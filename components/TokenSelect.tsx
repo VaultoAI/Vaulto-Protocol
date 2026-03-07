@@ -2,7 +2,6 @@
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { TokenLogo } from "@/components/TokenLogo";
-import { DemoBadge } from "@/components/DemoBadge";
 
 type TokenWithName = { symbol: string; name: string };
 
@@ -29,7 +28,6 @@ export function TokenSelect({
   const rootRef = useRef<HTMLDivElement>(null);
 
   const selected = value ? tokens.find((t) => t.symbol === value) : null;
-  const selectedIsDemo = selected ? demoSymbols.has(selected.symbol) : false;
 
   // Group tokens into live markets and private companies
   const { liveTokens, demoTokens } = useMemo(() => {
@@ -78,8 +76,7 @@ export function TokenSelect({
         {selected ? (
           <>
             <TokenLogo symbol={selected.symbol} size={24} />
-            <span className="truncate text-left font-medium">{selected.symbol}</span>
-            {selectedIsDemo && <DemoBadge size="sm" />}
+            <span className="truncate text-left font-medium">{selected.name || selected.symbol}</span>
           </>
         ) : (
           <span className="text-muted-foreground">Select token</span>
@@ -144,9 +141,8 @@ export function TokenSelect({
           )}
           {demoTokens.length > 0 && (
             <>
-              <li className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 border-t border-border mt-1 pt-2">
+              <li className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide border-t border-border mt-1 pt-2">
                 Private Companies
-                <DemoBadge size="sm" />
               </li>
               {demoTokens.map((token) => {
                 const isDisabled = token.symbol === disabledValue;

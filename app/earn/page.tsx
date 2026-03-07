@@ -118,8 +118,8 @@ export default async function EarnPage() {
         </div>
       </div>
 
-      {/* Additional Stats */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Additional Stats - hidden on mobile */}
+      <div className="mt-4 hidden gap-4 md:grid md:grid-cols-2">
         <div className="rounded-lg border border-border bg-background p-4">
           <p className="text-sm text-muted">Active Pools</p>
           <p className="mt-1 text-lg font-semibold">{pools.length}</p>
