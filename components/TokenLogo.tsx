@@ -19,8 +19,8 @@ export function TokenLogo({
   size = 24,
   className = "",
 }: TokenLogoProps) {
-  // Check for private token logo first (symbols starting with "s")
-  const privateLogoUrl = symbol?.startsWith("s") ? getPrivateTokenLogoUrl(symbol) : null;
+  // Check for private token logo first (symbols starting with "v" for private companies)
+  const privateLogoUrl = symbol?.startsWith("v") ? getPrivateTokenLogoUrl(symbol) : null;
 
   const resolvedAddress = address ?? getTokenAddressBySymbol(symbol);
   const { logoUrl: onchainLogoUrl, isLoading } = useTokenLogo(resolvedAddress, chainId);
