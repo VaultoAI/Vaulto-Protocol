@@ -1,6 +1,6 @@
 import { getPrivateCompanies, getSyntheticSymbol, formatValuation, type PrivateCompany } from "@/lib/vaulto/companies";
-import { TokenLogo } from "@/components/TokenLogo";
 import { formatUSD, formatPercent } from "@/lib/format";
+import { EarnPoolsTable, type StockPool } from "@/components/EarnPoolsTable";
 
 /**
  * Seeded random number generator for consistent demo data.
@@ -37,39 +37,6 @@ function generateDemoMetrics(company: PrivateCompany) {
     volume24h,
     apr,
   };
-}
-
-type StockPool = {
-  company: PrivateCompany;
-  symbol: string;
-  poolName: string;
-  tvlUSD: number;
-  volume24h: number;
-  apr: number;
-};
-
-function PoolCell({ pool }: { pool: StockPool }) {
-  const tokens = [pool.symbol, "USDC"];
-  return (
-    <td className="py-3 px-4">
-      <div className="flex items-center gap-2 whitespace-nowrap">
-        <div className="flex -space-x-1 shrink-0">
-          {tokens.map((symbol) => (
-            <TokenLogo key={symbol} symbol={symbol} size={24} className="ring-2 ring-background" />
-          ))}
-        </div>
-        <span>{pool.poolName}</span>
-      </div>
-    </td>
-  );
-}
-
-function IndustryBadge({ industry }: { industry: string }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-muted/50 px-2 py-0.5 text-xs text-muted">
-      {industry}
-    </span>
-  );
 }
 
 export default async function EarnPage() {
@@ -132,99 +99,7 @@ export default async function EarnPage() {
         </div>
       </div>
 
-      {/* Pools: mobile cards */}
-      <div className="mt-8 flex flex-col gap-3 md:hidden">
-        {pools.map((pool) => (
-          <div
-            key={pool.company.id}
-            className="rounded-md border border-border bg-background p-4"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="flex -space-x-1 shrink-0">
-                  {[pool.symbol, "USDC"].map((symbol) => (
-                    <TokenLogo key={symbol} symbol={symbol} size={28} className="ring-2 ring-background" />
-                  ))}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-medium">{pool.poolName}</p>
-                  <IndustryBadge industry={pool.company.industry} />
-                </div>
-              </div>
-              <span className="shrink-0 text-right font-medium text-green-500">
-                {formatPercent(pool.apr)}
-              </span>
-            </div>
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              <div>
-                <dt className="text-muted">Valuation</dt>
-                <dd>{formatValuation(pool.company.valuationUsd)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">TVL</dt>
-                <dd>{formatUSD(pool.tvlUSD)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Volume (24h)</dt>
-                <dd>{formatUSD(pool.volume24h)}</dd>
-              </div>
-            </dl>
-            <div className="mt-3 pt-3 border-t border-border">
-              <button
-                className="w-full rounded border border-border bg-white py-2 text-sm font-medium text-black hover:bg-white/90 disabled:opacity-50"
-                disabled
-                title="Coming soon"
-              >
-                Add LP
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Pools Table (desktop) */}
-      <div className="mt-8 hidden overflow-x-auto border border-border rounded-md md:block">
-        <table className="w-full min-w-[48rem] text-left text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="py-3 px-4 font-medium">Pool</th>
-              <th className="py-3 px-4 font-medium text-muted">Industry</th>
-              <th className="py-3 px-4 font-medium text-muted">Valuation</th>
-              <th className="py-3 px-4 font-medium text-muted text-right">TVL</th>
-              <th className="py-3 px-4 font-medium text-muted text-right">Volume (24h)</th>
-              <th className="py-3 px-4 font-medium text-muted text-right">APR</th>
-              <th className="w-28" aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {pools.map((pool) => (
-              <tr key={pool.company.id} className="border-b border-border last:border-0 hover:bg-muted/10">
-                <PoolCell pool={pool} />
-                <td className="py-3 px-4">
-                  <IndustryBadge industry={pool.company.industry} />
-                </td>
-                <td className="py-3 px-4 text-muted">
-                  {formatValuation(pool.company.valuationUsd)}
-                </td>
-                <td className="py-3 px-4 text-muted text-right">{formatUSD(pool.tvlUSD)}</td>
-                <td className="py-3 px-4 text-muted text-right">{formatUSD(pool.volume24h)}</td>
-                <td className="py-3 px-4 text-right font-medium text-green-500">
-                  {formatPercent(pool.apr)}
-                </td>
-                <td className="py-3 px-4 text-center">
-                  <button
-                    className="inline-block rounded border border-border bg-white px-3 py-1.5 text-sm font-medium text-black hover:bg-white/90 disabled:opacity-50"
-                    disabled
-                    title="Coming soon"
-                  >
-                    Add LP
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <EarnPoolsTable pools={pools} />
 
       {/* Disclaimer */}
       <p className="mt-4 text-xs text-muted">

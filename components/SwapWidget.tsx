@@ -420,7 +420,7 @@ export function SwapWidget({ tokens }: SwapWidgetProps) {
               : "Swap";
 
   return (
-    <div className="max-w-md border border-border bg-background" aria-label="Swap widget">
+    <div className="max-w-md rounded-lg border border-border bg-background" aria-label="Swap widget">
       <div className="p-4">
         <label className="sr-only" htmlFor="swap-from-amount">
           From amount

@@ -2,11 +2,8 @@ import {
   getPrivateCompanies,
   getPrivateCompanyMetrics,
   formatValuation,
-  formatPricePerShare,
-  getSyntheticSymbol,
 } from "@/lib/vaulto/companies";
-import { CompanyLogo } from "@/components/CompanyLogo";
-import { MintWidget } from "@/components/MintWidget";
+import { MintTable } from "@/components/MintTable";
 
 export default async function MintPage() {
   const [companies, metrics] = await Promise.all([
@@ -41,119 +38,7 @@ export default async function MintPage() {
         </div>
       </div>
 
-      {/* Companies: mobile cards */}
-      <div className="mt-8 flex flex-col gap-3 md:hidden">
-        {companies.map((company) => {
-          const syntheticSymbol = getSyntheticSymbol(company.name);
-          return (
-            <div
-              key={company.id}
-              className="rounded-md border border-border bg-background p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <CompanyLogo name={company.name} website={company.website} size={40} />
-                  <div className="min-w-0">
-                    <p className="font-medium">{company.name}</p>
-                    <p className="text-xs text-muted">{company.ceo}</p>
-                    <p className="mt-1 text-xs text-muted">{company.industry}</p>
-                  </div>
-                </div>
-                <span className="shrink-0 rounded-full bg-muted/50 px-2 py-0.5 text-xs font-medium">
-                  {syntheticSymbol}
-                </span>
-              </div>
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                <div>
-                  <dt className="text-muted">Valuation</dt>
-                  <dd>{formatValuation(company.valuationUsd)}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Funding</dt>
-                  <dd>{formatValuation(company.totalFundingUsd)}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Price/Share</dt>
-                  <dd>{formatPricePerShare(company.lastFundingEstPricePerShareUsd)}</dd>
-                </div>
-              </dl>
-              <div className="mt-3 pt-3 border-t border-border">
-                <MintWidget
-                  companyName={company.name}
-                  syntheticSymbol={syntheticSymbol}
-                  valuationUsd={company.valuationUsd}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Companies Table (desktop) */}
-      <div className="mt-8 hidden overflow-x-auto border border-border rounded-md md:block">
-        <table className="w-full min-w-[48rem] text-left text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="py-3 px-4 font-medium">Company</th>
-              <th className="py-3 px-4 font-medium text-muted">Industry</th>
-              <th className="py-3 px-4 font-medium text-muted whitespace-nowrap">
-                Valuation
-              </th>
-              <th className="py-3 px-4 font-medium text-muted whitespace-nowrap">
-                Funding
-              </th>
-              <th className="py-3 px-4 font-medium text-muted whitespace-nowrap">
-                Price/Share
-              </th>
-              <th className="py-3 px-4 font-medium text-muted">Token</th>
-              <th className="px-4 py-3" aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((company) => {
-              const syntheticSymbol = getSyntheticSymbol(company.name);
-              return (
-                <tr
-                  key={company.id}
-                  className="border-b border-border last:border-0"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <CompanyLogo name={company.name} website={company.website} size={32} />
-                      <div>
-                        <p className="font-medium">{company.name}</p>
-                        <p className="text-xs text-muted">{company.ceo}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-muted">{company.industry}</td>
-                  <td className="py-3 px-4 text-muted">
-                    {formatValuation(company.valuationUsd)}
-                  </td>
-                  <td className="py-3 px-4 text-muted">
-                    {formatValuation(company.totalFundingUsd)}
-                  </td>
-                  <td className="py-3 px-4 text-muted">
-                    {formatPricePerShare(company.lastFundingEstPricePerShareUsd)}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="inline-flex items-center rounded-full bg-muted/50 px-2 py-0.5 text-xs font-medium">
-                      {syntheticSymbol}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <MintWidget
-                      companyName={company.name}
-                      syntheticSymbol={syntheticSymbol}
-                      valuationUsd={company.valuationUsd}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <MintTable companies={companies} />
 
       {companies.length === 0 && (
         <div className="mt-8 rounded-md border border-border bg-muted/30 px-6 py-12 text-center">

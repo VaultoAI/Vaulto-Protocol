@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -8,6 +9,8 @@ import { getUserPositions, type PositionInfo } from "@/lib/lp/positions";
 import { formatTokenAmount, formatCompactBigInt } from "@/lib/format";
 import { TokenLogo } from "@/components/TokenLogo";
 import type { TokenInfo } from "@/hooks/useSwapConfig";
+import { useSortableTable, type SortableColumn } from "@/hooks/useSortableTable";
+import { SortableHeader } from "@/components/SortableHeader";
 
 function addressToSymbol(
   address: string | unknown,
@@ -29,6 +32,33 @@ function PositionsList({
   positions: PositionInfo[];
   tokenRegistry: Record<string, TokenInfo>;
 }) {
+  type PositionColumnKey = "pool" | "fee" | "liquidity" | "unclaimed";
+
+  const columns: SortableColumn<PositionColumnKey, PositionInfo>[] = useMemo(
+    () => [
+      {
+        key: "pool",
+        getValue: (pos) => {
+          const sym0 = addressToSymbol(pos.token0, tokenRegistry);
+          const sym1 = addressToSymbol(pos.token1, tokenRegistry);
+          return `${sym0} / ${sym1}`;
+        },
+      },
+      { key: "fee", getValue: (pos) => pos.fee },
+      { key: "liquidity", getValue: (pos) => pos.liquidity },
+      {
+        key: "unclaimed",
+        getValue: (pos) => {
+          // Sort by total unclaimed (sum of both tokens as bigint)
+          return pos.tokensOwed0 + pos.tokensOwed1;
+        },
+      },
+    ],
+    [tokenRegistry]
+  );
+
+  const { sortedData, sortConfig, handleSort } = useSortableTable(positions, columns);
+
   if (positions.length === 0) {
     return (
       <p className="py-6 text-center text-muted text-sm">
@@ -43,14 +73,38 @@ function PositionsList({
   return (
     <>
       <div className="grid grid-cols-[1fr_auto_auto_1fr_auto] gap-4 items-center py-3 px-4 border-b border-border text-sm text-muted font-medium">
-        <span>Pool</span>
-        <span>Fee</span>
-        <span>Liquidity</span>
-        <span>Unclaimed</span>
+        <SortableHeader
+          label="Pool"
+          columnKey="pool"
+          currentSortColumn={sortConfig.column}
+          currentSortDirection={sortConfig.direction}
+          onSort={handleSort as (column: string) => void}
+        />
+        <SortableHeader
+          label="Fee"
+          columnKey="fee"
+          currentSortColumn={sortConfig.column}
+          currentSortDirection={sortConfig.direction}
+          onSort={handleSort as (column: string) => void}
+        />
+        <SortableHeader
+          label="Liquidity"
+          columnKey="liquidity"
+          currentSortColumn={sortConfig.column}
+          currentSortDirection={sortConfig.direction}
+          onSort={handleSort as (column: string) => void}
+        />
+        <SortableHeader
+          label="Unclaimed"
+          columnKey="unclaimed"
+          currentSortColumn={sortConfig.column}
+          currentSortDirection={sortConfig.direction}
+          onSort={handleSort as (column: string) => void}
+        />
         <span className="w-24" aria-hidden />
       </div>
       <ul className="divide-y divide-border">
-        {positions.map((pos) => {
+        {sortedData.map((pos) => {
           const sym0 = addressToSymbol(pos.token0, tokenRegistry);
           const sym1 = addressToSymbol(pos.token1, tokenRegistry);
           const poolLabel = `${sym0} / ${sym1}`;

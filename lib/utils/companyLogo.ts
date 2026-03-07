@@ -15,11 +15,15 @@ const STATIC_LOGO_MAP: Record<string, string> = {
 
 /**
  * Extract domain from a website URL.
+ * Handles URLs with or without protocol prefix.
  * Returns null if URL is invalid.
  */
 export function extractDomainFromUrl(url: string): string | null {
+  if (!url) return null;
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    // Add protocol if missing
+    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
+    return new URL(normalizedUrl).hostname.replace(/^www\./, "");
   } catch {
     return null;
   }

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { getPredictionPositions, sellPredictionShares, calculatePositionValue } from "@/lib/polymarket/demo-trading";
 import type { PredictionMarket } from "@/lib/polymarket/markets";
+import { useSortableTable, type SortableColumn } from "@/hooks/useSortableTable";
+import { SortableTableHeader } from "@/components/SortableHeader";
 
 type PositionsProps = {
   markets: PredictionMarket[];
@@ -37,6 +39,21 @@ export function PredictionPositions({ markets }: PositionsProps) {
     refreshPositions();
     setSelling(null);
   }, [markets, refreshPositions]);
+
+  type PredictionColumnKey = "position" | "outcome" | "shares" | "currentValue" | "potentialPayout";
+
+  const columns: SortableColumn<PredictionColumnKey, typeof positions[0]>[] = useMemo(
+    () => [
+      { key: "position", getValue: (p) => p.question },
+      { key: "outcome", getValue: (p) => p.outcome },
+      { key: "shares", getValue: (p) => p.shares },
+      { key: "currentValue", getValue: (p) => calculatePositionValue(p.shares, p.currentPrice) },
+      { key: "potentialPayout", getValue: (p) => p.shares },
+    ],
+    []
+  );
+
+  const { sortedData, sortConfig, handleSort } = useSortableTable(positions, columns);
 
   if (positions.length === 0) {
     return null;
@@ -107,16 +124,50 @@ export function PredictionPositions({ markets }: PositionsProps) {
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="py-3 px-4 font-medium">Position</th>
-              <th className="py-3 px-4 font-medium text-muted">Outcome</th>
-              <th className="py-3 px-4 font-medium text-muted">Shares</th>
-              <th className="py-3 px-4 font-medium text-muted">Current Value</th>
-              <th className="py-3 px-4 font-medium text-muted">Potential Payout</th>
+              <SortableTableHeader
+                label="Position"
+                columnKey="position"
+                currentSortColumn={sortConfig.column}
+                currentSortDirection={sortConfig.direction}
+                onSort={handleSort as (column: string) => void}
+              />
+              <SortableTableHeader
+                label="Outcome"
+                columnKey="outcome"
+                currentSortColumn={sortConfig.column}
+                currentSortDirection={sortConfig.direction}
+                onSort={handleSort as (column: string) => void}
+                className="text-muted"
+              />
+              <SortableTableHeader
+                label="Shares"
+                columnKey="shares"
+                currentSortColumn={sortConfig.column}
+                currentSortDirection={sortConfig.direction}
+                onSort={handleSort as (column: string) => void}
+                className="text-muted"
+              />
+              <SortableTableHeader
+                label="Current Value"
+                columnKey="currentValue"
+                currentSortColumn={sortConfig.column}
+                currentSortDirection={sortConfig.direction}
+                onSort={handleSort as (column: string) => void}
+                className="text-muted"
+              />
+              <SortableTableHeader
+                label="Potential Payout"
+                columnKey="potentialPayout"
+                currentSortColumn={sortConfig.column}
+                currentSortDirection={sortConfig.direction}
+                onSort={handleSort as (column: string) => void}
+                className="text-muted"
+              />
               <th className="px-4 py-3" aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
-            {positions.map((position) => {
+            {sortedData.map((position) => {
               const currentValue = calculatePositionValue(position.shares, position.currentPrice);
               const potentialPayout = position.shares;
 
