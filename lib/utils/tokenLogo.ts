@@ -38,56 +38,56 @@ export const EVM_TOKEN_ADDRESSES: Record<string, string> = {
  */
 export const PRIVATE_TOKEN_DOMAINS: Record<string, string> = {
   // Major tech companies
-  sSpaceX: "spacex.com",
-  sStripe: "stripe.com",
-  sOpenAI: "openai.com",
-  sAnthropic: "anthropic.com",
-  sDataBricks: "databricks.com",
-  sDatabricks: "databricks.com",
-  sDiscord: "discord.com",
+  vSpaceX: "spacex.com",
+  vStripe: "stripe.com",
+  vOpenAI: "openai.com",
+  vAnthropic: "anthropic.com",
+  vDataBricks: "databricks.com",
+  vDatabricks: "databricks.com",
+  vDiscord: "discord.com",
   // IPO market companies
-  sFannieMae: "fanniemae.com",
-  sFreddieMac: "freddiemac.com",
-  sMegaETH: "megaeth.systems",
+  vFannieMae: "fanniemae.com",
+  vFreddieMac: "freddiemac.com",
+  vMegaETH: "megaeth.systems",
   // Fintech
-  sCanva: "canva.com",
-  sKlarna: "klarna.com",
-  sChime: "chime.com",
-  sPlaid: "plaid.com",
+  vCanva: "canva.com",
+  vKlarna: "klarna.com",
+  vChime: "chime.com",
+  vPlaid: "plaid.com",
   // Productivity
-  sFigma: "figma.com",
-  sNotion: "notion.so",
-  sAirtable: "airtable.com",
+  vFigma: "figma.com",
+  vNotion: "notion.so",
+  vAirtable: "airtable.com",
   // Consumer/Delivery
-  sInstacart: "instacart.com",
-  sDoorDash: "doordash.com",
+  vInstacart: "instacart.com",
+  vDoorDash: "doordash.com",
   // Social/Gaming
-  sReddit: "reddit.com",
-  sEpicGames: "epicgames.com",
-  sRoblox: "roblox.com",
+  vReddit: "reddit.com",
+  vEpicGames: "epicgames.com",
+  vRoblox: "roblox.com",
   // Automotive
-  sRivian: "rivian.com",
-  sLucidMotors: "lucidmotors.com",
+  vRivian: "rivian.com",
+  vLucidMotors: "lucidmotors.com",
   // Defense/AI
-  sAnduril: "anduril.com",
-  sAndurilIndustries: "anduril.com",
-  sScale: "scale.com",
-  sScaleAI: "scale.com",
+  vAnduril: "anduril.com",
+  vAndurilIndustries: "anduril.com",
+  vScale: "scale.com",
+  vScaleAI: "scale.com",
   // Space/Logistics
-  sRelativitySpace: "relativityspace.com",
-  sFlexport: "flexport.com",
+  vRelativitySpace: "relativityspace.com",
+  vFlexport: "flexport.com",
   // Autonomous vehicles
-  sNuro: "nuro.ai",
-  sCruise: "getcruise.com",
-  sWaymo: "waymo.com",
+  vNuro: "nuro.ai",
+  vCruise: "getcruise.com",
+  vWaymo: "waymo.com",
   // Other
-  sZoom: "zoom.us",
-  sShein: "shein.com",
-  sByteDance: "bytedance.com",
-  sRevolutionMedicines: "revmed.com",
-  sNeuralink: "neuralink.com",
-  sKalshi: "kalshi.com",
-  sPerplexity: "perplexity.ai",
+  vZoom: "zoom.us",
+  vShein: "shein.com",
+  vByteDance: "bytedance.com",
+  vRevolutionMedicines: "revmed.com",
+  vNeuralink: "neuralink.com",
+  vKalshi: "kalshi.com",
+  vPerplexity: "perplexity.ai",
 };
 
 /**
@@ -108,8 +108,8 @@ export function getPrivateTokenLogoUrl(symbol: string): string | null {
     return getGoogleFaviconUrl(domain);
   }
 
-  // Try to extract company name from symbol (sCompanyName -> companyname.com)
-  if (symbol.startsWith("s") && symbol.length > 1) {
+  // Try to extract company name from symbol (vCompanyName -> companyname.com)
+  if (symbol.startsWith("v") && symbol.length > 1) {
     const companyName = symbol.slice(1).toLowerCase();
     return getGoogleFaviconUrl(`${companyName}.com`);
   }
@@ -119,7 +119,7 @@ export function getPrivateTokenLogoUrl(symbol: string): string | null {
 
 /** Display names for swap/token selectors. Fall back to symbol if missing. */
 export const TOKEN_DISPLAY_NAMES: Record<string, string> = {
-  USDC: "USD Coin",
+  USDC: "USDC",
   SLVon: "Silvergate Capital",
   CRCLon: "Circle",
   NVDAon: "NVIDIA",
@@ -136,6 +136,7 @@ export const TOKEN_DISPLAY_NAMES: Record<string, string> = {
   MSTRon: "MicroStrategy",
   NKEon: "Nike",
   SPGIon: "S&P Global",
+  vAnduril: "Anduril",
 };
 
 export function getTokenDisplayName(symbol: string): string {

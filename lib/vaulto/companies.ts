@@ -7,6 +7,7 @@ export interface FundingRound {
   type: string;
   amountUsd: number;
   leadInvestors: string[];
+  postMoneyValuationUsd?: number;
 }
 
 /** Product offered by a company */
@@ -116,11 +117,20 @@ export function formatValuation(value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
-/** Generate synthetic token symbol from company name (e.g., SpaceX -> sSpaceX). */
+/** Override symbols for specific companies. */
+const SYMBOL_OVERRIDES: Record<string, string> = {
+  "Anduril Industries": "vAnduril",
+};
+
+/** Generate synthetic token symbol from company name (e.g., SpaceX -> vSpaceX). */
 export function getSyntheticSymbol(companyName: string): string {
+  // Check for explicit override first
+  if (SYMBOL_OVERRIDES[companyName]) {
+    return SYMBOL_OVERRIDES[companyName];
+  }
   // Remove spaces and special characters, keep alphanumeric
   const clean = companyName.replace(/[^a-zA-Z0-9]/g, "");
-  return `s${clean}`;
+  return `v${clean}`;
 }
 
 /** Format price per share in USD (e.g., $123.45). */
