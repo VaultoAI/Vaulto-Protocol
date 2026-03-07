@@ -1,11 +1,10 @@
 import Image from "next/image";
-import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-neutral-200 bg-neutral-50 px-6 py-8 dark:border-neutral-800 dark:bg-neutral-900">
+    <footer className="mt-auto border-t border-black/10 bg-white px-6 py-8 dark:border-white/10 dark:bg-black">
       <div className="mx-auto max-w-6xl">
-        <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
+        <div className="flex flex-col items-center gap-1">
           <div className="flex items-center gap-2">
             <Image
               src="/favicon.png"
@@ -18,32 +17,16 @@ export function Footer() {
               Vaulto Protocol
             </span>
           </div>
-
-          <div className="flex items-center gap-6 text-sm">
-            <Link
-              href="/privacy"
-              className="text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              href="/terms"
-              className="text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-            >
-              Terms of Service
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-6 border-t border-neutral-200 pt-6 dark:border-neutral-800">
-          <p className="text-center text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
-            <strong className="font-medium">Risk Disclosure:</strong> Trading tokenized stocks involves substantial risk of loss and is not suitable for all investors. Past performance is not indicative of future results. The value of investments can go down as well as up. You should not invest more than you can afford to lose.
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+            © 2026 Vaulto Protocol. All rights reserved.
           </p>
         </div>
 
-        <p className="mt-4 text-center text-xs text-neutral-400 dark:text-neutral-500">
-          &copy; {new Date().getFullYear()} Vaulto Protocol. All rights reserved.
-        </p>
+        <div className="mt-6 border-t border-black/10 pt-6 dark:border-white/10">
+          <p className="text-center text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
+            <strong className="font-medium">Risk Disclosure:</strong> Trading tokenized stocks and digital assets involves substantial risk of loss and is not suitable for all investors. Past performance is not indicative of future results. The value of investments can fluctuate significantly and you may lose some or all of your invested capital. Tokenized assets are subject to additional risks including smart contract vulnerabilities, blockchain network disruptions, regulatory uncertainty, and liquidity constraints. Prices may deviate from underlying asset values. Providing liquidity carries risks of impermanent loss and market volatility. This platform does not provide financial, investment, legal, or tax advice. You should conduct your own research and consult with qualified professionals before making any investment decisions. Only invest funds you can afford to lose entirely.
+          </p>
+        </div>
       </div>
     </footer>
   );

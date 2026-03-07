@@ -7,8 +7,9 @@ import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Vaulto — LP for Tokenized Stocks",
-  description: "Provide liquidity and earn on tokenized stock pools.",
+  title: "Vaulto — The Future of Private Investing",
+  description:
+    "Trade, earn, and invest in tokenized private company stocks. Access pre-IPO companies like SpaceX, Stripe, and more.",
   icons: {
     icon: "/favicon.png",
   },

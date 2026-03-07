@@ -14,6 +14,66 @@ const STATIC_LOGO_MAP: Record<string, string> = {
 };
 
 /**
+ * Map company names (normalized) to their website domains.
+ * Used as fallback when website field is missing or incorrect.
+ */
+const COMPANY_DOMAIN_MAP: Record<string, string> = {
+  // Tech
+  spacex: "spacex.com",
+  stripe: "stripe.com",
+  openai: "openai.com",
+  anthropic: "anthropic.com",
+  databricks: "databricks.com",
+  discord: "discord.com",
+  bytedance: "bytedance.com",
+  // Fintech
+  canva: "canva.com",
+  klarna: "klarna.com",
+  chime: "chime.com",
+  plaid: "plaid.com",
+  ramp: "ramp.com",
+  // Productivity
+  figma: "figma.com",
+  notion: "notion.so",
+  airtable: "airtable.com",
+  // Consumer/Delivery
+  instacart: "instacart.com",
+  doordash: "doordash.com",
+  // Social/Gaming
+  reddit: "reddit.com",
+  epicgames: "epicgames.com",
+  roblox: "roblox.com",
+  // Automotive
+  rivian: "rivian.com",
+  lucidmotors: "lucidmotors.com",
+  // Defense/AI
+  andurilindustries: "anduril.com",
+  anduril: "anduril.com",
+  scaleai: "scale.com",
+  scale: "scale.com",
+  shieldai: "shield.ai",
+  epirus: "epirus.com",
+  // Space/Logistics
+  relativityspace: "relativityspace.com",
+  flexport: "flexport.com",
+  // Autonomous vehicles
+  nuro: "nuro.ai",
+  cruise: "getcruise.com",
+  waymo: "waymo.com",
+  // Other
+  zoom: "zoom.us",
+  shein: "shein.com",
+  revolutionmedicines: "revmed.com",
+  neuralink: "neuralink.com",
+  kalshi: "kalshi.com",
+  perplexity: "perplexity.ai",
+  fanniemae: "fanniemae.com",
+  freddiemac: "freddiemac.com",
+  megaeth: "megaeth.systems",
+  whoop: "whoop.com",
+};
+
+/**
  * Extract domain from a website URL.
  * Handles URLs with or without protocol prefix.
  * Returns null if URL is invalid.
@@ -37,6 +97,15 @@ export function getStaticCompanyLogoUrl(companyName: string): string | null {
   const normalized = companyName.toLowerCase().replace(/[^a-z0-9]/g, "");
   const filename = STATIC_LOGO_MAP[normalized];
   return filename ? `/companies/${filename}` : null;
+}
+
+/**
+ * Get domain for a company by name.
+ * Uses COMPANY_DOMAIN_MAP lookup with normalized name.
+ */
+export function getCompanyDomain(companyName: string): string | null {
+  const normalized = companyName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return COMPANY_DOMAIN_MAP[normalized] ?? null;
 }
 
 /**
@@ -65,6 +134,10 @@ export function getCompanyLogoUrl(
     if (domain) return getGoogleFaviconUrl(domain);
   }
 
+  // 3. Fallback to domain map lookup by company name
+  const mappedDomain = getCompanyDomain(companyName);
+  if (mappedDomain) return getGoogleFaviconUrl(mappedDomain);
+
   return null;
 }
 
@@ -85,7 +158,7 @@ async function verifyLogoExists(logoUrl: string): Promise<boolean> {
 
 /**
  * Fetch company logo URL with verification and caching.
- * Tries static asset first, then Google Favicon API.
+ * Tries static asset first, then Google Favicon API with website or domain map.
  */
 export async function fetchCompanyLogo(
   companyName: string,
@@ -107,7 +180,7 @@ export async function fetchCompanyLogo(
     }
   }
 
-  // 2. Try Google Favicon API
+  // 2. Try Google Favicon API with website URL
   if (website) {
     const domain = extractDomainFromUrl(website);
     if (domain) {
@@ -117,6 +190,14 @@ export async function fetchCompanyLogo(
       logoCache.set(cacheKey, faviconUrl);
       return faviconUrl;
     }
+  }
+
+  // 3. Fallback to domain map lookup by company name
+  const mappedDomain = getCompanyDomain(companyName);
+  if (mappedDomain) {
+    const faviconUrl = getGoogleFaviconUrl(mappedDomain);
+    logoCache.set(cacheKey, faviconUrl);
+    return faviconUrl;
   }
 
   logoCache.set(cacheKey, null);
