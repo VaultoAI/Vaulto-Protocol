@@ -11,13 +11,12 @@ type MintTableProps = {
   companies: PrivateCompany[];
 };
 
-type ColumnKey = "company" | "industry" | "valuation" | "funding" | "pricePerShare" | "token";
+type ColumnKey = "company" | "valuation" | "funding" | "pricePerShare" | "token";
 
 export function MintTable({ companies }: MintTableProps) {
   const columns: SortableColumn<ColumnKey, PrivateCompany>[] = useMemo(
     () => [
       { key: "company", getValue: (c) => c.name },
-      { key: "industry", getValue: (c) => c.industry },
       { key: "valuation", getValue: (c) => c.valuationUsd },
       { key: "funding", getValue: (c) => c.totalFundingUsd },
       { key: "pricePerShare", getValue: (c) => c.lastFundingEstPricePerShareUsd ?? 0 },
@@ -43,9 +42,8 @@ export function MintTable({ companies }: MintTableProps) {
                 <div className="flex min-w-0 items-center gap-3">
                   <CompanyLogo name={company.name} website={company.website} size={40} />
                   <div className="min-w-0">
-                    <p className="font-medium">{company.name}</p>
-                    <p className="text-xs text-muted">{company.ceo}</p>
-                    <p className="mt-1 text-xs text-muted">{company.industry}</p>
+                    <p className="text-xs font-medium whitespace-nowrap">{company.name}</p>
+                    <p className="text-[10px] text-muted whitespace-nowrap">{company.industry}</p>
                   </div>
                 </div>
                 <span className="shrink-0 rounded-full bg-muted/50 px-2 py-0.5 text-xs font-medium">
@@ -82,14 +80,6 @@ export function MintTable({ companies }: MintTableProps) {
                 currentSortColumn={sortConfig.column}
                 currentSortDirection={sortConfig.direction}
                 onSort={handleSort as (column: string) => void}
-              />
-              <SortableTableHeader
-                label="Industry"
-                columnKey="industry"
-                currentSortColumn={sortConfig.column}
-                currentSortDirection={sortConfig.direction}
-                onSort={handleSort as (column: string) => void}
-                className="text-muted"
               />
               <SortableTableHeader
                 label="Valuation"
@@ -137,12 +127,11 @@ export function MintTable({ companies }: MintTableProps) {
                     <div className="flex items-center gap-3">
                       <CompanyLogo name={company.name} website={company.website} size={32} />
                       <div>
-                        <p className="font-medium">{company.name}</p>
-                        <p className="text-xs text-muted">{company.ceo}</p>
+                        <p className="text-xs font-medium whitespace-nowrap">{company.name}</p>
+                        <p className="text-[10px] text-muted whitespace-nowrap">{company.industry}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-muted">{company.industry}</td>
                   <td className="py-3 px-4 text-muted">
                     {formatValuation(company.valuationUsd)}
                   </td>

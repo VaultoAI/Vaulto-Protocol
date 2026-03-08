@@ -122,7 +122,7 @@ const SYMBOL_OVERRIDES: Record<string, string> = {
   "Anduril Industries": "vAnduril",
   "Fanatics Holdings": "vFanatics",
   "Mercury Technologies": "vMercury",
-  "Thinking Machines Lab": "vThinkingMachines",
+  "Thinking Machines Lab": "vTML",
 };
 
 /** Generate synthetic token symbol from company name (e.g., SpaceX -> vSpaceX). */

@@ -93,7 +93,7 @@ export const PRIVATE_TOKEN_DOMAINS: Record<string, string> = {
   // Fintech
   vMercury: "mercury.com",
   // AI
-  vThinkingMachines: "thinkingmachines.ai",
+  vTML: "thinkingmachines.ai",
 };
 
 /**
