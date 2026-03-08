@@ -120,6 +120,9 @@ export function formatValuation(value: number): string {
 /** Override symbols for specific companies. */
 const SYMBOL_OVERRIDES: Record<string, string> = {
   "Anduril Industries": "vAnduril",
+  "Fanatics Holdings": "vFanatics",
+  "Mercury Technologies": "vMercury",
+  "Thinking Machines Lab": "vThinkingMachines",
 };
 
 /** Generate synthetic token symbol from company name (e.g., SpaceX -> vSpaceX). */

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTokenLogo } from "@/hooks/useTokenLogo";
-import { getTokenAddressBySymbol, getPrivateTokenLogoUrl } from "@/lib/utils/tokenLogo";
+import { getTokenAddressBySymbol, getPrivateTokenLogoUrl, DARK_LOGO_SYMBOLS } from "@/lib/utils/tokenLogo";
 
 type TokenLogoProps = {
   symbol: string;
@@ -43,13 +43,16 @@ export function TokenLogo({
     );
   }
 
+  // Check if this logo needs a white background (dark logos like Fnatic)
+  const needsWhiteBg = DARK_LOGO_SYMBOLS.has(symbol);
+
   return (
     <img
       src={logoUrl}
       alt=""
       width={size}
       height={size}
-      className={`rounded-full shrink-0 ${className}`}
+      className={`rounded-full shrink-0 ${needsWhiteBg ? "bg-white" : ""} ${className}`}
       style={{ width: size, height: size }}
       onError={() => setImgError(true)}
     />

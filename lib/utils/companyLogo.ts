@@ -25,7 +25,7 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   anthropic: "anthropic.com",
   databricks: "databricks.com",
   discord: "discord.com",
-  bytedance: "bytedance.com",
+  bytedance: "tiktok.com", // bytedance.com favicon broken, use TikTok (their flagship product)
   // Fintech
   canva: "canva.com",
   klarna: "klarna.com",
@@ -71,7 +71,19 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   freddiemac: "freddiemac.com",
   megaeth: "megaeth.systems",
   whoop: "whoop.com",
+  // Sports/Entertainment
+  fanatics: "fanatics.com",
+  fanaticsholdings: "fanatics.com",
+  // Fintech
+  mercurytechnologies: "mercury.com",
+  // AI
+  thinkingmachineslab: "thinkingmachines.ai",
 };
+
+/**
+ * Set of company names (normalized) that have dark logos and need a white background.
+ */
+export const DARK_LOGO_COMPANIES = new Set<string>(["fanatics"]);
 
 /**
  * Extract domain from a website URL.
@@ -128,15 +140,15 @@ export function getCompanyLogoUrl(
   const staticUrl = getStaticCompanyLogoUrl(companyName);
   if (staticUrl) return staticUrl;
 
-  // 2. Try Google Favicon API if website provided
+  // 2. Try domain map lookup by company name (preferred over website field)
+  const mappedDomain = getCompanyDomain(companyName);
+  if (mappedDomain) return getGoogleFaviconUrl(mappedDomain);
+
+  // 3. Fallback to Google Favicon API with website URL
   if (website) {
     const domain = extractDomainFromUrl(website);
     if (domain) return getGoogleFaviconUrl(domain);
   }
-
-  // 3. Fallback to domain map lookup by company name
-  const mappedDomain = getCompanyDomain(companyName);
-  if (mappedDomain) return getGoogleFaviconUrl(mappedDomain);
 
   return null;
 }
@@ -180,7 +192,15 @@ export async function fetchCompanyLogo(
     }
   }
 
-  // 2. Try Google Favicon API with website URL
+  // 2. Try domain map lookup by company name (preferred over website field)
+  const mappedDomain = getCompanyDomain(companyName);
+  if (mappedDomain) {
+    const faviconUrl = getGoogleFaviconUrl(mappedDomain);
+    logoCache.set(cacheKey, faviconUrl);
+    return faviconUrl;
+  }
+
+  // 3. Fallback to Google Favicon API with website URL
   if (website) {
     const domain = extractDomainFromUrl(website);
     if (domain) {
@@ -190,14 +210,6 @@ export async function fetchCompanyLogo(
       logoCache.set(cacheKey, faviconUrl);
       return faviconUrl;
     }
-  }
-
-  // 3. Fallback to domain map lookup by company name
-  const mappedDomain = getCompanyDomain(companyName);
-  if (mappedDomain) {
-    const faviconUrl = getGoogleFaviconUrl(mappedDomain);
-    logoCache.set(cacheKey, faviconUrl);
-    return faviconUrl;
   }
 
   logoCache.set(cacheKey, null);

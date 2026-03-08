@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCompanyLogo } from "@/hooks/useCompanyLogo";
+import { DARK_LOGO_COMPANIES } from "@/lib/utils/companyLogo";
 
 type CompanyLogoProps = {
   name: string;
@@ -34,13 +35,17 @@ export function CompanyLogo({
     );
   }
 
+  // Check if this logo needs a white background (dark logos like Fnatic)
+  const normalizedName = name?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
+  const needsWhiteBg = DARK_LOGO_COMPANIES.has(normalizedName);
+
   return (
     <img
       src={logoUrl}
       alt={`${name} logo`}
       width={size}
       height={size}
-      className={`rounded-full object-cover shrink-0 ${className}`}
+      className={`rounded-full object-cover shrink-0 ${needsWhiteBg ? "bg-white" : ""} ${className}`}
       onError={() => setImgError(true)}
     />
   );

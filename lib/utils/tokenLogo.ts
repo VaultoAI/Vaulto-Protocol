@@ -83,12 +83,23 @@ export const PRIVATE_TOKEN_DOMAINS: Record<string, string> = {
   // Other
   vZoom: "zoom.us",
   vShein: "shein.com",
-  vByteDance: "bytedance.com",
+  vByteDance: "tiktok.com", // bytedance.com favicon broken, use TikTok
   vRevolutionMedicines: "revmed.com",
   vNeuralink: "neuralink.com",
   vKalshi: "kalshi.com",
   vPerplexity: "perplexity.ai",
+  // Sports/Entertainment
+  vFanatics: "fanatics.com",
+  // Fintech
+  vMercury: "mercury.com",
+  // AI
+  vThinkingMachines: "thinkingmachines.ai",
 };
+
+/**
+ * Set of private token symbols that have dark logos and need a white background.
+ */
+export const DARK_LOGO_SYMBOLS = new Set<string>(["vFanatics"]);
 
 /**
  * Get Google Favicon API URL for a domain (128px high resolution).

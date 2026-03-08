@@ -21,7 +21,7 @@ export function useSortableTable<T extends string, D>(
 ) {
   const [sortConfig, setSortConfig] = useState<SortConfig<T>>({
     column: defaultSort?.column ?? null,
-    direction: defaultSort?.direction ?? "asc",
+    direction: defaultSort?.direction ?? "desc",
   });
 
   const handleSort = useCallback((column: T) => {
@@ -32,7 +32,7 @@ export function useSortableTable<T extends string, D>(
           direction: prev.direction === "asc" ? "desc" : "asc",
         };
       }
-      return { column, direction: "asc" };
+      return { column, direction: "desc" };
     });
   }, []);
 
