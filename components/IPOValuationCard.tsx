@@ -10,6 +10,7 @@ import {
 
 type IPOValuationCardProps = {
   ipo: CompanyIPO;
+  onTrade?: (ipo: CompanyIPO, direction: "long" | "short") => void;
 };
 
 function ValuationBandRow({
@@ -51,7 +52,7 @@ function ValuationBandRow({
   );
 }
 
-export function IPOValuationCard({ ipo }: IPOValuationCardProps) {
+export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
   const sortedBands = [...ipo.bands].sort((a, b) => (a.lowThreshold ?? 0) - (b.lowThreshold ?? 0));
   const eventUrl = getPolymarketEventUrl(ipo.eventSlug);
 
@@ -73,14 +74,36 @@ export function IPOValuationCard({ ipo }: IPOValuationCardProps) {
             </a>
           </div>
         </div>
-        {ipo.noIPOProbability !== undefined && (
-          <div className="text-right">
-            <p className="text-xs text-muted">No IPO probability</p>
-            <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
-              {(ipo.noIPOProbability * 100).toFixed(0)}%
-            </p>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {ipo.noIPOProbability !== undefined && (
+            <div className="text-right mr-2">
+              <p className="text-xs text-muted">No IPO</p>
+              <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                {(ipo.noIPOProbability * 100).toFixed(0)}%
+              </p>
+            </div>
+          )}
+          {onTrade && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => onTrade(ipo, "long")}
+                className="px-3 py-1.5 text-xs font-medium rounded border border-green-500 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                title="Long - bet IPO closes above expected value"
+              >
+                Long
+              </button>
+              <button
+                type="button"
+                onClick={() => onTrade(ipo, "short")}
+                className="px-3 py-1.5 text-xs font-medium rounded border border-red-500 bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                title="Short - bet IPO closes below expected value"
+              >
+                Short
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Valuation Summary */}

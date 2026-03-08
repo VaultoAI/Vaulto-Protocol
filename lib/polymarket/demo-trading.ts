@@ -362,6 +362,132 @@ export async function sellIPOBandPosition(params: {
   };
 }
 
+// ============================================================================
+// Overall IPO Trading (Long/Short across all bands)
+// ============================================================================
+
+export interface OverallIPOTradeParams {
+  ipo: CompanyIPO;
+  direction: "long" | "short";
+  usdcAmount: number;
+}
+
+export interface OverallIPOTradeResult {
+  success: boolean;
+  txHash: string;
+  error?: string;
+  totalShares: number;
+  totalCost: number;
+  direction: "long" | "short";
+  bandAllocations: Array<{
+    band: ValuationBand;
+    shares: number;
+    usdcAmount: number;
+  }>;
+}
+
+/**
+ * Buy an overall Long or Short position on an IPO.
+ *
+ * Long: Bullish on IPO valuation - buy slightly more Yes contracts on bands
+ *       ABOVE the expected valuation, slightly less on bands below.
+ * Short: Bearish on IPO valuation - buy slightly more No contracts on bands
+ *        BELOW the expected valuation, slightly less on bands above.
+ *
+ * Weighting: Bands closer to expected value get more weight, with a tilt
+ * based on direction (long = favor higher bands, short = favor lower bands).
+ */
+export async function buyOverallIPOPosition(
+  params: OverallIPOTradeParams
+): Promise<OverallIPOTradeResult> {
+  const { ipo, direction, usdcAmount } = params;
+
+  // Check USDC balance
+  if (!hasSufficientBalance("USDC", usdcAmount)) {
+    return {
+      success: false,
+      txHash: "",
+      error: "Insufficient USDC balance",
+      totalShares: 0,
+      totalCost: usdcAmount,
+      direction,
+      bandAllocations: [],
+    };
+  }
+
+  const bands = ipo.bands;
+  const expectedValue = ipo.expectedIPOValue;
+
+  // Calculate weights for each band based on direction
+  // Higher weight = more allocation
+  const bandWeights: Array<{ band: ValuationBand; weight: number }> = bands.map((band) => {
+    const midpoint = ((band.lowThreshold ?? 0) + (band.highThreshold ?? Infinity)) / 2;
+    const isAboveExpected = midpoint > expectedValue;
+
+    // Base weight from probability (bands with higher probability get more weight)
+    let weight = band.probability;
+
+    // Direction tilt:
+    // Long = favor bands above expected (multiply weight by 1.5 for above, 0.7 for below)
+    // Short = favor bands below expected (multiply weight by 1.5 for below, 0.7 for above)
+    if (direction === "long") {
+      weight *= isAboveExpected ? 1.5 : 0.7;
+    } else {
+      weight *= isAboveExpected ? 0.7 : 1.5;
+    }
+
+    return { band, weight };
+  });
+
+  // Normalize weights so they sum to 1
+  const totalWeight = bandWeights.reduce((sum, bw) => sum + bw.weight, 0);
+  const normalizedWeights = bandWeights.map((bw) => ({
+    ...bw,
+    weight: bw.weight / totalWeight,
+  }));
+
+  // Allocate USDC to each band based on normalized weights
+  const bandAllocations: OverallIPOTradeResult["bandAllocations"] = [];
+  let totalShares = 0;
+
+  for (const { band, weight } of normalizedWeights) {
+    const bandUsdcAmount = usdcAmount * weight;
+
+    // For Long: buy Yes (probability price)
+    // For Short: buy No (1 - probability price)
+    const pricePerShare = direction === "long" ? band.probability : 1 - band.probability;
+    const shares = bandUsdcAmount / pricePerShare;
+
+    totalShares += shares;
+    bandAllocations.push({
+      band,
+      shares,
+      usdcAmount: bandUsdcAmount,
+    });
+
+    // Record each band's transaction
+    const symbol = getIPOBandSymbol(ipo.company, band, direction);
+    recordDemoTransaction({
+      type: "swap",
+      tokenIn: "USDC",
+      tokenOut: symbol,
+      amountIn: bandUsdcAmount,
+      amountOut: shares,
+    });
+  }
+
+  await simulateNetworkDelay();
+
+  return {
+    success: true,
+    txHash: `0x${Math.random().toString(16).slice(2, 18)}`,
+    totalShares,
+    totalCost: usdcAmount,
+    direction,
+    bandAllocations,
+  };
+}
+
 /**
  * Get user's IPO band positions from demo balances.
  */
