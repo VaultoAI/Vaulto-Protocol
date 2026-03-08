@@ -38,7 +38,7 @@ export function IPOValuationList({ ipos }: IPOValuationListProps) {
       {/* IPO Cards */}
       <div className="mt-6 space-y-6">
         {ipos.map((ipo) => (
-          <IPOValuationCard key={ipo.companyId} ipo={ipo} onTrade={handleTrade} />
+          <IPOValuationCard key={ipo.eventSlug} ipo={ipo} onTrade={handleTrade} />
         ))}
       </div>
 
