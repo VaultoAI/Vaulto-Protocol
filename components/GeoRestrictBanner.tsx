@@ -39,8 +39,8 @@ export function GeoRestrictBanner() {
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[5] md:z-50 bg-amber-500/40 backdrop-blur-sm text-amber-950 dark:text-amber-200 text-center text-sm py-2 px-4 md:left-48">
-      <div className="flex items-center justify-center gap-2 pl-10 md:pl-0">
-        <span className="flex-1 text-center md:flex-none">Platform has limited functionality for US persons.</span>
+      <div className="flex items-center justify-center gap-2">
+        <span className="md:flex-none">Platform has limited functionality for US persons.</span>
         <button
           type="button"
           onClick={handleDismiss}
