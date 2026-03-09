@@ -35,9 +35,9 @@ export function CompanyLogo({
     );
   }
 
-  // Check if this logo needs a white background (dark logos like Fnatic)
+  // Check if this logo needs inversion in dark mode (dark/black logos)
   const normalizedName = name?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
-  const needsWhiteBg = DARK_LOGO_COMPANIES.has(normalizedName);
+  const needsDarkModeInvert = DARK_LOGO_COMPANIES.has(normalizedName);
 
   return (
     <img
@@ -45,7 +45,7 @@ export function CompanyLogo({
       alt={`${name} logo`}
       width={size}
       height={size}
-      className={`rounded-full object-cover shrink-0 ${needsWhiteBg ? "bg-white" : ""} ${className}`}
+      className={`rounded-full object-cover shrink-0 ${needsDarkModeInvert ? "dark:invert" : ""} ${className}`}
       onError={() => setImgError(true)}
     />
   );

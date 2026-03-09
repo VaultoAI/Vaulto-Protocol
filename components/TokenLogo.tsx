@@ -59,9 +59,9 @@ export function TokenLogo({
     );
   }
 
-  // Check if this logo needs a white background (dark logos)
+  // Check if this logo needs inversion in dark mode (dark/black logos)
   const normalizedName = companyName?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
-  const needsWhiteBg = DARK_LOGO_SYMBOLS.has(symbol) || DARK_LOGO_COMPANIES.has(normalizedName);
+  const needsDarkModeInvert = DARK_LOGO_SYMBOLS.has(symbol) || DARK_LOGO_COMPANIES.has(normalizedName);
 
   return (
     <img
@@ -69,7 +69,7 @@ export function TokenLogo({
       alt=""
       width={size}
       height={size}
-      className={`rounded-full shrink-0 ${needsWhiteBg ? "bg-white" : ""} ${className}`}
+      className={`rounded-full shrink-0 ${needsDarkModeInvert ? "dark:invert" : ""} ${className}`}
       style={{ width: size, height: size }}
       onError={() => setImgError(true)}
     />

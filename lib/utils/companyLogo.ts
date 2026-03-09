@@ -89,9 +89,10 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
 };
 
 /**
- * Set of company names (normalized) that have dark logos and need a white background.
+ * Set of company names (normalized) that have dark logos.
+ * These logos are inverted in dark mode (black -> white).
  */
-export const DARK_LOGO_COMPANIES = new Set<string>(["fanatics"]);
+export const DARK_LOGO_COMPANIES = new Set<string>(["fanatics", "fanaticsholdings"]);
 
 /**
  * Extract domain from a website URL.
