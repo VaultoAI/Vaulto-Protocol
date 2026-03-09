@@ -4,8 +4,20 @@ import {
   formatValuation,
 } from "@/lib/vaulto/companies";
 import { MintTable } from "@/components/MintTable";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export default async function MintPage() {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/");
+  }
+
+  if (!session.user.isVaultoEmployee) {
+    redirect("/waitlist-success");
+  }
+
   const [companies, metrics] = await Promise.all([
     getPrivateCompanies(),
     getPrivateCompanyMetrics(),

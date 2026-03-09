@@ -1,6 +1,8 @@
 import { getPrivateCompanies, getSyntheticSymbol, formatValuation, type PrivateCompany } from "@/lib/vaulto/companies";
 import { formatUSD, formatPercent } from "@/lib/format";
 import { EarnPoolsTable, type StockPool } from "@/components/EarnPoolsTable";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 /**
  * Seeded random number generator for consistent demo data.
@@ -40,6 +42,16 @@ function generateDemoMetrics(company: PrivateCompany) {
 }
 
 export default async function EarnPage() {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/");
+  }
+
+  if (!session.user.isVaultoEmployee) {
+    redirect("/waitlist-success");
+  }
+
   const companies = await getPrivateCompanies();
 
   // Generate demo pool data for each company

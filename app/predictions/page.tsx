@@ -1,7 +1,19 @@
 import { getCompanyIPOs, formatValuationPrecise } from "@/lib/polymarket/ipo-valuations";
 import { IPOValuationList } from "@/components/IPOValuationList";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export default async function PredictionsPage() {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/");
+  }
+
+  if (!session.user.isVaultoEmployee) {
+    redirect("/waitlist-success");
+  }
+
   const ipos = await getCompanyIPOs();
 
   // Calculate aggregate metrics
