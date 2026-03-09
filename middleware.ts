@@ -52,12 +52,16 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
-  // Check if accessing onboarding routes (always allow after auth)
+  // Check if accessing onboarding routes
   const isOnboardingRoute = onboardingExemptRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
   if (isOnboardingRoute) {
+    // If onboarding is disabled, redirect away from onboarding page
+    if (pathname === "/onboarding" && !isOnboardingEnforcementEnabled()) {
+      return NextResponse.redirect(new URL("/swap", req.url));
+    }
     // Only require authentication for onboarding page itself
     if (pathname === "/onboarding" && !session?.user) {
       return NextResponse.redirect(new URL("/", req.url));
