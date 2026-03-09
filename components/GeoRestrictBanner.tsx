@@ -38,13 +38,13 @@ export function GeoRestrictBanner() {
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-amber-950 text-center text-sm py-2 px-4 md:left-48">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500/40 backdrop-blur-sm text-amber-950 dark:text-amber-200 text-center text-sm py-2 px-4 md:left-48">
       <div className="flex items-center justify-center gap-2">
         <span className="flex-1 md:flex-none">Platform has limited functionality for US persons.</span>
         <button
           type="button"
           onClick={handleDismiss}
-          className="ml-2 p-2 -m-2 text-amber-950/70 hover:text-amber-950 active:text-amber-950 touch-manipulation"
+          className="hidden md:block ml-2 p-2 -m-2 text-amber-950/70 hover:text-amber-950 active:text-amber-950 dark:text-amber-200/70 dark:hover:text-amber-200 touch-manipulation"
           aria-label="Dismiss"
         >
           <svg
