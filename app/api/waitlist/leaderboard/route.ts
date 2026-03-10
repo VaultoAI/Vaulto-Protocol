@@ -9,6 +9,7 @@ export interface LeaderboardUser {
   bonusPoints: number;
   createdAt: string;
   isCurrentUser: boolean;
+  hasSharedToX: boolean;
 }
 
 export interface LeaderboardResponse {
@@ -103,6 +104,7 @@ export async function GET() {
         bonusPoints: user.bonusPoints,
         createdAt: user.createdAt.toISOString(),
         isCurrentUser: user.email === session.user?.email,
+        hasSharedToX: user.hasSharedToX,
       }));
 
     // If current user is not in top 50, add them at the end
@@ -114,6 +116,7 @@ export async function GET() {
         bonusPoints: currentUserData.bonusPoints,
         createdAt: currentUserData.createdAt.toISOString(),
         isCurrentUser: true,
+        hasSharedToX: currentUserData.hasSharedToX,
       });
     }
 

@@ -4,6 +4,22 @@ import { Fragment } from "react";
 import { useLeaderboard } from "@/hooks/waitlist";
 import { PointsCounter } from "./PointsCounter";
 
+function VerifiedBadge() {
+  return (
+    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-black px-2 py-0.5">
+      <svg
+        className="h-3 w-3 flex-shrink-0"
+        viewBox="0 0 24 24"
+        fill="white"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+      <span className="text-[10px] font-semibold text-white">Verified</span>
+    </span>
+  );
+}
+
 export function WaitlistLeaderboard() {
   const { leaderboard, totalUsers, isLoading, isError } = useLeaderboard();
 
@@ -96,13 +112,14 @@ export function WaitlistLeaderboard() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={
+                        className={`inline-flex items-center ${
                           user.isCurrentUser
                             ? "font-medium text-blue-500"
                             : "text-[var(--foreground)]"
-                        }
+                        }`}
                       >
                         {user.isCurrentUser ? "YOU" : user.displayName}
+                        {user.hasSharedToX && <VerifiedBadge />}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -144,13 +161,14 @@ export function WaitlistLeaderboard() {
                     #{user.rank}
                   </span>
                   <span
-                    className={
+                    className={`inline-flex items-center ${
                       user.isCurrentUser
                         ? "font-medium text-blue-500"
                         : "text-[var(--foreground)]"
-                    }
+                    }`}
                   >
                     {user.isCurrentUser ? "YOU" : user.displayName}
+                    {user.hasSharedToX && <VerifiedBadge />}
                   </span>
                 </div>
                 <PointsCounter
