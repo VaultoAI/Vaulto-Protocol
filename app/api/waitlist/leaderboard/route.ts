@@ -20,6 +20,8 @@ export interface LeaderboardResponse {
     bonusPoints: number;
     createdAt: string;
     hasSharedToX: boolean;
+    referralCode: string | null;
+    referralCount: number;
   } | null;
   totalUsers: number;
 }
@@ -42,7 +44,7 @@ function formatDisplayName(name: string | null, email: string): string {
 
 function calculatePoints(createdAt: Date, bonusPoints: number): number {
   const now = new Date();
-  const timeBasedPoints = Math.floor((now.getTime() - createdAt.getTime()) / 1000);
+  const timeBasedPoints = Math.floor((now.getTime() - createdAt.getTime()) / 1000) * 3;
   return timeBasedPoints + bonusPoints;
 }
 
@@ -72,6 +74,12 @@ export async function GET() {
         createdAt: true,
         bonusPoints: true,
         hasSharedToX: true,
+        referralCode: true,
+        _count: {
+          select: {
+            referrals: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "asc", // Oldest first = most points
@@ -129,6 +137,8 @@ export async function GET() {
             bonusPoints: currentUserData.bonusPoints,
             createdAt: currentUserData.createdAt.toISOString(),
             hasSharedToX: currentUserData.hasSharedToX,
+            referralCode: currentUserData.referralCode,
+            referralCount: currentUserData._count.referrals,
           }
         : null,
       totalUsers: waitlistUsers.length,
