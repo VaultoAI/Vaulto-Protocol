@@ -15,6 +15,28 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.png",
   },
+  metadataBase: new URL("https://protocol.vaulto.ai"),
+  openGraph: {
+    title: "Vaulto — Trade Faster & Smarter",
+    description: "Join the waitlist for early access to tokenized private company stocks. Trade pre-IPO companies like SpaceX, Anduril, and more.",
+    url: "https://protocol.vaulto.ai",
+    siteName: "Vaulto Protocol",
+    images: [
+      {
+        url: "/socialbanner.png",
+        width: 1200,
+        height: 630,
+        alt: "Vaulto - Trade faster & smarter",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vaulto — Trade Faster & Smarter",
+    description: "Join the waitlist for early access to tokenized private company stocks. Trade pre-IPO companies like SpaceX, Anduril, and more.",
+    images: ["/socialbanner.png"],
+  },
 };
 
 const themeScript = `
