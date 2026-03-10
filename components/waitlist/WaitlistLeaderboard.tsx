@@ -3,21 +3,47 @@
 import { Fragment } from "react";
 import { useLeaderboard } from "@/hooks/waitlist";
 import { PointsCounter } from "./PointsCounter";
+import { ShareToXButton } from "./ShareToXButton";
 
 function VerifiedBadge() {
   return (
-    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-black px-2 py-0.5">
+    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5">
       <svg
         className="h-3 w-3 flex-shrink-0"
         viewBox="0 0 24 24"
-        fill="white"
+        fill="black"
         xmlns="http://www.w3.org/2000/svg"
       >
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
       </svg>
-      <span className="text-[10px] font-semibold text-white">Verified</span>
+      <span className="text-[10px] font-semibold text-black">Verified</span>
     </span>
   );
+}
+
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <span className="text-xl font-bold text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.5)]">
+        1
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span className="text-xl font-bold text-slate-300 drop-shadow-[0_0_3px_rgba(203,213,225,0.5)]">
+        2
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span className="text-xl font-bold text-amber-600 drop-shadow-[0_0_3px_rgba(217,119,6,0.5)]">
+        3
+      </span>
+    );
+  }
+  return <span className="text-[var(--muted)]">{rank}</span>;
 }
 
 export function WaitlistLeaderboard() {
@@ -107,27 +133,29 @@ export function WaitlistLeaderboard() {
                         : "hover:bg-[var(--muted)]/5"
                     }`}
                   >
-                    <td className="px-4 py-3 text-[var(--muted)]">
-                      {user.rank}
+                    <td className="px-4 py-3">
+                      <RankBadge rank={user.rank} />
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center ${
+                        className={
                           user.isCurrentUser
-                            ? "font-medium text-blue-500"
+                            ? "font-bold text-blue-500"
                             : "text-[var(--foreground)]"
-                        }`}
+                        }
                       >
-                        {user.isCurrentUser ? "YOU" : user.displayName}
-                        {user.hasSharedToX && <VerifiedBadge />}
+                        {user.displayName}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <PointsCounter
-                        createdAt={user.createdAt}
-                        bonusPoints={user.bonusPoints}
-                        className="text-[var(--foreground)]"
-                      />
+                      <span className="inline-flex items-center justify-end gap-2">
+                        {user.hasSharedToX && <VerifiedBadge />}
+                        <PointsCounter
+                          createdAt={user.createdAt}
+                          bonusPoints={user.bonusPoints}
+                          className="text-[var(--foreground)]"
+                        />
+                      </span>
                     </td>
                   </tr>
                 </Fragment>
@@ -157,25 +185,27 @@ export function WaitlistLeaderboard() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-8 text-sm text-[var(--muted)]">
-                    #{user.rank}
+                  <span className="w-8">
+                    <RankBadge rank={user.rank} />
                   </span>
                   <span
-                    className={`inline-flex items-center ${
+                    className={
                       user.isCurrentUser
-                        ? "font-medium text-blue-500"
+                        ? "font-bold text-blue-500"
                         : "text-[var(--foreground)]"
-                    }`}
+                    }
                   >
-                    {user.isCurrentUser ? "YOU" : user.displayName}
-                    {user.hasSharedToX && <VerifiedBadge />}
+                    {user.displayName}
                   </span>
                 </div>
-                <PointsCounter
-                  createdAt={user.createdAt}
-                  bonusPoints={user.bonusPoints}
-                  className="text-sm text-[var(--foreground)]"
-                />
+                <span className="inline-flex items-center gap-2">
+                  {user.hasSharedToX && <VerifiedBadge />}
+                  <PointsCounter
+                    createdAt={user.createdAt}
+                    bonusPoints={user.bonusPoints}
+                    className="text-sm text-[var(--foreground)]"
+                  />
+                </span>
               </div>
             </Fragment>
           );

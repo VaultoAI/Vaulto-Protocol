@@ -33,24 +33,7 @@ export function ShareToXButton({
   }, [onShare]);
 
   if (hasShared || justShared) {
-    return (
-      <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-4 py-2 text-sm text-green-500">
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-        <span>+100,000 points claimed!</span>
-      </div>
-    );
+    return null;
   }
 
   return (

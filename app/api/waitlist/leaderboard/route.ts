@@ -32,7 +32,7 @@ function formatDisplayName(name: string | null, email: string): string {
     if (parts.length >= 2) {
       const firstName = parts[0];
       const lastInitial = parts[parts.length - 1][0]?.toUpperCase();
-      return `${firstName} ${lastInitial}.`;
+      return `${firstName} ${lastInitial}`;
     }
     return parts[0];
   }

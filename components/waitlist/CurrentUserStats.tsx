@@ -5,6 +5,13 @@ import { PointsCounter } from "./PointsCounter";
 import { ShareToXButton } from "./ShareToXButton";
 import { useLeaderboard } from "@/hooks/waitlist";
 
+function getRankStyles(rank: number): string {
+  if (rank === 1) return "text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.5)]";
+  if (rank === 2) return "text-slate-300 drop-shadow-[0_0_3px_rgba(203,213,225,0.5)]";
+  if (rank === 3) return "text-amber-600 drop-shadow-[0_0_3px_rgba(217,119,6,0.5)]";
+  return "text-[var(--foreground)]";
+}
+
 export function CurrentUserStats() {
   const { currentUser, isLoading, shareToX, isSharing } = useLeaderboard();
   const [copied, setCopied] = useState(false);
@@ -61,14 +68,11 @@ export function CurrentUserStats() {
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-      <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
-        Your Stats
-      </h3>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-10">
           <div>
             <div className="text-sm text-[var(--muted)]">Rank</div>
-            <div className="text-2xl font-semibold text-[var(--foreground)]">
+            <div className={`text-2xl font-semibold ${getRankStyles(currentUser.rank)}`}>
               #{currentUser.rank}
             </div>
           </div>

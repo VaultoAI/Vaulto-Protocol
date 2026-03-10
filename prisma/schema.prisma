@@ -95,6 +95,12 @@ model User {
   hasSharedToX          Boolean             @default(false)
   sharedToXAt           DateTime?
 
+  // Referral system
+  referralCode          String?             @unique
+  referredById          String?
+  referredBy            User?               @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals             User[]              @relation("UserReferrals")
+
   // Relations
   geoVerifications      GeoVerification[]
   kycVerification       KycVerification?
@@ -107,6 +113,7 @@ model User {
   @@index([email])
   @@index([onboardingStatus])
   @@index([createdAt])
+  @@index([referralCode])
 }
 
 model GeoVerification {
