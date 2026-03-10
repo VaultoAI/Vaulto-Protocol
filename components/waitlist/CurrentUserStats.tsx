@@ -91,17 +91,6 @@ export function CurrentUserStats() {
             </div>
           </div>
         </div>
-        {currentUser.referralCode && (
-          <button
-            onClick={handleShareReferral}
-            className="inline-flex items-center justify-center gap-1 rounded-full bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-500 transition-opacity active:opacity-70"
-          >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
-            </svg>
-            Earn 250k
-          </button>
-        )}
       </div>
 
       {/* Desktop Layout */}

@@ -25,61 +25,6 @@ const FLOATING_LOGOS = [
   { domain: "anduril.com", name: "Anduril", size: 58, top: "90%", right: "22%", delay: "1.8s", hideOnMobile: true },
 ];
 
-function MobileShareButton() {
-  const { currentUser } = useLeaderboard();
-  const [isSharePending, setIsSharePending] = useState(false);
-
-  const handleShare = useCallback(async () => {
-    if (!currentUser?.referralCode || isSharePending) return;
-
-    const referralUrl = `https://protocol.vaulto.ai?ref=${currentUser.referralCode}`;
-
-    if (navigator.share) {
-      try {
-        setIsSharePending(true);
-        await navigator.share({
-          title: "Join Vaulto",
-          text: "Join me on Vaulto and get early access to trade private company stocks!",
-          url: referralUrl,
-        });
-      } catch (error) {
-        if ((error as Error).name !== "AbortError" && (error as Error).name !== "InvalidStateError") {
-          console.error("Share failed:", error);
-        }
-      } finally {
-        setIsSharePending(false);
-      }
-    }
-  }, [currentUser?.referralCode, isSharePending]);
-
-  if (!currentUser?.referralCode) return null;
-
-  return (
-    <button
-      onClick={handleShare}
-      disabled={isSharePending}
-      className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--background)]/80 px-4 py-2 text-sm backdrop-blur-sm transition-all hover:bg-[var(--background)] disabled:opacity-50 md:hidden"
-    >
-      <svg
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"
-        />
-      </svg>
-      <span className="text-xs">
-        Earn <span className="font-semibold text-purple-500">250k pts</span>
-      </span>
-    </button>
-  );
-}
-
 function FloatingLogo({
   logo,
   index,
@@ -200,14 +145,6 @@ export function WaitlistSuccess({ user, userData }: WaitlistSuccessProps) {
 
       {/* Content */}
       <div className="relative z-10 flex w-full max-w-2xl flex-col items-center px-6 py-12">
-        {/* Mobile Share Button - Fixed at top right on mobile */}
-        {userData && (
-          <div className="fixed right-4 top-4 z-20 animate-fade-in-up animation-delay-500">
-            <TickProvider>
-              <MobileShareButton />
-            </TickProvider>
-          </div>
-        )}
 
         {/* Logo */}
         <div className="animate-scale-in mb-12">
