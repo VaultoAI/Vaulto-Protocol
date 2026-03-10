@@ -44,7 +44,7 @@ function formatDisplayName(name: string | null, email: string): string {
 
 function calculatePoints(createdAt: Date, bonusPoints: number): number {
   const now = new Date();
-  const timeBasedPoints = Math.floor((now.getTime() - createdAt.getTime()) / 1000) * 3;
+  const timeBasedPoints = Math.floor((now.getTime() - createdAt.getTime()) / 333);
   return timeBasedPoints + bonusPoints;
 }
 

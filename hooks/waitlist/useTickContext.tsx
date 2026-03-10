@@ -10,7 +10,7 @@ export function TickProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const interval = setInterval(() => {
       setTick((t) => t + 1);
-    }, 1000);
+    }, 333);
 
     return () => clearInterval(interval);
   }, []);

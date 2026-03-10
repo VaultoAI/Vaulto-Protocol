@@ -9,7 +9,7 @@ export function usePointsCounter(createdAt: Date | string, bonusPoints: number):
   const points = useMemo(() => {
     const createdAtDate = typeof createdAt === "string" ? new Date(createdAt) : createdAt;
     const now = new Date();
-    const timeBasedPoints = Math.floor((now.getTime() - createdAtDate.getTime()) / 1000) * 3;
+    const timeBasedPoints = Math.floor((now.getTime() - createdAtDate.getTime()) / 333);
     return timeBasedPoints + bonusPoints;
   }, [createdAt, bonusPoints, tick]);
 
