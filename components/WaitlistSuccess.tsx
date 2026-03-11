@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { CurrentUserStats, WaitlistLeaderboard } from "./waitlist";
+import { CurrentUserStats, WaitlistLeaderboard, PointsCounter } from "./waitlist";
 import { TickProvider, useLeaderboard } from "@/hooks/waitlist";
 
 // Company logos for floating background - positioned on edges to avoid content overlap
@@ -201,9 +201,33 @@ export function WaitlistSuccess({
         </h1>
 
         {isEmailSignupMode ? (
-          <p className="animate-fade-in-up animation-delay-300 mb-8 max-w-md text-center text-[var(--muted)]">
-            We&apos;ll notify you when Vaulto is ready.
-          </p>
+          <>
+            <p className="animate-fade-in-up animation-delay-300 mb-8 max-w-md text-center text-[var(--muted)]">
+              We&apos;ll notify you when Vaulto is ready.
+            </p>
+
+            {/* Points display for email signup users */}
+            {userData && (
+              <TickProvider>
+                <div className="animate-fade-in-up animation-delay-400 w-full">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="text-sm text-[var(--muted)]">Your Points</div>
+                      <div className="text-3xl font-semibold text-[var(--foreground)]">
+                        <PointsCounter
+                          createdAt={userData.createdAt}
+                          bonusPoints={userData.bonusPoints}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-[var(--muted)]">
+                        Your points increase every second. Sign in with Google later to see your rank and share with friends.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </TickProvider>
+            )}
+          </>
         ) : (
           <>
             <p className="animate-fade-in-up animation-delay-300 mb-8 max-w-md text-center text-[var(--muted)]">

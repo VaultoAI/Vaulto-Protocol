@@ -4,19 +4,20 @@ import { cookies } from "next/headers";
 import { WaitlistSuccess } from "@/components/WaitlistSuccess";
 import { prisma } from "@/lib/prisma";
 
-type Props = { searchParams: Promise<{ from?: string; name?: string }> };
+type Props = { searchParams: Promise<{ from?: string; name?: string; createdAt?: string }> };
 
 export default async function WaitlistSuccessPage({ searchParams }: Props) {
   const session = await auth();
   const params = await searchParams;
   const fromEmail = params.from === "email";
   const emailSignupFirstName = typeof params.name === "string" ? params.name.trim().slice(0, 100) : null;
+  const emailSignupCreatedAt = typeof params.createdAt === "string" ? params.createdAt : null;
 
   if (fromEmail && !session?.user) {
     return (
       <WaitlistSuccess
         user={null}
-        userData={null}
+        userData={emailSignupCreatedAt ? { createdAt: emailSignupCreatedAt, bonusPoints: 0, hasSharedToX: false } : null}
         pendingReferralCode={null}
         emailSignupFirstName={emailSignupFirstName || undefined}
       />

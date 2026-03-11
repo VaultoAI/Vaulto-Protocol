@@ -82,9 +82,10 @@ export async function POST(request: Request) {
       );
     }
 
+    let newUser;
     if (referrerId) {
-      await db.$transaction(async (tx) => {
-        const newUser = await tx.user.create({
+      newUser = await db.$transaction(async (tx) => {
+        const user = await tx.user.create({
           data: {
             email: rawEmail,
             name: firstName,
@@ -97,10 +98,10 @@ export async function POST(request: Request) {
           where: { id: referrerId! },
           data: { bonusPoints: { increment: REFERRAL_BONUS_POINTS } },
         });
-        return newUser;
+        return user;
       });
     } else {
-      await db.user.create({
+      newUser = await db.user.create({
         data: {
           email: rawEmail,
           name: firstName,
@@ -111,7 +112,12 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { success: true, message: "You're on the list!" },
+      {
+        success: true,
+        message: "You're on the list!",
+        createdAt: newUser.createdAt.toISOString(),
+        bonusPoints: newUser.bonusPoints,
+      },
       { status: 201 }
     );
   } catch (error) {

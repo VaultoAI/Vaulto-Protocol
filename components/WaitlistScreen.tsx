@@ -69,7 +69,8 @@ export function WaitlistScreen() {
           return;
         }
         const nameParam = encodeURIComponent(trimmedFirstName);
-        window.location.href = `/waitlist-success?from=email&name=${nameParam}`;
+        const createdAtParam = data.createdAt ? `&createdAt=${encodeURIComponent(data.createdAt)}` : "";
+        window.location.href = `/waitlist-success?from=email&name=${nameParam}${createdAtParam}`;
       } catch {
         setError("Something went wrong. Please try again.");
       } finally {
