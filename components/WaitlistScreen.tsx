@@ -5,8 +5,10 @@ import { useEffect, useState, useCallback } from "react";
 import { GoogleSignInButton } from "./GoogleSignInButton";
 
 // User-agent patterns for in-app / embedded browsers (Google blocks OAuth in these)
+// NOTE: CriOS (Chrome iOS), FxiOS (Firefox iOS), EdgiOS (Edge iOS), and SamsungBrowser
+// are real browsers, NOT embedded WebViews. Google OAuth redirect flow works fine in them.
 const EMBEDDED_BROWSER_PATTERNS =
-  /WebView|wv\)|Instagram|FBAN|FBAV|Line\/|Twitter|Slack|Discord|Electron|CriOS|FxiOS|EdgiOS|InApp|SamsungBrowser\/.*Mobile/i;
+  /WebView|wv\)|Instagram|FBAN|FBAV|Line\/|Twitter|Slack|Discord|Electron|InApp/i;
 
 function isEmbeddedBrowser(): boolean {
   if (typeof navigator === "undefined") return false;
