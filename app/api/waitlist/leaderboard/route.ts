@@ -59,6 +59,24 @@ function calculatePoints(createdAt: Date, bonusPoints: number): number {
   return timeBasedPoints + bonusPoints;
 }
 
+// For users outside top 50, calculate their adjusted rank.
+// Users who signed up AFTER the USER_MULTIPLE row was created should have
+// their rank offset by the historical user count (they're behind all those users).
+// Users who signed up BEFORE USER_MULTIPLE keep their original rank.
+function getAdjustedRank(
+  baseRank: number,
+  userCreatedAt: Date,
+  userMultipleCreatedAt: Date | null,
+  additionalUsers: number
+): number {
+  // If user_multiple doesn't exist or user was created before it, no offset
+  if (!userMultipleCreatedAt || userCreatedAt < userMultipleCreatedAt) {
+    return baseRank;
+  }
+  // User signed up after historical import - add offset
+  return baseRank + additionalUsers;
+}
+
 export async function GET() {
   try {
     const session = await auth();
@@ -75,13 +93,16 @@ export async function GET() {
     // Get the special aggregate waitlist row. This represents people who
     // previously signed up for the waitlist but do not exist as individual
     // User rows in the database. The "name" field stores their count.
+    // We also fetch createdAt to determine which users should have their
+    // rank offset by the historical user count.
     const userMultipleRow = await db.user.findUnique({
       where: { id: USER_MULTIPLE_ID },
-      select: { name: true },
+      select: { name: true, createdAt: true },
     });
 
     const additionalWaitlistUsers =
       userMultipleRow?.name ? Number(userMultipleRow.name) || 0 : 0;
+    const userMultipleCreatedAt = userMultipleRow?.createdAt || null;
 
     // Get all waitlist users (NOT_STARTED onboarding status), excluding the aggregate row
     const waitlistUsers = await db.user.findMany({
@@ -138,10 +159,16 @@ export async function GET() {
         hasSharedToX: user.hasSharedToX,
       }));
 
-    // If current user is not in top 50, add them at the end
+    // If current user is not in top 50, add them at the end with adjusted rank
     if (currentUserIndex >= 50 && currentUserData) {
+      const adjustedRank = getAdjustedRank(
+        currentUserIndex + 1,
+        currentUserData.createdAt,
+        userMultipleCreatedAt,
+        additionalWaitlistUsers
+      );
       leaderboard.push({
-        rank: currentUserIndex + 1,
+        rank: adjustedRank,
         displayName: formatDisplayName(currentUserData.name, currentUserData.email),
         points: currentUserData.points,
         bonusPoints: currentUserData.bonusPoints,
@@ -151,11 +178,23 @@ export async function GET() {
       });
     }
 
+    // Calculate current user's rank (adjusted for users outside top 50)
+    const currentUserRank = currentUserData
+      ? currentUserIndex < 50
+        ? currentUserIndex + 1 // Top 50 keeps normal rank
+        : getAdjustedRank(
+            currentUserIndex + 1,
+            currentUserData.createdAt,
+            userMultipleCreatedAt,
+            additionalWaitlistUsers
+          )
+      : 0;
+
     return NextResponse.json({
       leaderboard,
       currentUser: currentUserData
         ? {
-            rank: currentUserIndex + 1,
+            rank: currentUserRank,
             points: currentUserData.points,
             bonusPoints: currentUserData.bonusPoints,
             createdAt: currentUserData.createdAt.toISOString(),
