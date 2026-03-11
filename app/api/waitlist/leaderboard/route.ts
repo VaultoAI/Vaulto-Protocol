@@ -23,8 +23,19 @@ export interface LeaderboardResponse {
     referralCode: string | null;
     referralCount: number;
   } | null;
+  // Total number of people on the waitlist, including:
+  // - Individual user records with onboardingStatus = NOT_STARTED
+  // - Historical signups that are not stored as individual User rows
   totalUsers: number;
 }
+
+// Special synthetic User row that aggregates historical waitlist signups
+// that were collected outside of the current Supabase-backed system.
+// The numeric value is stored in the "name" field and represents the
+// count of those external waitlist users. This row MUST:
+// - Be included in total waitlist counts
+// - Never be surfaced as a normal user in the leaderboard
+const USER_MULTIPLE_ID = "USER_MULTIPLE";
 
 function formatDisplayName(name: string | null, email: string): string {
   if (name) {
@@ -61,11 +72,23 @@ export async function GET() {
 
     const db = getDb();
 
-    // Get all waitlist users (NOT_STARTED onboarding status)
+    // Get the special aggregate waitlist row. This represents people who
+    // previously signed up for the waitlist but do not exist as individual
+    // User rows in the database. The "name" field stores their count.
+    const userMultipleRow = await db.user.findUnique({
+      where: { id: USER_MULTIPLE_ID },
+      select: { name: true },
+    });
+
+    const additionalWaitlistUsers =
+      userMultipleRow?.name ? Number(userMultipleRow.name) || 0 : 0;
+
+    // Get all waitlist users (NOT_STARTED onboarding status), excluding the aggregate row
     const waitlistUsers = await db.user.findMany({
       where: {
         onboardingStatus: "NOT_STARTED",
         isVaultoEmployee: false,
+        id: { not: USER_MULTIPLE_ID },
       },
       select: {
         id: true,
@@ -141,7 +164,7 @@ export async function GET() {
             referralCount: currentUserData._count.referrals,
           }
         : null,
-      totalUsers: waitlistUsers.length,
+      totalUsers: waitlistUsers.length + additionalWaitlistUsers,
     } as LeaderboardResponse);
   } catch (error) {
     console.error("Get leaderboard error:", error);
