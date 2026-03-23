@@ -231,23 +231,28 @@ export function AddLiquidityModal({
             {!initialPool && (
               <div className="mt-4">
                 <label className="block text-sm font-medium">Select Pool</label>
-                <select
-                  value={selectedPool?.company.id || ""}
-                  onChange={(e) => {
-                    const pool = pools.find(
-                      (p) => p.company.id === parseInt(e.target.value)
-                    );
-                    setSelectedPool(pool || null);
-                  }}
-                  className="mt-1 w-full rounded border border-border bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-1 focus:ring-border"
-                >
-                  <option value="">Choose a pool...</option>
-                  {pools.map((pool) => (
-                    <option key={pool.company.id} value={pool.company.id}>
-                      {pool.poolName} - {formatPercent(pool.apr)} APR
-                    </option>
-                  ))}
-                </select>
+                <div className="relative mt-1">
+                  <select
+                    value={selectedPool?.company.id || ""}
+                    onChange={(e) => {
+                      const pool = pools.find(
+                        (p) => p.company.id === parseInt(e.target.value)
+                      );
+                      setSelectedPool(pool || null);
+                    }}
+                    className="appearance-none w-full rounded-lg border border-border/50 bg-card-bg px-4 py-3 pr-10 text-foreground transition-all hover:border-border focus:outline-none focus:ring-2 focus:ring-green/20 focus:border-green/50 cursor-pointer"
+                  >
+                    <option value="">Choose a pool...</option>
+                    {pools.map((pool) => (
+                      <option key={pool.company.id} value={pool.company.id}>
+                        {pool.poolName} - {formatPercent(pool.apr)} APR
+                      </option>
+                    ))}
+                  </select>
+                  <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             )}
 

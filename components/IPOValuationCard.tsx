@@ -59,8 +59,9 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
   return (
     <div className="rounded-lg border border-border bg-background overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center px-4 py-3 border-b border-border bg-muted/20">
+        {/* Left: Logo + Name */}
+        <div className="flex items-center gap-3 flex-shrink-0">
           <CompanyLogo name={ipo.company} website={ipo.website} size={40} />
           <div>
             <h3 className="text-lg font-semibold">{ipo.company} IPO</h3>
@@ -74,40 +75,33 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
             </a>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {ipo.noIPOProbability !== undefined && (
-            <div className="text-right mr-2">
-              <p className="text-xs text-muted">No IPO</p>
-              <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                {(ipo.noIPOProbability * 100).toFixed(0)}%
-              </p>
-            </div>
-          )}
-          {onTrade && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => onTrade(ipo, "long")}
-                className="px-3 py-1.5 text-xs font-medium rounded bg-green-500 text-white hover:bg-green-600"
-                title="Long - bet IPO closes above expected value"
-              >
-                Long
-              </button>
-              <button
-                type="button"
-                onClick={() => onTrade(ipo, "short")}
-                className="px-3 py-1.5 text-xs font-medium rounded bg-red-500 text-white hover:bg-red-600"
-                title="Short - bet IPO closes below expected value"
-              >
-                Short
-              </button>
-            </div>
-          )}
-        </div>
+
+        {/* Right: Trade Buttons */}
+        {onTrade && (
+          <div className="flex-1 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => onTrade(ipo, "long")}
+              style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}
+              className="px-6 py-2 text-sm font-bold rounded-full text-white shadow-[0_0_12px_rgba(34,197,94,0.4)] hover:shadow-[0_0_20px_rgba(34,197,94,0.6)] hover:scale-105 active:scale-95 transition-all duration-200"
+            >
+              ▲ Long
+            </button>
+            <button
+              type="button"
+              onClick={() => onTrade(ipo, "short")}
+              style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)" }}
+              className="px-6 py-2 text-sm font-bold rounded-full text-white shadow-[0_0_12px_rgba(239,68,68,0.4)] hover:shadow-[0_0_20px_rgba(239,68,68,0.6)] hover:scale-105 active:scale-95 transition-all duration-200"
+            >
+              ▼ Short
+            </button>
+          </div>
+        )}
+
       </div>
 
       {/* Valuation Summary */}
-      <div className="px-4 py-3 grid grid-cols-1 gap-4 border-b border-border bg-muted/10 sm:grid-cols-2">
+      <div className="px-4 py-3 flex flex-wrap items-start gap-8 border-b border-border bg-muted/10">
         <div>
           <p className="text-xs text-muted uppercase tracking-wide">Expected IPO Value</p>
           <p className="mt-0.5 text-xl font-semibold text-blue-600 dark:text-blue-400">
@@ -122,6 +116,15 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
               {formatValuationPrecise(ipo.currentValuation)}
             </p>
             <p className="text-xs text-muted">(via Vaulto)</p>
+          </div>
+        )}
+        {ipo.noIPOProbability !== undefined && (
+          <div>
+            <p className="text-xs text-muted uppercase tracking-wide">No IPO Probability</p>
+            <p className="mt-0.5 text-xl font-semibold text-orange-600 dark:text-orange-400">
+              {(ipo.noIPOProbability * 100).toFixed(0)}%
+            </p>
+            <p className="text-xs text-muted">&nbsp;</p>
           </div>
         )}
       </div>

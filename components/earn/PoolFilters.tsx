@@ -87,47 +87,62 @@ export function PoolFilters({
           placeholder="Search pools..."
           value={filters.search}
           onChange={handleSearchChange}
-          className="w-full rounded border border-border bg-background pl-10 pr-4 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-border"
+          className="w-full rounded-lg border border-border/50 bg-card-bg pl-10 pr-4 py-2.5 text-sm placeholder:text-muted transition-all hover:border-border focus:outline-none focus:ring-2 focus:ring-green/20 focus:border-green/50"
         />
       </div>
 
       {/* Industry Filter */}
-      <select
-        value={filters.industry}
-        onChange={handleIndustryChange}
-        className="rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-border"
-      >
-        <option value="">All Industries</option>
-        {industries.map((industry) => (
-          <option key={industry} value={industry}>
-            {industry}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={filters.industry}
+          onChange={handleIndustryChange}
+          className="appearance-none rounded-lg border border-border/50 bg-card-bg px-4 py-2.5 pr-9 text-sm text-foreground transition-all hover:border-border focus:outline-none focus:ring-2 focus:ring-green/20 focus:border-green/50 cursor-pointer"
+        >
+          <option value="">All Industries</option>
+          {industries.map((industry) => (
+            <option key={industry} value={industry}>
+              {industry}
+            </option>
+          ))}
+        </select>
+        <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
 
       {/* Min APR Filter */}
-      <select
-        value={filters.minApr ?? ""}
-        onChange={handleMinAprChange}
-        className="rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-border"
-      >
-        <option value="">Any APR</option>
-        <option value="15">15%+ APR</option>
-        <option value="20">20%+ APR</option>
-        <option value="25">25%+ APR</option>
-        <option value="30">30%+ APR</option>
-      </select>
+      <div className="relative">
+        <select
+          value={filters.minApr ?? ""}
+          onChange={handleMinAprChange}
+          className="appearance-none rounded-lg border border-border/50 bg-card-bg px-4 py-2.5 pr-9 text-sm text-foreground transition-all hover:border-border focus:outline-none focus:ring-2 focus:ring-green/20 focus:border-green/50 cursor-pointer"
+        >
+          <option value="">Any APR</option>
+          <option value="15">15%+ APR</option>
+          <option value="20">20%+ APR</option>
+          <option value="25">25%+ APR</option>
+          <option value="30">30%+ APR</option>
+        </select>
+        <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
 
       {/* Sort By */}
-      <select
-        value={filters.sortBy}
-        onChange={handleSortChange}
-        className="rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-border"
-      >
-        <option value="tvl">Sort by TVL</option>
-        <option value="apr">Sort by APR</option>
-        <option value="volume">Sort by Volume</option>
-      </select>
+      <div className="relative">
+        <select
+          value={filters.sortBy}
+          onChange={handleSortChange}
+          className="appearance-none rounded-lg border border-border/50 bg-card-bg px-4 py-2.5 pr-9 text-sm text-foreground transition-all hover:border-border focus:outline-none focus:ring-2 focus:ring-green/20 focus:border-green/50 cursor-pointer"
+        >
+          <option value="tvl">Sort by TVL</option>
+          <option value="apr">Sort by APR</option>
+          <option value="volume">Sort by Volume</option>
+        </select>
+        <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
 
       {/* Clear Filters */}
       {hasActiveFilters && (
