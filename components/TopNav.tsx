@@ -9,7 +9,6 @@ import { ConnectWalletButton } from "@/components/ConnectWalletButton";
 
 const nav = [
   { href: "/mint", label: "Explore" },
-  { href: "/swap", label: "Swap" },
   { href: "/earn", label: "Earn" },
   { href: "/predictions", label: "Predictions" },
 ] as const;
