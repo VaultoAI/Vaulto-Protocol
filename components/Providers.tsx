@@ -1,27 +1,30 @@
 "use client";
 
+import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PrivyProvider } from "@privy-io/react-auth";
-import { WagmiProvider } from "@privy-io/wagmi";
+import { RainbowKitProvider, lightTheme } from "@rainbow-me/rainbowkit";
+import { WagmiProvider } from "wagmi";
 import { SessionProvider } from "next-auth/react";
-import { wagmiConfig } from "@/lib/wagmi";
-import { privyConfig } from "@/lib/privy";
+import { config } from "@/lib/wagmi";
 
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <PrivyProvider
-        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
-        config={privyConfig}
-      >
+      <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <WagmiProvider config={wagmiConfig}>
+          <RainbowKitProvider
+            theme={lightTheme({
+              accentColor: "#0a0a0a",
+              accentColorForeground: "white",
+              borderRadius: "medium",
+            })}
+          >
             {children}
-          </WagmiProvider>
+          </RainbowKitProvider>
         </QueryClientProvider>
-      </PrivyProvider>
+      </WagmiProvider>
     </SessionProvider>
   );
 }

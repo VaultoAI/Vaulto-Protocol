@@ -4,16 +4,14 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export default async function PredictionsPage() {
-  if (process.env.NODE_ENV !== "development") {
-    const session = await auth();
+  const session = await auth();
 
-    if (!session?.user) {
-      redirect("/");
-    }
+  if (!session?.user) {
+    redirect("/");
+  }
 
-    if (!session.user.isVaultoEmployee) {
-      redirect("/waitlist-success");
-    }
+  if (!session.user.isVaultoEmployee) {
+    redirect("/waitlist-success");
   }
 
   const ipos = await getCompanyIPOs();
@@ -23,7 +21,7 @@ export default async function PredictionsPage() {
   const totalBands = ipos.reduce((sum, ipo) => sum + ipo.bands.length, 0);
 
   return (
-    <div>
+    <div className="max-w-4xl">
       <h1 className="text-2xl font-medium tracking-tight">IPO Valuation Predictions</h1>
       <p className="mt-2 text-muted">
         Trade Long/Short positions on private company IPO valuations from Polymarket.

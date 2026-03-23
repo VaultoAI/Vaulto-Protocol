@@ -1,42 +1,60 @@
 import {
   getPrivateCompanies,
   getPrivateCompanyMetrics,
+  formatValuation,
 } from "@/lib/vaulto/companies";
-import { ExploreTopSection } from "@/components/ExploreTopSection";
-import { ExploreAssets } from "@/components/ExploreAssets";
+import { MintTable } from "@/components/MintTable";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export default async function MintPage() {
-  if (process.env.NODE_ENV !== "development") {
-    const session = await auth();
+  const session = await auth();
 
-    if (!session?.user) {
-      redirect("/");
-    }
-
-    if (!session.user.isVaultoEmployee) {
-      redirect("/waitlist-success");
-    }
+  if (!session?.user) {
+    redirect("/");
   }
 
-  const companies = await getPrivateCompanies();
+  if (!session.user.isVaultoEmployee) {
+    redirect("/waitlist-success");
+  }
+
+  const [companies, metrics] = await Promise.all([
+    getPrivateCompanies(),
+    getPrivateCompanyMetrics(),
+  ]);
 
   return (
-    <div>
-      {/* Top section: Gainers, Trending, Newly Added */}
-      <ExploreTopSection companies={companies} />
+    <div className="max-w-4xl">
+      <h1 className="text-2xl font-medium tracking-tight">Mint</h1>
+      <p className="mt-2 text-muted">
+        Mint synthetic exposure to private companies.
+      </p>
 
-      {/* Divider */}
-      <div className="border-b border-border" />
+      {/* Summary Stats */}
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-md border border-border bg-muted/30 px-4 py-3">
+          <p className="text-sm text-muted">Companies</p>
+          <p className="mt-1 text-xl font-medium">{metrics.companyCount}</p>
+        </div>
+        <div className="rounded-md border border-border bg-muted/30 px-4 py-3">
+          <p className="text-sm text-muted">Total Valuation</p>
+          <p className="mt-1 text-xl font-medium">
+            {formatValuation(metrics.totalValuation)}
+          </p>
+        </div>
+        <div className="rounded-md border border-border bg-muted/30 px-4 py-3">
+          <p className="text-sm text-muted">Total Funding</p>
+          <p className="mt-1 text-xl font-medium">
+            {formatValuation(metrics.totalFunding)}
+          </p>
+        </div>
+      </div>
 
-      {/* Explore Assets grid */}
-      <ExploreAssets companies={companies} />
+      <MintTable companies={companies} />
 
-      {/* Empty state */}
       {companies.length === 0 && (
-        <div className="mt-8 rounded-xl border border-border bg-card-bg px-6 py-16 text-center">
-          <p className="text-muted text-sm">No companies available for minting.</p>
+        <div className="mt-8 rounded-md border border-border bg-muted/30 px-6 py-12 text-center">
+          <p className="text-muted">No companies available for minting.</p>
         </div>
       )}
     </div>

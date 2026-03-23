@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Wallet, Shield, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { useAccount, useSignMessage } from "wagmi";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 interface WalletVerificationStepProps {
   onComplete: () => void;
@@ -16,15 +16,10 @@ export function WalletVerificationStep({
 }: WalletVerificationStepProps) {
   const { address, isConnected, chainId } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const { ready, authenticated, login } = usePrivy();
-  const { wallets } = useWallets();
 
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<"connect" | "sign" | "screening">("connect");
-
-  const activeWallet = wallets[0];
-  const displayAddress = activeWallet?.address;
 
   const handleVerify = async () => {
     if (!address || !chainId) {
@@ -91,30 +86,6 @@ export function WalletVerificationStep({
     }
   };
 
-  const ConnectWalletButton = () => {
-    if (!ready) {
-      return (
-        <button
-          type="button"
-          disabled
-          className="rounded-lg bg-foreground px-6 py-3 font-medium text-background opacity-50"
-        >
-          Loading...
-        </button>
-      );
-    }
-
-    return (
-      <button
-        type="button"
-        onClick={login}
-        className="rounded-lg bg-foreground px-6 py-3 font-medium text-background transition-opacity hover:opacity-90"
-      >
-        Connect Wallet
-      </button>
-    );
-  };
-
   if (!isConnected) {
     return (
       <div className="space-y-6">
@@ -147,7 +118,7 @@ export function WalletVerificationStep({
         </div>
 
         <div className="flex justify-center">
-          <ConnectWalletButton />
+          <ConnectButton />
         </div>
 
         <p className="text-center text-sm text-muted">
@@ -171,7 +142,7 @@ export function WalletVerificationStep({
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted">Connected Wallet</span>
           <span className="font-mono text-sm">
-            {displayAddress ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}` : `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+            {address?.slice(0, 6)}...{address?.slice(-4)}
           </span>
         </div>
       </div>
@@ -233,7 +204,7 @@ export function WalletVerificationStep({
       </button>
 
       <div className="flex justify-center">
-        <ConnectWalletButton />
+        <ConnectButton />
       </div>
     </div>
   );

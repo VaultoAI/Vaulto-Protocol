@@ -56,7 +56,7 @@ export function OnboardingComplete({ compliancePeriod }: OnboardingCompleteProps
 
           <div className="grid gap-3">
             <Link
-              href="/mint"
+              href="/swap"
               className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-border/50"
             >
               <div className="flex items-center gap-3">
@@ -64,9 +64,9 @@ export function OnboardingComplete({ compliancePeriod }: OnboardingCompleteProps
                   <Rocket className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Explore Assets</p>
+                  <p className="font-medium">Trade Tokens</p>
                   <p className="text-sm text-muted">
-                    Browse and mint synthetic company tokens
+                    Swap synthetic private company tokens
                   </p>
                 </div>
               </div>

@@ -19,7 +19,6 @@ export type StockPool = {
 
 type EarnPoolsTableProps = {
   pools: StockPool[];
-  onAddLiquidity?: (pool: StockPool) => void;
 };
 
 type ColumnKey = "pool" | "industry" | "valuation" | "tvl" | "volume" | "apr";
@@ -52,7 +51,7 @@ function IndustryBadge({ industry }: { industry: string }) {
   );
 }
 
-export function EarnPoolsTable({ pools, onAddLiquidity }: EarnPoolsTableProps) {
+export function EarnPoolsTable({ pools }: EarnPoolsTableProps) {
   const columns: SortableColumn<ColumnKey, StockPool>[] = useMemo(
     () => [
       { key: "pool", getValue: (p) => p.poolName },
@@ -111,15 +110,6 @@ export function EarnPoolsTable({ pools, onAddLiquidity }: EarnPoolsTableProps) {
                 <dd>{formatUSD(pool.volume24h)}</dd>
               </div>
             </dl>
-            {onAddLiquidity && (
-              <button
-                type="button"
-                onClick={() => onAddLiquidity(pool)}
-                className="mt-3 w-full rounded border border-foreground bg-foreground py-2 text-sm font-medium text-background hover:opacity-90"
-              >
-                Add Liquidity
-              </button>
-            )}
           </div>
         ))}
       </div>
@@ -176,9 +166,6 @@ export function EarnPoolsTable({ pools, onAddLiquidity }: EarnPoolsTableProps) {
                 onSort={handleSort as (column: string) => void}
                 className="text-muted text-right"
               />
-              {onAddLiquidity && (
-                <th className="py-3 px-4 font-medium text-muted text-right">Action</th>
-              )}
             </tr>
           </thead>
           <tbody>
@@ -196,17 +183,6 @@ export function EarnPoolsTable({ pools, onAddLiquidity }: EarnPoolsTableProps) {
                 <td className="py-3 px-4 text-right font-medium text-green-500">
                   {formatPercent(pool.apr)}
                 </td>
-                {onAddLiquidity && (
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onAddLiquidity(pool)}
-                      className="rounded border border-foreground bg-foreground px-3 py-1.5 text-sm font-medium text-background hover:opacity-90"
-                    >
-                      Add
-                    </button>
-                  </td>
-                )}
               </tr>
             ))}
           </tbody>
