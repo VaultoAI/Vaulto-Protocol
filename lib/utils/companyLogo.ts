@@ -1,8 +1,8 @@
 /**
  * Company logo utilities with hybrid approach:
  * 1. Static local assets (highest quality)
- * 2. Google Favicon API (automatic fallback)
- * 3. Letter fallback (handled by component)
+ * 2. Logo proxy API (Google Favicon via server-side proxy to avoid CORS)
+ * 3. Letter fallback (handled by component via onError)
  */
 
 /** Map company names to static asset filenames */
@@ -59,6 +59,7 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   epirus: "epirusinc.com",
   // Robotics
   figureai: "figure.ai",
+  figure: "figure.ai",
   // Space/Logistics
   relativityspace: "relativityspace.com",
   flexport: "flexport.com",
@@ -131,8 +132,17 @@ export function getCompanyDomain(companyName: string): string | null {
 }
 
 /**
- * Get Google Favicon API URL for a domain.
- * Returns the highest resolution available (128px).
+ * Get proxied favicon URL for a domain.
+ * Uses our API route to avoid CORS issues.
+ * Returns the proxied URL which will be cached for 7 days.
+ */
+export function getProxiedFaviconUrl(domain: string): string {
+  return `/api/logo?domain=${encodeURIComponent(domain)}`;
+}
+
+/**
+ * Legacy: Get Google Favicon API URL directly (causes CORS issues).
+ * Use getProxiedFaviconUrl instead for client-side usage.
  */
 export function getGoogleFaviconUrl(domain: string): string {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
@@ -140,7 +150,9 @@ export function getGoogleFaviconUrl(domain: string): string {
 
 /**
  * Resolve company logo URL using fallback chain.
- * Returns: static asset URL, Google Favicon URL, or null.
+ * Returns: static asset URL, proxied favicon URL, or null.
+ *
+ * This is a synchronous function - validation happens via <img onError>.
  */
 export function getCompanyLogoUrl(
   companyName: string,
@@ -152,76 +164,27 @@ export function getCompanyLogoUrl(
 
   // 2. Try domain map lookup by company name (preferred over website field)
   const mappedDomain = getCompanyDomain(companyName);
-  if (mappedDomain) return getGoogleFaviconUrl(mappedDomain);
+  if (mappedDomain) return getProxiedFaviconUrl(mappedDomain);
 
-  // 3. Fallback to Google Favicon API with website URL
+  // 3. Fallback to proxied favicon with website URL
   if (website) {
     const domain = extractDomainFromUrl(website);
-    if (domain) return getGoogleFaviconUrl(domain);
+    if (domain) return getProxiedFaviconUrl(domain);
   }
 
   return null;
 }
 
-const logoCache = new Map<string, string | null>();
-
 /**
- * Verify that a logo URL is accessible.
- */
-async function verifyLogoExists(logoUrl: string): Promise<boolean> {
-  if (!logoUrl) return false;
-  try {
-    const res = await fetch(logoUrl, { method: "HEAD" });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Fetch company logo URL with verification and caching.
- * Tries static asset first, then Google Favicon API with website or domain map.
+ * Fetch company logo URL.
+ * Now synchronous since we use proxy API and rely on <img onError> for validation.
+ *
+ * This function is kept for backwards compatibility with useCompanyLogo hook.
  */
 export async function fetchCompanyLogo(
   companyName: string,
   website?: string
 ): Promise<string | null> {
-  const cacheKey = `${companyName.toLowerCase()}:${website ?? ""}`;
-
-  if (logoCache.has(cacheKey)) {
-    return logoCache.get(cacheKey) ?? null;
-  }
-
-  // 1. Try static asset first
-  const staticUrl = getStaticCompanyLogoUrl(companyName);
-  if (staticUrl) {
-    const exists = await verifyLogoExists(staticUrl);
-    if (exists) {
-      logoCache.set(cacheKey, staticUrl);
-      return staticUrl;
-    }
-  }
-
-  // 2. Try domain map lookup by company name (preferred over website field)
-  const mappedDomain = getCompanyDomain(companyName);
-  if (mappedDomain) {
-    const faviconUrl = getGoogleFaviconUrl(mappedDomain);
-    logoCache.set(cacheKey, faviconUrl);
-    return faviconUrl;
-  }
-
-  // 3. Fallback to Google Favicon API with website URL
-  if (website) {
-    const domain = extractDomainFromUrl(website);
-    if (domain) {
-      const faviconUrl = getGoogleFaviconUrl(domain);
-      // Google Favicon API always returns something (even a default icon)
-      // so we trust it without verification
-      logoCache.set(cacheKey, faviconUrl);
-      return faviconUrl;
-    }
-  }
-
-  logoCache.set(cacheKey, null);
-  return null;
+  // Simply return the resolved URL - validation happens via <img onError>
+  return getCompanyLogoUrl(companyName, website);
 }
