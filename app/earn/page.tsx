@@ -1,6 +1,6 @@
 import { getPrivateCompanies, getSyntheticSymbol, formatValuation, type PrivateCompany } from "@/lib/vaulto/companies";
-import { formatUSD, formatPercent } from "@/lib/format";
-import { EarnPoolsTable, type StockPool } from "@/components/EarnPoolsTable";
+import type { StockPool } from "@/components/EarnPoolsTable";
+import { EarnPageClient } from "@/components/earn/EarnPageClient";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -42,14 +42,16 @@ function generateDemoMetrics(company: PrivateCompany) {
 }
 
 export default async function EarnPage() {
-  const session = await auth();
+  if (process.env.NODE_ENV !== "development") {
+    const session = await auth();
 
-  if (!session?.user) {
-    redirect("/");
-  }
+    if (!session?.user) {
+      redirect("/");
+    }
 
-  if (!session.user.isVaultoEmployee) {
-    redirect("/waitlist-success");
+    if (!session.user.isVaultoEmployee) {
+      redirect("/waitlist-success");
+    }
   }
 
   const companies = await getPrivateCompanies();
@@ -75,46 +77,21 @@ export default async function EarnPage() {
   const avgAPR = pools.length ? pools.reduce((sum, p) => sum + p.apr, 0) / pools.length : 0;
 
   return (
-    <div className="max-w-5xl">
+    <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-medium tracking-tight">Earn</h1>
       <p className="mt-2 text-muted">
-        Provide liquidity for synthetic private company tokens and earn trading fees.
+        Provide liquidity for synthetic tokens and earn fees.
       </p>
 
-      {/* Summary Cards */}
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-border bg-background p-5 text-center">
-          <p className="text-sm text-muted">Total TVL</p>
-          <p className="mt-1 text-xl font-semibold">{formatUSD(totalTVL)}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-background p-5 text-center">
-          <p className="text-sm text-muted">Total Volume (24h)</p>
-          <p className="mt-1 text-xl font-semibold">{formatUSD(totalVolume)}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-background p-5 text-center">
-          <p className="text-sm text-muted">Avg APR</p>
-          <p className="mt-1 text-xl font-semibold text-green-500">{formatPercent(avgAPR)}</p>
-        </div>
-      </div>
-
-      {/* Additional Stats - hidden on mobile */}
-      <div className="mt-4 hidden gap-4 md:grid md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-background p-4">
-          <p className="text-sm text-muted">Active Pools</p>
-          <p className="mt-1 text-lg font-semibold">{pools.length}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-background p-4">
-          <p className="text-sm text-muted">Combined Market Cap</p>
-          <p className="mt-1 text-lg font-semibold">
-            {formatValuation(companies.reduce((sum, c) => sum + c.valuationUsd, 0))}
-          </p>
-        </div>
-      </div>
-
-      <EarnPoolsTable pools={pools} />
+      <EarnPageClient
+        pools={pools}
+        totalTVL={totalTVL}
+        totalVolume={totalVolume}
+        avgAPR={avgAPR}
+      />
 
       {/* Disclaimer */}
-      <p className="mt-4 text-xs text-muted">
+      <p className="mt-8 text-xs text-muted">
         Demo data shown. Actual TVL, volume, and APR will vary based on real market activity.
         Synthetic tokens represent exposure to private company valuations, not actual equity.
       </p>
