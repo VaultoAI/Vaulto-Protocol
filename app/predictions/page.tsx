@@ -21,7 +21,7 @@ export default async function PredictionsPage() {
   const totalBands = ipos.reduce((sum, ipo) => sum + ipo.bands.length, 0);
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <h1 className="text-2xl font-medium tracking-tight">IPO Valuation Predictions</h1>
       <p className="mt-2 text-muted">
         Trade Long/Short positions on private company IPO valuations from Polymarket.

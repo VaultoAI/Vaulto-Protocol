@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { Sidebar } from "@/components/Sidebar";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { ConnectWalletButton } from "@/components/ConnectWalletButton";
+import { TopNav } from "@/components/TopNav";
 import { Providers } from "@/components/Providers";
 import { Footer } from "@/components/Footer";
 import { GeoRestrictBanner } from "@/components/GeoRestrictBanner";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { auth } from "@/lib/auth";
 import "./globals.css";
 
@@ -53,7 +52,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Server-side session check - no loading state needed
   const session = await auth();
   const isVaultoEmployee = session?.user?.isVaultoEmployee === true;
 
@@ -64,17 +62,15 @@ export default async function RootLayout({
         <Providers>
           <GeoRestrictBanner />
           {isVaultoEmployee ? (
-            // Full platform layout for Vaulto employees
+            // Full platform layout with top navbar
             <div className="flex min-h-screen flex-col">
-              <Sidebar />
-              <header className="fixed right-0 top-0 z-20 flex items-center gap-3 pr-6 pt-14 md:pt-14">
-                <ThemeSwitch />
-                <ConnectWalletButton />
-              </header>
-              <main className="ml-0 flex-1 p-8 pt-28 md:ml-48 md:pt-14">{children}</main>
-              <div className="md:ml-48">
-                <Footer />
-              </div>
+              <TopNav />
+              <main className="flex-1">
+                <div className="mx-auto max-w-[1400px] px-6 py-6">
+                  {children}
+                </div>
+              </main>
+              <Footer />
             </div>
           ) : (
             // Minimal layout for non-employees (waitlist users)
