@@ -31,7 +31,6 @@ export function ExploreTopSection({ companies }: ExploreTopSectionProps) {
       {/* Top Gainers */}
       <TopColumn
         title="Top Gainers"
-        badge="24H"
         companies={gainers}
         renderMetric={(company) => {
           const { changePercent, isPositive } = getDailyChange(company);
