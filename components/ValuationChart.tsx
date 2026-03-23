@@ -120,19 +120,21 @@ export function ValuationChart({ company }: ValuationChartProps) {
 
   return (
     <div className="w-full">
-      {/* Hover tooltip */}
-      {hoverPoint && (
-        <div className="mb-2 text-sm text-muted">
-          <span className="font-medium text-foreground">{formatValuation(hoverPoint.value)}</span>
-          <span className="ml-2">
-            {new Date(hoverPoint.date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
-        </div>
-      )}
+      {/* Hover tooltip — fixed height to prevent layout shift */}
+      <div className="mb-2 text-sm text-muted h-6">
+        {hoverPoint ? (
+          <>
+            <span className="font-medium text-foreground">{formatValuation(hoverPoint.value)}</span>
+            <span className="ml-2">
+              {new Date(hoverPoint.date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+          </>
+        ) : null}
+      </div>
 
       {/* Chart */}
       <div className="w-full relative">
