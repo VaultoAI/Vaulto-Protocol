@@ -79,7 +79,7 @@ export function ExploreAssets({ companies }: ExploreAssetsProps) {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-foreground">
           Explore Assets
-          <sup className="text-[10px] text-muted ml-0.5 font-normal">*,1</sup>
+          <span className="text-sm text-muted ml-2 font-normal">({filteredCompanies.length})</span>
         </h2>
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 text-sm text-muted">
