@@ -8,7 +8,6 @@ import { LegalLink } from "./LegalLink";
 
 const nav = [
   { href: "/mint", label: "Mint" },
-  { href: "/swap", label: "Swap" },
   { href: "/earn", label: "Earn" },
   { href: "/predictions", label: "Predictions" },
 ] as const;
