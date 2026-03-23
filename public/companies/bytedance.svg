@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" rx="100" fill="white"/>
+  <g transform="translate(100,100) scale(0.7) translate(-100,-100)">
+    <!-- Bar 1: dark navy, tallest, slight perspective skew -->
+    <polygon points="20,25 50,15 50,170 20,175" fill="#2B3990"/>
+    <!-- Bar 2: medium blue, shorter, skewed -->
+    <polygon points="60,65 90,55 90,165 60,170" fill="#4A7FE0"/>
+    <!-- Bar 3: teal/cyan, medium height, skewed -->
+    <polygon points="100,45 130,35 130,155 100,160" fill="#00BFC9"/>
+    <!-- Bar 4: light mint, tall, skewed -->
+    <polygon points="140,15 175,5 175,170 140,175" fill="#7EECD4"/>
+  </g>
+</svg>

@@ -11,6 +11,7 @@ const STATIC_LOGO_MAP: Record<string, string> = {
   anthropic: "anthropic.png",
   waymo: "waymo.png",
   databricks: "databricks.png",
+  bytedance: "bytedance.svg",
 };
 
 /**
