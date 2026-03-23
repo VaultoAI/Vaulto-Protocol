@@ -53,7 +53,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
-  const isVaultoEmployee = session?.user?.isVaultoEmployee === true;
+  const isVaultoEmployee = process.env.NODE_ENV === "development" || session?.user?.isVaultoEmployee === true;
 
   return (
     <html lang="en" suppressHydrationWarning>
