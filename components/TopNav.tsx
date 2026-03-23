@@ -70,7 +70,7 @@ export function TopNav() {
           {/* Center: Nav links (desktop) */}
           <nav className="hidden md:flex items-center gap-1">
             {nav.map(({ href, label }) => {
-              const active = pathname === href || (href === "/mint" && pathname.startsWith("/mint"));
+              const active = pathname === href || (href === "/mint" && pathname?.startsWith("/mint"));
               return (
                 <Link
                   key={href}
@@ -113,7 +113,7 @@ export function TopNav() {
           <div className="md:hidden border-t border-border bg-background px-6 py-3">
             <nav className="flex flex-col gap-1">
               {nav.map(({ href, label }) => {
-                const active = pathname === href || (href === "/mint" && pathname.startsWith("/mint"));
+                const active = pathname === href || (href === "/mint" && pathname?.startsWith("/mint"));
                 return (
                   <Link
                     key={href}

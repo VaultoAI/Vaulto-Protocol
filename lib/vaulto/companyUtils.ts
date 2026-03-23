@@ -266,9 +266,6 @@ export function getCompanyCategory(company: PrivateCompany): Category[] {
   if (industry.includes("fintech") || industry.includes("financial") || industry.includes("payment")) {
     categories.push("Fintech");
   }
-  if (industry.includes("health") || industry.includes("bio") || industry.includes("medical")) {
-    categories.push("Healthcare");
-  }
   if (industry.includes("consumer") || industry.includes("retail") || industry.includes("commerce")) {
     categories.push("Consumer");
   }
