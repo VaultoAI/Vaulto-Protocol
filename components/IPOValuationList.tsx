@@ -25,6 +25,7 @@ export function IPOValuationList({ ipos }: IPOValuationListProps) {
     []
   );
 
+
   const handleCloseTrade = useCallback(() => {
     setTradeState(null);
   }, []);

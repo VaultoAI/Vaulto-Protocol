@@ -20,6 +20,7 @@ function ValuationBandRow({
 }) {
   const percentWidth = Math.min(100, Math.max(2, Math.round(band.probability * 100)));
   const probabilityText = `${(band.probability * 100).toFixed(1)}%`;
+  const isHighProbability = band.probability >= 0.10;
 
   return (
     <div className="flex items-center gap-2 py-2 sm:gap-3">
@@ -33,14 +34,13 @@ function ValuationBandRow({
 
       {/* Probability bar - less rounding, mobile-optimized */}
       <div className="min-w-0 flex-1 flex items-center">
-        <div className="relative flex-1 h-7 min-w-[3rem] rounded-sm bg-muted/50 overflow-hidden sm:h-6 sm:min-w-[4rem] sm:rounded">
+        <div className="relative flex-1 h-7 min-w-[3rem] rounded-sm overflow-hidden sm:h-6 sm:min-w-[4rem] sm:rounded">
           <div
-            className={`absolute inset-y-0 left-0 rounded-sm transition-all sm:rounded ${
-              band.probability >= 0.10
-                ? "bg-green-500/80"
-                : "bg-red-500/80"
-            }`}
-            style={{ width: `${percentWidth}%` }}
+            className="absolute inset-y-0 left-0 rounded-sm transition-all sm:rounded"
+            style={{
+              width: `${percentWidth}%`,
+              backgroundColor: isHighProbability ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+            }}
           />
           <span className="absolute inset-0 flex items-center justify-end pr-2 text-xs font-medium text-foreground">
             {probabilityText}
@@ -88,7 +88,7 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
               <button
                 type="button"
                 onClick={() => onTrade(ipo, "long")}
-                className="px-3 py-1.5 text-xs font-medium rounded border border-green-500 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                className="px-3 py-1.5 text-xs font-medium rounded bg-green-500 text-white hover:bg-green-600"
                 title="Long - bet IPO closes above expected value"
               >
                 Long
@@ -96,7 +96,7 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
               <button
                 type="button"
                 onClick={() => onTrade(ipo, "short")}
-                className="px-3 py-1.5 text-xs font-medium rounded border border-red-500 bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                className="px-3 py-1.5 text-xs font-medium rounded bg-red-500 text-white hover:bg-red-600"
                 title="Short - bet IPO closes below expected value"
               >
                 Short
