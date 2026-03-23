@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol, formatValuation } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
@@ -20,13 +21,17 @@ interface AssetListRowProps {
  * Chart shows real post-money valuation from funding history.
  */
 export function AssetListRow({ company }: AssetListRowProps) {
+  const router = useRouter();
   const symbol = getSyntheticSymbol(company.name);
   const price = getCurrentPrice(company);
   const { changePercent, isPositive } = getDailyChange(company);
   const sparklineData = getValuationSparkline(company, 30);
 
   return (
-    <tr className="border-b border-border last:border-0 hover:bg-card-hover transition-colors cursor-pointer">
+    <tr
+      className="border-b border-border last:border-0 hover:bg-card-hover transition-colors cursor-pointer"
+      onClick={() => router.push(`/mint/${company.id}`)}
+    >
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <CompanyLogo name={company.name} website={company.website} size={32} />

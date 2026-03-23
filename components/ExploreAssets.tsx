@@ -234,7 +234,7 @@ export function ExploreAssets({ companies }: ExploreAssetsProps) {
               <tr className="border-b border-border bg-badge-bg/50">
                 <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Asset</th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Price</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">24H Change</th>
+                <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Last Round</th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Valuation</th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider w-[120px]">Chart</th>
               </tr>

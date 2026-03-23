@@ -116,7 +116,7 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
         {/* Right side: Trade Widget */}
         <div className="w-full lg:w-[340px] shrink-0">
-          <div className="lg:sticky lg:top-20">
+          <div className="lg:sticky lg:top-8">
             <TradeWidget company={company} />
           </div>
         </div>
