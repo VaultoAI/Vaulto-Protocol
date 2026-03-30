@@ -5,7 +5,7 @@ import { WaitlistScreen } from "@/components/WaitlistScreen";
 export default async function Home() {
   // In development, skip auth and go straight to the app
   if (process.env.NODE_ENV === "development") {
-    redirect("/mint");
+    redirect("/explore");
   }
 
   const session = await auth();
@@ -13,7 +13,7 @@ export default async function Home() {
   // Redirect authenticated users to waitlist success page
   if (session?.user) {
     if (session.user.isVaultoEmployee) {
-      redirect("/mint");
+      redirect("/explore");
     }
     redirect("/waitlist-success");
   }

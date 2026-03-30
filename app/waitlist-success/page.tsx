@@ -30,7 +30,7 @@ export default async function WaitlistSuccessPage({ searchParams }: Props) {
 
   // Vaulto employees get immediate access to the platform
   if (session.user.isVaultoEmployee) {
-    redirect("/mint");
+    redirect("/explore");
   }
 
   // Read referral code from cookie (set when user landed on /?ref= before signup)

@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 // Platform routes that require authentication and onboarding
-const protectedRoutes = ["/mint", "/earn", "/predictions"];
+const protectedRoutes = ["/explore", "/earn", "/predictions"];
 
 // Routes that don't require onboarding check
 const onboardingExemptRoutes = ["/onboarding", "/api/onboarding", "/api/webhooks"];
@@ -62,7 +62,7 @@ export default auth((req) => {
     if (pathname === "/onboarding" && !isOnboardingEnforcementEnabled()) {
       // Vaulto employees go to platform, others to waitlist
       if (session?.user?.isVaultoEmployee) {
-        return NextResponse.redirect(new URL("/mint", req.url));
+        return NextResponse.redirect(new URL("/explore", req.url));
       }
       return NextResponse.redirect(new URL("/waitlist-success", req.url));
     }

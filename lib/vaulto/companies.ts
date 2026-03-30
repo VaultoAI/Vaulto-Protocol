@@ -120,6 +120,14 @@ export function formatValuation(value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
+/** Generate URL-friendly slug from company name (e.g., "SpaceX" -> "spacex", "Anduril Industries" -> "anduril-industries"). */
+export function getCompanySlug(companyName: string): string {
+  return companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 /** Override symbols for specific companies. */
 const SYMBOL_OVERRIDES: Record<string, string> = {
   "Anduril Industries": "vAnduril",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
-import { getSyntheticSymbol } from "@/lib/vaulto/companies";
+import { getSyntheticSymbol, getCompanySlug } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { MiniChart } from "@/components/MiniChart";
 import {
@@ -28,7 +28,7 @@ export function AssetCard({ company }: AssetCardProps) {
   const sparklineData = getValuationSparkline(company);
 
   return (
-    <Link href={`/mint/${company.id}`} className="block">
+    <Link href={`/explore/${getCompanySlug(company.name)}`} className="block">
       <div className="group rounded-xl border border-border bg-card-bg p-5 transition-all duration-200 hover:shadow-md hover:border-border/80 cursor-pointer">
         {/* Header: Logo + Ticker + Name */}
         <div className="flex items-center gap-3 mb-4">

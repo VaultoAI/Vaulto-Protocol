@@ -56,7 +56,7 @@ export function OnboardingComplete({ compliancePeriod }: OnboardingCompleteProps
 
           <div className="grid gap-3">
             <Link
-              href="/mint"
+              href="/explore"
               className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-border/50"
             >
               <div className="flex items-center gap-3">
@@ -74,7 +74,7 @@ export function OnboardingComplete({ compliancePeriod }: OnboardingCompleteProps
             </Link>
 
             <Link
-              href="/mint"
+              href="/explore"
               className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-border/50"
             >
               <div className="flex items-center gap-3">

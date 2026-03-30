@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
-import { getSyntheticSymbol, formatValuation } from "@/lib/vaulto/companies";
+import { getSyntheticSymbol, formatValuation, getCompanySlug } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import {
   getDailyChange,
@@ -102,7 +102,7 @@ function TopColumn({ title, badge, companies, hasBorderLeft, renderMetric }: Top
           return (
             <Link
               key={company.id}
-              href={`/mint/${company.id}`}
+              href={`/explore/${getCompanySlug(company.name)}`}
               className="flex items-center gap-3 cursor-pointer group"
             >
               {/* Logo */}

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
-import { getSyntheticSymbol, formatValuation } from "@/lib/vaulto/companies";
+import { getSyntheticSymbol, formatValuation, getCompanySlug } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { MiniChart } from "@/components/MiniChart";
 import {
@@ -30,7 +30,7 @@ export function AssetListRow({ company }: AssetListRowProps) {
   return (
     <tr
       className="border-b border-border last:border-0 hover:bg-card-hover transition-colors cursor-pointer"
-      onClick={() => router.push(`/mint/${company.id}`)}
+      onClick={() => router.push(`/explore/${getCompanySlug(company.name)}`)}
     >
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">

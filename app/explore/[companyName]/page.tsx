@@ -1,10 +1,10 @@
-import { getPrivateCompanies } from "@/lib/vaulto/companies";
+import { getPrivateCompanies, getCompanySlug } from "@/lib/vaulto/companies";
 import { CompanyDetailPage } from "@/components/CompanyDetailPage";
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 
 interface CompanyPageProps {
-  params: Promise<{ companyId: string }>;
+  params: Promise<{ companyName: string }>;
 }
 
 export default async function CompanyPage({ params }: CompanyPageProps) {
@@ -20,9 +20,9 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
     }
   }
 
-  const { companyId } = await params;
+  const { companyName } = await params;
   const companies = await getPrivateCompanies();
-  const company = companies.find((c) => String(c.id) === companyId);
+  const company = companies.find((c) => getCompanySlug(c.name) === companyName);
 
   if (!company) {
     notFound();

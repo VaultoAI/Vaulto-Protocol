@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { LegalLink } from "./LegalLink";
 
 const nav = [
-  { href: "/mint", label: "Mint" },
+  { href: "/explore", label: "Explore" },
   { href: "/earn", label: "Earn" },
   { href: "/predictions", label: "Predictions" },
 ] as const;
@@ -60,7 +60,7 @@ export function Sidebar() {
         }`}
       >
       <div className="flex items-center justify-between border-b border-border p-4">
-        <Link href="/mint" className="flex items-center">
+        <Link href="/explore" className="flex items-center">
           <span className="relative h-7 w-[100px] dark:hidden">
             <Image
               src="/vaulto-logo-light.png"
