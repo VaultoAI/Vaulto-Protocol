@@ -152,6 +152,11 @@ export function getGoogleFaviconUrl(domain: string): string {
  * Resolve company logo URL using fallback chain.
  * Returns: static asset URL, proxied favicon URL, or null.
  *
+ * Priority:
+ * 1. Static local assets (highest quality)
+ * 2. Company's actual website URL (most accurate)
+ * 3. Domain map fallback (for known companies without good website field)
+ *
  * This is a synchronous function - validation happens via <img onError>.
  */
 export function getCompanyLogoUrl(
@@ -162,15 +167,15 @@ export function getCompanyLogoUrl(
   const staticUrl = getStaticCompanyLogoUrl(companyName);
   if (staticUrl) return staticUrl;
 
-  // 2. Try domain map lookup by company name (preferred over website field)
-  const mappedDomain = getCompanyDomain(companyName);
-  if (mappedDomain) return getProxiedFaviconUrl(mappedDomain);
-
-  // 3. Fallback to proxied favicon with website URL
+  // 2. Try the company's actual website URL first (most accurate source)
   if (website) {
     const domain = extractDomainFromUrl(website);
     if (domain) return getProxiedFaviconUrl(domain);
   }
+
+  // 3. Fallback to domain map lookup by company name
+  const mappedDomain = getCompanyDomain(companyName);
+  if (mappedDomain) return getProxiedFaviconUrl(mappedDomain);
 
   return null;
 }
