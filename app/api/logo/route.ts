@@ -6,11 +6,15 @@ import { NextRequest, NextResponse } from "next/server";
  *
  * Usage: /api/logo?domain=openai.com
  *
- * Caching: 7 days with stale-while-revalidate for 30 days
+ * IMPORTANT: Uses CDN-Cache-Control for edge caching with proper cache key.
+ * The Vary header ensures each domain gets its own cached response.
  */
 
 const CACHE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 const CACHE_STALE_WHILE_REVALIDATE = 60 * 60 * 24 * 30; // 30 days
+
+// Force dynamic rendering to ensure query params are always read
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -32,6 +36,8 @@ export async function GET(request: NextRequest) {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; VaultoBot/1.0)",
       },
+      // Don't cache on the server side - let the CDN/browser handle it
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -48,7 +54,12 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": contentType,
+        // Browser caching only - don't let CDN cache without proper key
         "Cache-Control": `public, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}`,
+        // Netlify CDN cache with domain as key
+        "Netlify-CDN-Cache-Control": `public, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}, durable`,
+        // Cache key varies by the full URL including query string
+        "Netlify-Vary": "query",
       },
     });
   } catch (error) {
