@@ -83,22 +83,24 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         </div>
       </section>
 
-      {/* Products */}
-      {company.products && company.products.length > 0 && (
+      {/* Products - only show if company has products with valid content */}
+      {company.products && company.products.filter(p => p.name || p.description).length > 0 && (
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-1">Products</h2>
           <div className="border-t border-border mb-4" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {company.products.map((product, index) => (
-              <div
-                key={index}
-                className="rounded-lg border border-border bg-badge-bg/30 p-4"
-              >
-                <h3 className="text-sm font-semibold text-foreground mb-1">{product.name}</h3>
-                <p className="text-xs text-muted leading-relaxed">{product.description}</p>
-              </div>
-            ))}
+            {company.products
+              .filter(p => p.name || p.description)
+              .map((product, index) => (
+                <div
+                  key={index}
+                  className="rounded-lg border border-border bg-badge-bg/30 p-4"
+                >
+                  <h3 className="text-sm font-semibold text-foreground mb-1">{product.name}</h3>
+                  <p className="text-xs text-muted leading-relaxed">{product.description}</p>
+                </div>
+              ))}
           </div>
         </section>
       )}
