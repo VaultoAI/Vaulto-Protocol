@@ -154,13 +154,6 @@ export function TradeWidget({ company }: TradeWidgetProps) {
           </span>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-border" />
-
-        {/* Trade options button */}
-        <button className="w-full py-2.5 rounded-full border-2 border-green text-green text-sm font-bold hover:bg-green/5 transition-colors">
-          Trade {symbol} Options
-        </button>
       </div>
     </div>
   );
