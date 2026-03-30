@@ -2,77 +2,80 @@
 
 import Link from "next/link";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
-import { formatValuation, formatPricePerShare, getSyntheticSymbol } from "@/lib/vaulto/companies";
-import { getDailyChange } from "@/lib/vaulto/companyUtils";
+import { getSyntheticSymbol } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
-import { Sparkline } from "@/components/Sparkline";
+import { MiniChart } from "@/components/MiniChart";
+import {
+  getDailyChange,
+  getCurrentPrice,
+  formatPrice,
+  getValuationSparkline,
+} from "@/lib/vaulto/companyUtils";
 
 interface AssetCardProps {
   company: PrivateCompany;
 }
 
 /**
- * Asset card component for grid view in Explore Assets.
- * Displays company info, price, daily change, and sparkline.
+ * Asset card matching Ondo Finance design.
+ * Clicking navigates to the company detail page.
+ * Chart shows real post-money valuation from funding history.
  */
 export function AssetCard({ company }: AssetCardProps) {
   const symbol = getSyntheticSymbol(company.name);
-  const dailyChange = getDailyChange(company);
-  const isPositive = dailyChange >= 0;
+  const price = getCurrentPrice(company);
+  const { changeAmount, changePercent, isPositive } = getDailyChange(company);
+  const sparklineData = getValuationSparkline(company);
 
   return (
-    <Link
-      href={`/mint/${company.id}`}
-      className="group block rounded-xl border border-border bg-card-bg p-4 transition-all hover:border-foreground/20 hover:bg-card-hover"
-    >
-      {/* Header: Logo + Name + Symbol */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <CompanyLogo name={company.name} website={company.website} size={40} />
+    <Link href={`/mint/${company.id}`} className="block">
+      <div className="group rounded-xl border border-border bg-card-bg p-5 transition-all duration-200 hover:shadow-md hover:border-border/80 cursor-pointer">
+        {/* Header: Logo + Ticker + Name */}
+        <div className="flex items-center gap-3 mb-4">
+          <CompanyLogo name={company.name} website={company.website} size={36} />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{company.name}</p>
-            <p className="text-xs text-muted">{symbol}</p>
+            <p className="text-sm font-semibold text-foreground leading-tight">{symbol}</p>
+            <p className="text-xs text-muted leading-tight truncate">{company.name}</p>
           </div>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-            isPositive
-              ? "bg-green/10 text-green"
-              : "bg-red/10 text-red"
-          }`}
-        >
-          {isPositive ? "+" : ""}
-          {dailyChange.toFixed(2)}%
-        </span>
-      </div>
 
-      {/* Price + Valuation */}
-      <div className="mt-4 flex items-end justify-between">
-        <div>
-          <p className="text-lg font-semibold text-foreground">
-            {formatPricePerShare(company.lastFundingEstPricePerShareUsd)}
-          </p>
-          <p className="text-xs text-muted">
-            {formatValuation(company.valuationUsd)} valuation
+        {/* Price */}
+        <div className="mb-1">
+          <p className="text-[28px] font-semibold text-foreground leading-tight tracking-tight">
+            {formatPrice(price)}
           </p>
         </div>
 
-        {/* Mini Sparkline */}
-        <div className="shrink-0">
-          <Sparkline
-            company={company}
-            width={64}
-            height={28}
-            color={isPositive ? "#22c55e" : "#ef4444"}
-          />
+        {/* Change indicator - based on real valuation change between last two rounds */}
+        <div className="flex items-center gap-1.5 mb-4">
+          <span className={`text-[10px] ${isPositive ? "text-green" : "text-red"}`}>
+            {isPositive ? "\u25B2" : "\u25BC"}
+          </span>
+          <span className={`text-xs font-medium ${isPositive ? "text-green" : "text-red"}`}>
+            ${changeAmount.toFixed(2)}
+          </span>
+          <span className={`text-xs font-medium ${isPositive ? "text-green" : "text-red"}`}>
+            ({changePercent.toFixed(2)}%)
+          </span>
+          <span className="text-xs text-muted ml-0.5">Last Round</span>
         </div>
-      </div>
 
-      {/* Industry tag */}
-      <div className="mt-3 pt-3 border-t border-border">
-        <span className="inline-block rounded-full bg-badge-bg px-2.5 py-1 text-xs text-muted">
-          {company.industry}
-        </span>
+        {/* Mini chart - real post-money valuation from funding history */}
+        <div className="-mx-5 -mb-5 mt-2 overflow-hidden rounded-b-xl">
+          {sparklineData ? (
+            <MiniChart
+              data={sparklineData}
+              width={320}
+              height={90}
+              isPositive={isPositive}
+              strokeWidth={1.5}
+            />
+          ) : (
+            <div className="h-[90px] flex items-center justify-center">
+              <span className="text-xs text-muted">No valuation history</span>
+            </div>
+          )}
+        </div>
       </div>
     </Link>
   );
