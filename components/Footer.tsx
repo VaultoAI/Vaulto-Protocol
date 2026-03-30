@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-background px-6 py-3">
+    <footer className="mt-auto border-t border-border bg-background px-6 py-3">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between">
         <p className="text-xs text-muted">
           © 2025 Vaulto Protocol. All rights reserved.
