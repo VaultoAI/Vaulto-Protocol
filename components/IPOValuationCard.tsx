@@ -20,6 +20,7 @@ function ValuationBandRow({
 }) {
   const percentWidth = Math.min(100, Math.max(2, Math.round(band.probability * 100)));
   const probabilityText = `${(band.probability * 100).toFixed(1)}%`;
+  const isHighProbability = band.probability >= 0.10;
 
   return (
     <div className="flex items-center gap-2 py-2 sm:gap-3">
@@ -33,14 +34,13 @@ function ValuationBandRow({
 
       {/* Probability bar - less rounding, mobile-optimized */}
       <div className="min-w-0 flex-1 flex items-center">
-        <div className="relative flex-1 h-7 min-w-[3rem] rounded-sm bg-muted/50 overflow-hidden sm:h-6 sm:min-w-[4rem] sm:rounded">
+        <div className="relative flex-1 h-7 min-w-[3rem] rounded-sm overflow-hidden sm:h-6 sm:min-w-[4rem] sm:rounded">
           <div
-            className={`absolute inset-y-0 left-0 rounded-sm transition-all sm:rounded ${
-              band.probability >= 0.10
-                ? "bg-green-500/80"
-                : "bg-red-500/80"
-            }`}
-            style={{ width: `${percentWidth}%` }}
+            className="absolute inset-y-0 left-0 rounded-sm transition-all sm:rounded"
+            style={{
+              width: `${percentWidth}%`,
+              backgroundColor: isHighProbability ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+            }}
           />
           <span className="absolute inset-0 flex items-center justify-end pr-2 text-xs font-medium text-foreground">
             {probabilityText}
@@ -59,8 +59,9 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
   return (
     <div className="rounded-lg border border-border bg-background overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center px-4 py-3 border-b border-border bg-muted/20">
+        {/* Left: Logo + Name */}
+        <div className="flex items-center gap-3 flex-shrink-0">
           <CompanyLogo name={ipo.company} website={ipo.website} size={40} />
           <div>
             <h3 className="text-lg font-semibold">{ipo.company} IPO</h3>
@@ -74,40 +75,33 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
             </a>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {ipo.noIPOProbability !== undefined && (
-            <div className="text-right mr-2">
-              <p className="text-xs text-muted">No IPO</p>
-              <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                {(ipo.noIPOProbability * 100).toFixed(0)}%
-              </p>
-            </div>
-          )}
-          {onTrade && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => onTrade(ipo, "long")}
-                className="px-3 py-1.5 text-xs font-medium rounded border border-green-500 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
-                title="Long - bet IPO closes above expected value"
-              >
-                Long
-              </button>
-              <button
-                type="button"
-                onClick={() => onTrade(ipo, "short")}
-                className="px-3 py-1.5 text-xs font-medium rounded border border-red-500 bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
-                title="Short - bet IPO closes below expected value"
-              >
-                Short
-              </button>
-            </div>
-          )}
-        </div>
+
+        {/* Right: Trade Buttons */}
+        {onTrade && (
+          <div className="flex-1 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => onTrade(ipo, "long")}
+              style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}
+              className="px-6 py-2 text-sm font-bold rounded-full text-white shadow-[0_0_12px_rgba(34,197,94,0.4)] hover:shadow-[0_0_20px_rgba(34,197,94,0.6)] hover:scale-105 active:scale-95 transition-all duration-200"
+            >
+              ▲ Long
+            </button>
+            <button
+              type="button"
+              onClick={() => onTrade(ipo, "short")}
+              style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)" }}
+              className="px-6 py-2 text-sm font-bold rounded-full text-white shadow-[0_0_12px_rgba(239,68,68,0.4)] hover:shadow-[0_0_20px_rgba(239,68,68,0.6)] hover:scale-105 active:scale-95 transition-all duration-200"
+            >
+              ▼ Short
+            </button>
+          </div>
+        )}
+
       </div>
 
       {/* Valuation Summary */}
-      <div className="px-4 py-3 grid grid-cols-1 gap-4 border-b border-border bg-muted/10 sm:grid-cols-2">
+      <div className="px-4 py-3 flex flex-wrap items-start gap-8 border-b border-border bg-muted/10">
         <div>
           <p className="text-xs text-muted uppercase tracking-wide">Expected IPO Value</p>
           <p className="mt-0.5 text-xl font-semibold text-blue-600 dark:text-blue-400">
@@ -122,6 +116,15 @@ export function IPOValuationCard({ ipo, onTrade }: IPOValuationCardProps) {
               {formatValuationPrecise(ipo.currentValuation)}
             </p>
             <p className="text-xs text-muted">(via Vaulto)</p>
+          </div>
+        )}
+        {ipo.noIPOProbability !== undefined && (
+          <div>
+            <p className="text-xs text-muted uppercase tracking-wide">No IPO Probability</p>
+            <p className="mt-0.5 text-xl font-semibold text-orange-600 dark:text-orange-400">
+              {(ipo.noIPOProbability * 100).toFixed(0)}%
+            </p>
+            <p className="text-xs text-muted">&nbsp;</p>
           </div>
         )}
       </div>

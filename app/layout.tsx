@@ -55,7 +55,7 @@ export default async function RootLayout({
 }>) {
   // Server-side session check - no loading state needed
   const session = await auth();
-  const isVaultoEmployee = session?.user?.isVaultoEmployee === true;
+  const isVaultoEmployee = process.env.NODE_ENV === "development" || session?.user?.isVaultoEmployee === true;
 
   return (
     <html lang="en" suppressHydrationWarning>

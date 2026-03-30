@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { usePrivy } from "@privy-io/react-auth";
 import { TokenSelect } from "@/components/TokenSelect";
 import { useSwapConfig } from "@/hooks/useSwapConfig";
 import { getTokenBySymbol, getPoolForPair } from "@/lib/tokens";
@@ -51,7 +51,7 @@ export function SwapWidget({ tokens }: SwapWidgetProps) {
 
   const { address, chain, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const { openConnectModal } = useConnectModal();
+  const { login } = usePrivy();
   const { data: config } = useSwapConfig();
   const swapAfterApproveRef = useRef<string | null>(null);
   const tokenRegistry = config?.tokens ?? {};
@@ -389,13 +389,13 @@ export function SwapWidget({ tokens }: SwapWidgetProps) {
 
     // On-chain swap requires wallet
     if (!isConnected) {
-      openConnectModal?.();
+      login();
       return;
     }
     if (!isMainnet || !canSwap) return;
     if (needsApproval) doApprove();
     else doSwap();
-  }, [isDemoSwap, canDemoSwap, doDemoSwap, isConnected, isMainnet, canSwap, needsApproval, openConnectModal, doApprove, doSwap]);
+  }, [isDemoSwap, canDemoSwap, doDemoSwap, isConnected, isMainnet, canSwap, needsApproval, login, doApprove, doSwap]);
 
   const isBusyOverall = isBusy || isDemoSwapping;
 

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useAccount } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { usePrivy } from "@privy-io/react-auth";
 
 type MintWidgetProps = {
   companyName: string;
@@ -23,7 +23,7 @@ export function MintWidget({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { isConnected, chain } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { login } = usePrivy();
 
   const isMainnet = chain?.id === 1;
 
@@ -32,14 +32,14 @@ export function MintWidget({
 
   const handleOpenModal = useCallback(() => {
     if (!isConnected) {
-      openConnectModal?.();
+      login();
       return;
     }
     setIsOpen(true);
     setAmount("");
     setMintState("idle");
     setErrorMessage(null);
-  }, [isConnected, openConnectModal]);
+  }, [isConnected, login]);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
