@@ -5,8 +5,14 @@ import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { formatValuation } from "@/lib/vaulto/companies";
 import { getValuationHistory } from "@/lib/vaulto/companyUtils";
 
+export interface HoverData {
+  valuation: number;
+  date: string;
+}
+
 interface ValuationChartProps {
   company: PrivateCompany;
+  onHover?: (data: HoverData | null) => void;
 }
 
 type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
@@ -16,7 +22,7 @@ type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
  * Plots real postMoneyValuationUsd from funding history.
  * Green line on dark-transparent background with hover tooltip.
  */
-export function ValuationChart({ company }: ValuationChartProps) {
+export function ValuationChart({ company, onHover }: ValuationChartProps) {
   const allHistory = useMemo(() => getValuationHistory(company), [company]);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -100,11 +106,15 @@ export function ValuationChart({ company }: ValuationChartProps) {
         }
       }
       setHoverIndex(closest);
+      onHover?.({ valuation: points[closest].value, date: points[closest].date });
     },
-    [points, width]
+    [points, width, onHover]
   );
 
-  const handleMouseLeave = useCallback(() => setHoverIndex(null), []);
+  const handleMouseLeave = useCallback(() => {
+    setHoverIndex(null);
+    onHover?.(null);
+  }, [onHover]);
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
@@ -120,22 +130,6 @@ export function ValuationChart({ company }: ValuationChartProps) {
 
   return (
     <div className="w-full">
-      {/* Hover tooltip — fixed height to prevent layout shift */}
-      <div className="mb-2 text-sm text-muted h-6">
-        {hoverPoint ? (
-          <>
-            <span className="font-medium text-foreground">{formatValuation(hoverPoint.value)}</span>
-            <span className="ml-2">
-              {new Date(hoverPoint.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          </>
-        ) : null}
-      </div>
-
       {/* Chart */}
       <div className="w-full relative overflow-hidden">
         <svg
@@ -224,6 +218,31 @@ export function ValuationChart({ company }: ValuationChartProps) {
             {range}
           </button>
         ))}
+      </div>
+
+      {/* Funding vs Valuation bar */}
+      <div className="mt-6 space-y-3">
+        {/* Labels and values above bar */}
+        <div className="flex justify-between">
+          <div className="flex flex-col">
+            <span className="text-base text-muted">Total Funding</span>
+            <span className="text-2xl font-semibold text-foreground">{formatValuation(company.totalFundingUsd)}</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-base text-muted">Valuation</span>
+            <span className="text-2xl font-semibold text-foreground">{formatValuation(company.valuationUsd)}</span>
+          </div>
+        </div>
+        {/* Progress bar with reduced rounding */}
+        <div className="relative h-8 rounded-md border border-border bg-muted/10 overflow-hidden p-0.5">
+          <div
+            className="h-full rounded transition-all duration-500 ease-out"
+            style={{
+              width: `${Math.min((company.totalFundingUsd / company.valuationUsd) * 100, 100)}%`,
+              background: `linear-gradient(90deg, ${color} 0%, ${color}cc 100%)`
+            }}
+          />
+        </div>
       </div>
     </div>
   );
