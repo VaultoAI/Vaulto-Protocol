@@ -108,10 +108,10 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
         <div className="w-full lg:w-[340px] shrink-0">
           <div className="lg:sticky lg:top-8 relative">
             {/* Coming Soon Overlay */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
+            <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
               <div className="text-center px-6 py-4">
-                <p className="text-white/90 uppercase tracking-widest text-xs font-medium mb-1">Coming Soon</p>
-                <p className="text-white text-lg font-semibold">Trading</p>
+                <p className="text-black/70 dark:text-white/90 uppercase tracking-widest text-xs font-medium mb-1">Coming Soon</p>
+                <p className="text-black dark:text-white text-lg font-semibold">Trading</p>
               </div>
             </div>
             {/* Dimmed Widget */}
