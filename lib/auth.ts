@@ -116,18 +116,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           try {
             console.log("[Auth] Attempting to upsert user to database...");
 
+            // Check if user already exists to preserve manually-set isVaultoEmployee flag
+            const existingUser = await prisma.user.findUnique({
+              where: { email: user.email },
+              select: { isVaultoEmployee: true },
+            });
+
+            // Auto-set employee flag for @vaulto.ai emails, otherwise preserve existing value
+            const isEmployeeByDomain = user.email.endsWith("@vaulto.ai");
+            const isVaultoEmployee = isEmployeeByDomain || (existingUser?.isVaultoEmployee ?? false);
+
             const savedUser = await prisma.user.upsert({
               where: { email: user.email },
               create: {
                 email: user.email,
                 name: user.name,
                 image: user.image,
-                isVaultoEmployee: user.email.endsWith("@vaulto.ai"),
+                isVaultoEmployee,
               },
               update: {
                 name: user.name,
                 image: user.image,
-                isVaultoEmployee: user.email.endsWith("@vaulto.ai"),
+                // Only update isVaultoEmployee if true (don't downgrade manually-set employees)
+                ...(isVaultoEmployee ? { isVaultoEmployee: true } : {}),
               },
             });
 
