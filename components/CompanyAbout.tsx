@@ -47,7 +47,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         )}
 
         {/* Company info grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-48">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8 md:gap-x-16 lg:gap-x-48">
           <InfoItem label="CEO" value={company.ceo || "—"} />
           <InfoItem label="Employees" value={company.employees ? company.employees.toLocaleString() : "—"} />
           <InfoItem label="Industry" value={company.industry || "—"} />
@@ -55,7 +55,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         </div>
 
         {/* Key facts */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-48 mt-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8 md:gap-x-16 lg:gap-x-48 mt-6">
           <InfoItem label="Price / Share" value={formatPricePerShare(company.lastFundingEstPricePerShareUsd)} />
           <InfoItem label="Last Round" value={company.lastFundingRoundType || "—"} />
           <InfoItem
@@ -76,20 +76,20 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
           <h2 className="text-xl font-semibold text-foreground mb-1">Products</h2>
           <div className="border-t border-border mb-4" />
 
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
             {company.products
               .filter(p => p.name)
               .map((product, index) => (
                 <div
                   key={index}
-                  className="group relative flex-shrink-0 rounded-lg border border-border bg-badge-bg/50 px-4 py-2 hover:bg-card-hover transition-colors cursor-default"
+                  className="group relative flex-shrink-0 rounded-lg border border-border bg-badge-bg/50 px-3 md:px-4 py-2.5 md:py-2 hover:bg-card-hover active:bg-card-hover transition-colors cursor-default"
                 >
                   <span className="text-sm font-medium text-foreground whitespace-nowrap">
                     {product.name}
                   </span>
-                  {/* Tooltip on hover */}
+                  {/* Tooltip on hover (hidden on mobile) */}
                   {product.description && (
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-10">
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden md:group-hover:block z-10">
                       <div className="bg-foreground text-background text-xs rounded-lg px-3 py-2 max-w-[200px] shadow-lg">
                         {product.description}
                       </div>
