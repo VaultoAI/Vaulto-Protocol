@@ -71,33 +71,12 @@ function generateArticleId(article: NewsAPIArticle): string {
 }
 
 /**
- * Build a search query that includes company name, CEO, and key products
- * Uses OR to broaden results while keeping them relevant
+ * Check if article title contains the company name (case-insensitive)
  */
-function buildSearchQuery(params: CompanyNewsParams): string {
-  const terms: string[] = [];
-
-  // Always include company name (exact match)
-  terms.push(`"${params.company}"`);
-
-  // Add CEO name if provided (helps catch leadership news)
-  if (params.ceo) {
-    terms.push(`"${params.ceo}"`);
-  }
-
-  // Add top product names (limit to 2 to avoid overly broad queries)
-  if (params.products && params.products.length > 0) {
-    const topProducts = params.products.slice(0, 2);
-    topProducts.forEach((product) => {
-      // Only add if product name is specific enough (more than 3 chars)
-      if (product.length > 3) {
-        terms.push(`"${product}"`);
-      }
-    });
-  }
-
-  // Join with OR for broader matching
-  return terms.join(" OR ");
+function titleContainsCompany(title: string, company: string): boolean {
+  const titleLower = title.toLowerCase();
+  const companyLower = company.toLowerCase();
+  return titleLower.includes(companyLower);
 }
 
 /**
@@ -119,12 +98,12 @@ async function fetchCompanyNewsUncached(
 
   try {
     const url = new URL(NEWSAPI_URL);
-    const searchQuery = buildSearchQuery(params);
-    url.searchParams.set("q", searchQuery);
+    // Search only by company name (exact match)
+    url.searchParams.set("q", `"${company}"`);
     url.searchParams.set("language", "en");
     url.searchParams.set("sortBy", "publishedAt");
-    // Request more than needed to filter by domain
-    url.searchParams.set("pageSize", String(Math.min(limit * 3, 100)));
+    // Request more than needed to filter for title relevance
+    url.searchParams.set("pageSize", String(Math.min(limit * 5, 100)));
     url.searchParams.set("domains", TRUSTED_DOMAINS.join(","));
     url.searchParams.set("apiKey", apiKey);
 
@@ -152,9 +131,9 @@ async function fetchCompanyNewsUncached(
       };
     }
 
-    // Filter and limit articles
+    // Filter articles: must have title and title must contain company name
     const articles: NewsArticle[] = data.articles
-      .filter((a) => a.title && a.title !== "[Removed]")
+      .filter((a) => a.title && a.title !== "[Removed]" && titleContainsCompany(a.title, company))
       .slice(0, limit)
       .map((a) => ({
         id: generateArticleId(a),
@@ -190,16 +169,10 @@ async function fetchCompanyNewsUncached(
 export async function getCompanyNews(
   params: CompanyNewsParams
 ): Promise<CompanyNewsResponse> {
-  const { company, ceo, products, limit = 6 } = params;
+  const { company, limit = 6 } = params;
 
-  // Create cache key from all params
-  const cacheKey = [
-    `company-news`,
-    company.toLowerCase(),
-    ceo?.toLowerCase() || "",
-    (products || []).join("-").toLowerCase(),
-    String(limit),
-  ].join("-");
+  // Create cache key from company name and limit
+  const cacheKey = `company-news-${company.toLowerCase()}-${limit}`;
 
   const cachedFetch = unstable_cache(
     () => fetchCompanyNewsUncached(params),

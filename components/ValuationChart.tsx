@@ -28,6 +28,14 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
+  // Current valuation from history (ensures consistency with line chart's last point)
+  const currentValuation = useMemo(() => {
+    if (allHistory.length > 0) {
+      return allHistory[allHistory.length - 1].valuation;
+    }
+    return company.valuationUsd;
+  }, [allHistory, company.valuationUsd]);
+
   // Filter history based on active range
   const history = useMemo(() => {
     if (activeRange === "ALL") return allHistory;
@@ -230,7 +238,7 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
           </div>
           <div className="flex flex-col items-end">
             <span className="text-base text-muted">Valuation</span>
-            <span className="text-2xl font-semibold text-foreground">{formatValuation(company.valuationUsd)}</span>
+            <span className="text-2xl font-semibold text-foreground">{formatValuation(currentValuation)}</span>
           </div>
         </div>
         {/* Progress bar with reduced rounding */}
@@ -238,7 +246,7 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
           <div
             className="h-full rounded transition-all duration-500 ease-out"
             style={{
-              width: `${Math.min((company.totalFundingUsd / company.valuationUsd) * 100, 100)}%`,
+              width: `${Math.min((company.totalFundingUsd / currentValuation) * 100, 100)}%`,
               background: `linear-gradient(90deg, ${color} 0%, ${color}cc 100%)`
             }}
           />

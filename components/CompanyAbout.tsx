@@ -15,7 +15,7 @@ interface CompanyAboutProps {
  * key statistics, products, and funding history.
  */
 export function CompanyAbout({ company }: CompanyAboutProps) {
-  const [showFullDesc, setShowFullDesc] = useState(false);
+  const [showFullDesc, setShowFullDesc] = useState(true);
 
   const descriptionLimit = 360;
   const isLong = company.description && company.description.length > descriptionLimit;
@@ -47,22 +47,15 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         )}
 
         {/* Company info grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-48">
           <InfoItem label="CEO" value={company.ceo || "—"} />
           <InfoItem label="Employees" value={company.employees ? company.employees.toLocaleString() : "—"} />
           <InfoItem label="Industry" value={company.industry || "—"} />
           <InfoItem label="Website" value={company.website ? (() => { try { const u = company.website!.startsWith("http") ? company.website! : `https://${company.website!}`; return new URL(u).hostname.replace("www.", ""); } catch { return company.website!; } })() : "—"} isLink={!!company.website} href={company.website?.startsWith("http") ? company.website : `https://${company.website}`} />
         </div>
-      </section>
 
-      {/* Key Statistics */}
-      <section>
-        <h2 className="text-xl font-semibold text-foreground mb-1">Key statistics</h2>
-        <div className="border-t border-border mb-4" />
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
-          <InfoItem label="Valuation" value={formatValuation(company.valuationUsd)} />
-          <InfoItem label="Total Funding" value={formatValuation(company.totalFundingUsd)} />
+        {/* Key facts */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-48 mt-6">
           <InfoItem label="Price / Share" value={formatPricePerShare(company.lastFundingEstPricePerShareUsd)} />
           <InfoItem label="Last Round" value={company.lastFundingRoundType || "—"} />
           <InfoItem
@@ -72,16 +65,9 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
               : "—"
             }
           />
-          <InfoItem
-            label="Valuation As Of"
-            value={company.valuationAsOf
-              ? new Date(company.valuationAsOf).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-              : "—"
-            }
-          />
           <InfoItem label="Funding Rounds" value={company.fundingHistory ? String(company.fundingHistory.length) : "—"} />
-          <InfoItem label="Status" value="Pre-IPO" />
         </div>
+
       </section>
 
       {/* Products - horizontal scrolling chips */}
@@ -96,7 +82,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
               .map((product, index) => (
                 <div
                   key={index}
-                  className="group relative flex-shrink-0 rounded-full border border-border bg-badge-bg/50 px-4 py-2 hover:bg-card-hover transition-colors cursor-default"
+                  className="group relative flex-shrink-0 rounded-lg border border-border bg-badge-bg/50 px-4 py-2 hover:bg-card-hover transition-colors cursor-default"
                 >
                   <span className="text-sm font-medium text-foreground whitespace-nowrap">
                     {product.name}
@@ -206,3 +192,4 @@ function InfoItem({
     </div>
   );
 }
+
