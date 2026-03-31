@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
+import { useTradingWallet } from "@/hooks/useTradingWallet";
 import { TokenSelect } from "@/components/TokenSelect";
 import { useSwapConfig } from "@/hooks/useSwapConfig";
 import { getTokenBySymbol, getPoolForPair } from "@/lib/tokens";
@@ -51,8 +52,9 @@ export function SwapWidget({ tokens }: SwapWidgetProps) {
 
   const { address, chain, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const { login } = usePrivy();
+  const { login, authenticated } = usePrivy();
   const { data: config } = useSwapConfig();
+  const { balance: tradingWalletBalance, formattedBalance, isActive: hasTradingWallet } = useTradingWallet();
   const swapAfterApproveRef = useRef<string | null>(null);
   const tokenRegistry = config?.tokens ?? {};
   const poolsForPair = config?.poolsForPair ?? {};
@@ -534,6 +536,11 @@ export function SwapWidget({ tokens }: SwapWidgetProps) {
         >
           {swapButtonLabel}
         </button>
+        {authenticated && hasTradingWallet && (
+          <p className="mt-2 text-center text-xs text-muted">
+            Trading wallet: ${formattedBalance} USDC
+          </p>
+        )}
       </div>
     </div>
   );

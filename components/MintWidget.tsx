@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useAccount } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
+import { useTradingWallet } from "@/hooks/useTradingWallet";
 
 type MintWidgetProps = {
   companyName: string;
@@ -22,16 +22,14 @@ export function MintWidget({
   const [mintState, setMintState] = useState<MintState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { isConnected, chain } = useAccount();
-  const { login } = usePrivy();
-
-  const isMainnet = chain?.id === 1;
+  const { authenticated, login } = usePrivy();
+  const { balance, formattedBalance, isActive, invalidateAll } = useTradingWallet();
 
   // Calculate tokens to receive (simulated 1:1 for demo)
   const tokensToReceive = parseFloat(amount) || 0;
 
   const handleOpenModal = useCallback(() => {
-    if (!isConnected) {
+    if (!authenticated) {
       login();
       return;
     }
@@ -39,7 +37,7 @@ export function MintWidget({
     setAmount("");
     setMintState("idle");
     setErrorMessage(null);
-  }, [isConnected, login]);
+  }, [authenticated, login]);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -54,25 +52,35 @@ export function MintWidget({
       return;
     }
 
-    if (!isMainnet) {
-      setErrorMessage("Please switch to Ethereum mainnet");
+    if (!isActive) {
+      setErrorMessage("Please set up your trading wallet first");
+      return;
+    }
+
+    const amountNum = parseFloat(amount);
+    const balanceNum = parseFloat(balance);
+
+    if (amountNum > balanceNum) {
+      setErrorMessage(`Insufficient balance. Available: $${formattedBalance}`);
       return;
     }
 
     setMintState("loading");
     setErrorMessage(null);
 
-    // Simulate minting process
+    // Simulate minting process using trading wallet
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Simulate 90% success rate
     if (Math.random() > 0.1) {
       setMintState("success");
+      // Refresh balance after successful mint
+      invalidateAll();
     } else {
       setMintState("error");
       setErrorMessage("Transaction failed. Please try again.");
     }
-  }, [amount, isMainnet]);
+  }, [amount, isActive, balance, formattedBalance, invalidateAll]);
 
   const handleAmountChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,16 +213,26 @@ export function MintWidget({
                   type="button"
                   onClick={handleMint}
                   disabled={
-                    mintState === "loading" || !amount || parseFloat(amount) <= 0
+                    mintState === "loading" ||
+                    !amount ||
+                    parseFloat(amount) <= 0 ||
+                    !isActive ||
+                    parseFloat(amount) > parseFloat(balance)
                   }
                   className="mt-6 w-full rounded border border-foreground bg-foreground py-3 text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {mintState === "loading" ? "Minting..." : "Mint"}
                 </button>
 
-                {!isMainnet && isConnected && (
+                {isActive && (
                   <p className="mt-2 text-center text-xs text-muted">
-                    Please switch to Ethereum mainnet
+                    Trading wallet balance: ${formattedBalance} USDC
+                  </p>
+                )}
+
+                {!isActive && authenticated && (
+                  <p className="mt-2 text-center text-xs text-muted">
+                    Set up your trading wallet to mint
                   </p>
                 )}
               </>

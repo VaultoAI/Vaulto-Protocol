@@ -1,13 +1,13 @@
 import { createConfig } from "@privy-io/wagmi";
 import { http } from "wagmi";
-import { mainnet } from "viem/chains";
+import { polygon } from "viem/chains";
 
-const mainnetRpc =
-  process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ?? "https://eth.llamarpc.com";
+const polygonRpc =
+  process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? "https://polygon.drpc.org";
 
 export const wagmiConfig = createConfig({
-  chains: [mainnet],
+  chains: [polygon],
   transports: {
-    [mainnet.id]: http(mainnetRpc),
+    [polygon.id]: http(polygonRpc),
   },
 });

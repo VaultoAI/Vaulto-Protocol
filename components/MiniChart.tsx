@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState, useEffect } from "react";
 
 interface MiniChartProps {
   data: number[];
@@ -23,10 +23,21 @@ export function MiniChart({
   strokeWidth = 1.5,
   showGradient = true,
 }: MiniChartProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const reactId = useId();
   const gradientId = `chart-grad-${isPositive ? "g" : "r"}-${reactId.replace(/:/g, "")}`;
 
+  // Only render after mount to avoid hydration mismatch with useId
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   if (!data || data.length < 2) return null;
+
+  // Return placeholder during SSR to avoid hydration mismatch
+  if (!isMounted) {
+    return <div style={{ width: "100%", height }} />;
+  }
 
   const padding = { top: 6, right: 2, bottom: 2, left: 2 };
   const innerWidth = width - padding.left - padding.right;

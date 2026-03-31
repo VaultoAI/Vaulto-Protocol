@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol } from "@/lib/vaulto/companies";
 import { getCurrentPrice, formatPrice } from "@/lib/vaulto/companyUtils";
+import { useTradingWallet } from "@/hooks/useTradingWallet";
 
 interface TradeWidgetProps {
   company: PrivateCompany;
@@ -11,11 +13,13 @@ interface TradeWidgetProps {
 
 /**
  * Buy/Sell trade widget matching Robinhood design.
- * Design only — no real trading functionality.
+ * Uses trading wallet balance for buying power.
  */
 export function TradeWidget({ company }: TradeWidgetProps) {
   const symbol = getSyntheticSymbol(company.name);
   const price = getCurrentPrice(company);
+  const { authenticated, login } = usePrivy();
+  const { balance, formattedBalance, isActive, needsCreation } = useTradingWallet();
 
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [orderType, setOrderType] = useState("Market");
@@ -136,21 +140,37 @@ export function TradeWidget({ company }: TradeWidgetProps) {
         </div>
 
         {/* Review order button */}
-        <button
-          className={`w-full py-3 rounded-full text-sm font-bold transition-all ${
-            activeTab === "buy"
-              ? "bg-green text-white hover:bg-green/90"
-              : "bg-red text-white hover:bg-red/90"
-          } ${numericAmount === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-          disabled={numericAmount === 0}
-        >
-          Review order
-        </button>
+        {!authenticated ? (
+          <button
+            onClick={login}
+            className="w-full py-3 rounded-full text-sm font-bold bg-foreground text-background hover:opacity-90 transition-all"
+          >
+            Connect Wallet
+          </button>
+        ) : needsCreation ? (
+          <button
+            className="w-full py-3 rounded-full text-sm font-bold bg-foreground text-background opacity-50 cursor-not-allowed"
+            disabled
+          >
+            Set up Trading Wallet
+          </button>
+        ) : (
+          <button
+            className={`w-full py-3 rounded-full text-sm font-bold transition-all ${
+              activeTab === "buy"
+                ? "bg-green text-white hover:bg-green/90"
+                : "bg-red text-white hover:bg-red/90"
+            } ${numericAmount === 0 || (activeTab === "buy" && estimatedTotal > parseFloat(balance)) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            disabled={numericAmount === 0 || (activeTab === "buy" && estimatedTotal > parseFloat(balance))}
+          >
+            Review order
+          </button>
+        )}
 
         {/* Buying power */}
         <div className="text-center">
           <span className="text-xs text-muted">
-            $0.00 buying power available
+            {isActive ? `$${formattedBalance}` : "$0.00"} buying power available
           </span>
         </div>
 

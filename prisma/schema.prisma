@@ -74,6 +74,41 @@ enum AuditAction {
   ONBOARDING_COMPLETED
   USER_SUSPENDED
   USER_REINSTATED
+  // Trading wallet actions
+  TRADING_WALLET_CREATED
+  TRADING_WALLET_DEPOSIT_INITIATED
+  TRADING_WALLET_DEPOSIT_CONFIRMED
+  TRADING_WALLET_WITHDRAWAL_REQUESTED
+  TRADING_WALLET_WITHDRAWAL_APPROVED
+  TRADING_WALLET_WITHDRAWAL_EXECUTED
+  TRADING_WALLET_WITHDRAWAL_REJECTED
+}
+
+enum TradingWalletStatus {
+  PENDING_CREATION
+  ACTIVE
+  SUSPENDED
+}
+
+enum DepositStatus {
+  PENDING
+  CONFIRMING
+  COMPLETED
+  FAILED
+}
+
+enum WithdrawalStatus {
+  PENDING_APPROVAL
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum UserTier {
+  STANDARD
+  VERIFIED
+  INSTITUTIONAL
 }
 
 // ============================================
@@ -109,6 +144,10 @@ model User {
   riskAcknowledgment    RiskAcknowledgment?
   compliancePeriod      CompliancePeriod?
   auditLogs             AuditLog[]
+  tradingWallet         TradingWallet?
+
+  // User tier for withdrawal limits
+  tier                  UserTier            @default(STANDARD)
 
   @@index([email])
   @@index([onboardingStatus])
@@ -439,4 +478,111 @@ model FundingRound {
 
   @@index([companyId])
   @@index([date])
+}
+
+// ============================================
+// TRADING WALLET MODELS (Polymarket-style)
+// ============================================
+
+model TradingWallet {
+  id                String              @id @default(cuid())
+  userId            String              @unique
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Privy wallet identifiers
+  privyWalletId     String              @unique
+  address           String              @unique
+  chainId           Int                 @default(137) // Polygon
+
+  // Status
+  status            TradingWalletStatus @default(PENDING_CREATION)
+
+  // Privy policy association (for transaction limits)
+  policyId          String?
+
+  // Server signer for delegated actions
+  hasServerSigner   Boolean             @default(false)
+  serverSignerId    String?
+
+  // Relations
+  deposits          Deposit[]
+  withdrawals       Withdrawal[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([address])
+  @@index([status])
+}
+
+model Deposit {
+  id                String              @id @default(cuid())
+  tradingWalletId   String
+  tradingWallet     TradingWallet       @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  // Transaction details
+  fromAddress       String
+  tokenAddress      String
+  amount            Decimal             @db.Decimal(78, 0) // Support full uint256 range
+  amountUsd         Decimal?            @db.Decimal(20, 2)
+  txHash            String?             @unique
+  chainId           Int
+
+  // Confirmation tracking
+  status            DepositStatus       @default(PENDING)
+  confirmations     Int                 @default(0)
+  requiredConfirmations Int             @default(64)
+
+  // Compliance screening
+  screenedAt        DateTime?
+  screeningPassed   Boolean?
+  screeningDetails  String?             // JSON with screening results
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  confirmedAt       DateTime?
+
+  @@index([tradingWalletId])
+  @@index([txHash])
+  @@index([status])
+  @@index([fromAddress])
+}
+
+model Withdrawal {
+  id                String              @id @default(cuid())
+  tradingWalletId   String
+  tradingWallet     TradingWallet       @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  // Transaction details
+  toAddress         String
+  tokenAddress      String
+  amount            Decimal             @db.Decimal(78, 0) // Support full uint256 range
+  amountUsd         Decimal?            @db.Decimal(20, 2)
+  txHash            String?             @unique
+  chainId           Int
+
+  // Status
+  status            WithdrawalStatus    @default(PENDING_APPROVAL)
+
+  // MFA requirement
+  requiresMfa       Boolean             @default(false)
+  mfaCompletedAt    DateTime?
+
+  // Approval tracking
+  approvedAt        DateTime?
+  approvedBy        String?             // System or admin ID
+  rejectedAt        DateTime?
+  rejectionReason   String?
+
+  // Execution
+  executedAt        DateTime?
+  executionError    String?
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([tradingWalletId])
+  @@index([txHash])
+  @@index([status])
+  @@index([toAddress])
 }
