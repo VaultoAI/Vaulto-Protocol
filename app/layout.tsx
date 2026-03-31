@@ -1,10 +1,4 @@
 import type { Metadata } from "next";
-import { TopNav } from "@/components/TopNav";
-import { Providers } from "@/components/Providers";
-import { Footer } from "@/components/Footer";
-import { GeoRestrictBanner } from "@/components/GeoRestrictBanner";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { auth } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -47,41 +41,20 @@ const themeScript = `
 })();
 `;
 
-export default async function RootLayout({
+/**
+ * Root layout - minimal, no auth, no providers.
+ * Route group layouts handle providers and auth checks.
+ */
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-  const isVaultoEmployee = process.env.NODE_ENV === "development" || session?.user?.isVaultoEmployee === true;
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <Providers>
-          <GeoRestrictBanner />
-          {isVaultoEmployee ? (
-            // Full platform layout with top navbar
-            <div className="flex min-h-screen flex-col">
-              <TopNav />
-              <main className="flex-1">
-                <div className="mx-auto max-w-[1400px] px-6 py-6">
-                  {children}
-                </div>
-              </main>
-              <Footer />
-            </div>
-          ) : (
-            // Minimal layout for non-employees (waitlist users)
-            <div className="flex min-h-screen flex-col">
-              <header className="fixed right-0 top-0 z-20 flex items-center gap-3 pr-6 pt-6">
-                <ThemeSwitch />
-              </header>
-              <main className="flex-1">{children}</main>
-            </div>
-          )}
-        </Providers>
+        {children}
       </body>
     </html>
   );
