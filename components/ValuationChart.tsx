@@ -33,7 +33,7 @@ export function ValuationChart({ company }: ValuationChartProps) {
 
   const width = 900;
   const height = 340;
-  const padding = { top: 20, right: 20, bottom: 20, left: 20 };
+  const padding = { top: 20, right: 20, bottom: 40, left: 20 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
@@ -137,7 +137,7 @@ export function ValuationChart({ company }: ValuationChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="w-full relative">
+      <div className="w-full relative overflow-hidden">
         <svg
           ref={svgRef}
           width="100%"
