@@ -1,8 +1,6 @@
 import { getPrivateCompanies, getSyntheticSymbol, formatValuation, type PrivateCompany } from "@/lib/vaulto/companies";
 import type { StockPool } from "@/components/EarnPoolsTable";
 import { EarnPageClient } from "@/components/earn/EarnPageClient";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 
 /**
  * Seeded random number generator for consistent demo data.
@@ -41,19 +39,11 @@ function generateDemoMetrics(company: PrivateCompany) {
   };
 }
 
+/**
+ * Earn page - displays LP pools for synthetic tokens.
+ * Auth is handled by the (authenticated) layout.
+ */
 export default async function EarnPage() {
-  if (process.env.NODE_ENV !== "development") {
-    const session = await auth();
-
-    if (!session?.user) {
-      redirect("/");
-    }
-
-    if (!session.user.isVaultoEmployee) {
-      redirect("/waitlist-success");
-    }
-  }
-
   const companies = await getPrivateCompanies();
 
   // Generate demo pool data for each company

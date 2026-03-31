@@ -123,18 +123,26 @@ body {
 
 .animate-gradient-shift {
   animation: gradient-shift 20s ease-in-out infinite;
+  will-change: transform;
+  contain: layout style paint;
 }
 
 .animate-float-1 {
   animation: float-1 8s ease-in-out infinite;
+  will-change: transform;
+  contain: layout style paint;
 }
 
 .animate-float-2 {
   animation: float-2 10s ease-in-out infinite;
+  will-change: transform;
+  contain: layout style paint;
 }
 
 .animate-float-3 {
   animation: float-3 12s ease-in-out infinite;
+  will-change: transform;
+  contain: layout style paint;
 }
 
 @keyframes float-logo {
@@ -154,18 +162,23 @@ body {
 
 .animate-float-logo {
   animation: float-logo 10s ease-in-out infinite;
+  will-change: transform;
+  contain: layout style paint;
 }
 
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out forwards;
+  will-change: transform, opacity;
 }
 
 .animate-scale-in {
   animation: scale-in 0.6s ease-out forwards;
+  will-change: transform, opacity;
 }
 
 .animate-shimmer {
   animation: shimmer 2s ease-in-out infinite;
+  will-change: transform;
 }
 
 .animation-delay-200 {
@@ -201,4 +214,20 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-gradient-shift,
+  .animate-float-1,
+  .animate-float-2,
+  .animate-float-3,
+  .animate-float-logo,
+  .animate-fade-in-up,
+  .animate-scale-in,
+  .animate-shimmer {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

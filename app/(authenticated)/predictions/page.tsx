@@ -1,21 +1,11 @@
 import { getCompanyIPOs, formatValuationPrecise } from "@/lib/polymarket/ipo-valuations";
 import { IPOValuationList } from "@/components/IPOValuationList";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 
+/**
+ * Predictions page - IPO valuation predictions from Polymarket.
+ * Auth is handled by the (authenticated) layout.
+ */
 export default async function PredictionsPage() {
-  if (process.env.NODE_ENV !== "development") {
-    const session = await auth();
-
-    if (!session?.user) {
-      redirect("/");
-    }
-
-    if (!session.user.isVaultoEmployee) {
-      redirect("/waitlist-success");
-    }
-  }
-
   const ipos = await getCompanyIPOs();
 
   // Calculate aggregate metrics

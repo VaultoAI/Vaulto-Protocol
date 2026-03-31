@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
 import { useWalletNetWorth } from "@/hooks/useWalletNetWorth";
 import { useExternalUsdcBalance } from "@/hooks/useExternalUsdcBalance";
 import { useReferralStats } from "@/hooks/useReferralStats";
-import { WithdrawModal } from "@/components/trading-wallet/WithdrawModal";
 import { MiniChart } from "@/components/MiniChart";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { Check, ExternalLink, Wallet, Loader2, Copy } from "lucide-react";
+
+// Lazy-load modal to reduce initial bundle
+const WithdrawModal = dynamic(
+  () => import("@/components/trading-wallet/WithdrawModal").then((mod) => mod.WithdrawModal),
+  { ssr: false }
+);
 
 type DepositStatus = "idle" | "initiating" | "pending" | "confirming" | "success" | "error";
 

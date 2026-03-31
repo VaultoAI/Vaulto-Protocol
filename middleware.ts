@@ -1,34 +1,10 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
-
-// Platform routes that require authentication and onboarding
-const protectedRoutes = ["/explore", "/earn", "/predictions"];
-
-// Routes that don't require onboarding check
-const onboardingExemptRoutes = ["/onboarding", "/api/onboarding", "/api/webhooks"];
-
-// Onboarding statuses that allow full platform access
-const fullyOnboardedStatuses = ["FULLY_ONBOARDED", "COMPLIANCE_PERIOD_ACTIVE"];
-
-// Check if onboarding enforcement is enabled
-// Disabled when DATABASE_URL is not set or SKIP_ONBOARDING is true
-function isOnboardingEnforcementEnabled(): boolean {
-  // Skip onboarding if explicitly disabled
-  if (process.env.SKIP_ONBOARDING === "true") {
-    return false;
-  }
-  // Skip onboarding if database is not configured
-  if (!process.env.DATABASE_URL) {
-    return false;
-  }
-  return true;
-}
+import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Detect country from request headers.
- * Supports Vercel, Netlify, Cloudflare, and fallback.
+ * Supports Vercel, Netlify, Cloudflare, and AWS CloudFront.
  */
-function getCountryFromRequest(req: Request): string | null {
+function getCountryFromRequest(req: NextRequest): string | null {
   // Vercel
   const vercelCountry = req.headers.get("x-vercel-ip-country");
   if (vercelCountry) return vercelCountry;
@@ -48,56 +24,16 @@ function getCountryFromRequest(req: Request): string | null {
   return null;
 }
 
-export default auth((req) => {
+/**
+ * Lightweight middleware - no auth checks here.
+ * Auth is handled by route group layouts for better performance.
+ * This middleware only sets cookies for geo detection and referral tracking.
+ */
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const session = req.auth;
-
-  // Check if accessing onboarding routes
-  const isOnboardingRoute = onboardingExemptRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  if (isOnboardingRoute) {
-    // If onboarding is disabled, redirect away from onboarding page
-    if (pathname === "/onboarding" && !isOnboardingEnforcementEnabled()) {
-      // Vaulto employees go to platform, others to waitlist
-      if (session?.user?.isVaultoEmployee) {
-        return NextResponse.redirect(new URL("/explore", req.url));
-      }
-      return NextResponse.redirect(new URL("/waitlist-success", req.url));
-    }
-    // Only require authentication for onboarding page itself
-    if (pathname === "/onboarding" && !session?.user) {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-    // Continue with geo cookie setting below
-  }
-
-  // Check if accessing a protected platform route
-  const isProtectedRoute = protectedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  if (isProtectedRoute) {
-    // In development, skip auth checks to allow direct access
-    if (process.env.NODE_ENV === "development") {
-      // Continue to set geo cookie
-    } else {
-      // Not authenticated - redirect to home
-      if (!session?.user) {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
-
-      // Only Vaulto employees (as designated in Supabase) can access the platform
-      if (!session.user.isVaultoEmployee) {
-        return NextResponse.redirect(new URL("/waitlist-success", req.url));
-      }
-      // Vaulto employees get full access - continue to set geo cookie
-    }
-  }
+  const response = NextResponse.next();
 
   // Set referral cookie when visiting home with ?ref= (for waitlist signup)
-  const response = NextResponse.next();
   if (pathname === "/" || pathname === "") {
     const ref = req.nextUrl.searchParams.get("ref");
     if (ref && /^[A-Za-z0-9]{1,20}$/.test(ref)) {
@@ -111,7 +47,7 @@ export default auth((req) => {
     }
   }
 
-  // Set geo cookie for client-side banner
+  // Set geo cookie for client-side geo-restriction banner
   let country = getCountryFromRequest(req);
 
   // In development, check for ?geo= query param to simulate geo
@@ -132,7 +68,7 @@ export default auth((req) => {
   }
 
   return response;
-});
+}
 
 export const config = {
   matcher: [

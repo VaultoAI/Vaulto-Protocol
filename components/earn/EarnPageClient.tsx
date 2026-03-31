@@ -1,15 +1,24 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { EarnPoolsTable, type StockPool } from "@/components/EarnPoolsTable";
 import { UserPositionsSection } from "@/components/earn/UserPositionsSection";
-import { AddLiquidityModal } from "@/components/earn/AddLiquidityModal";
-import { RemoveLiquidityModal } from "@/components/earn/RemoveLiquidityModal";
 import { PoolFilters, applyPoolFilters, type FilterState } from "@/components/earn/PoolFilters";
 import { FeaturedPools } from "@/components/earn/FeaturedPools";
 import { useLPPositions } from "@/hooks/useLPPositions";
 import { formatUSD, formatPercent } from "@/lib/format";
 import type { LPPosition } from "@/lib/lp/types";
+
+// Lazy-load modals to reduce initial bundle
+const AddLiquidityModal = dynamic(
+  () => import("@/components/earn/AddLiquidityModal").then((mod) => mod.AddLiquidityModal),
+  { ssr: false }
+);
+const RemoveLiquidityModal = dynamic(
+  () => import("@/components/earn/RemoveLiquidityModal").then((mod) => mod.RemoveLiquidityModal),
+  { ssr: false }
+);
 
 type EarnPageClientProps = {
   pools: StockPool[];
