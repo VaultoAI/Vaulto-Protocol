@@ -26,6 +26,7 @@ export function DepositPageClient() {
   const [depositStatus, setDepositStatus] = useState<DepositStatus>("idle");
   const [depositError, setDepositError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const { ready, authenticated } = usePrivy();
   const { chain, address: connectedAddress } = useAccount();
@@ -167,6 +168,11 @@ export function DepositPageClient() {
       setDepositStatus("error");
     }
   }, [sendError, depositStatus]);
+
+  // Track client-side mounting to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const resetDeposit = () => {
     setDepositAmount("");
@@ -427,11 +433,13 @@ export function DepositPageClient() {
         <div className="flex items-center gap-2">
           <div className="flex-1 rounded-lg border border-border bg-foreground/5 px-3 py-2.5">
             <span className="text-sm text-muted font-mono truncate block">
-              {referralCode
-                ? `${typeof window !== "undefined" ? window.location.origin : ""}/join?ref=${referralCode}`
-                : isLoadingReferral
-                  ? "Loading..."
-                  : "No referral code"}
+              {!mounted
+                ? "Loading..."
+                : referralCode
+                  ? `${window.location.origin}/join?ref=${referralCode}`
+                  : isLoadingReferral
+                    ? "Loading..."
+                    : "No referral code"}
             </span>
           </div>
           <button
