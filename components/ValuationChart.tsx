@@ -36,13 +36,34 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
     return company.valuationUsd;
   }, [allHistory, company.valuationUsd]);
 
-  // Filter history based on active range
-  const history = useMemo(() => {
-    if (activeRange === "ALL") return allHistory;
-    const now = new Date();
-    const years = activeRange === "5Y" ? 5 : activeRange === "3Y" ? 3 : 1;
-    const cutoff = new Date(now.getFullYear() - years, now.getMonth(), now.getDate());
-    return allHistory.filter((h) => new Date(h.date) >= cutoff);
+  // Filter history based on active range, with fallback to larger ranges if insufficient data
+  const { history, effectiveRange } = useMemo(() => {
+    const filterByRange = (range: TimeRange) => {
+      if (range === "ALL") return allHistory;
+      const now = new Date();
+      const years = range === "5Y" ? 5 : range === "3Y" ? 3 : 1;
+      const cutoff = new Date(now.getFullYear() - years, now.getMonth(), now.getDate());
+      return allHistory.filter((h) => new Date(h.date) >= cutoff);
+    };
+
+    // Try the active range first
+    const filtered = filterByRange(activeRange);
+    if (filtered.length >= 2) {
+      return { history: filtered, effectiveRange: activeRange };
+    }
+
+    // Fallback to larger ranges if insufficient data
+    const fallbackOrder: TimeRange[] = ["3Y", "5Y", "ALL"];
+    for (const range of fallbackOrder) {
+      if (range === activeRange) continue;
+      const fallbackFiltered = filterByRange(range);
+      if (fallbackFiltered.length >= 2) {
+        return { history: fallbackFiltered, effectiveRange: range };
+      }
+    }
+
+    // Return all history as last resort
+    return { history: allHistory, effectiveRange: "ALL" as TimeRange };
   }, [allHistory, activeRange]);
 
   const width = 900;
@@ -128,7 +149,8 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
 
   const timeRanges: TimeRange[] = ["1Y", "3Y", "5Y", "ALL"];
 
-  if (history.length < 2) {
+  // Only show error if there's truly no data at all
+  if (allHistory.length < 2) {
     return (
       <div className="w-full h-[340px] flex items-center justify-center rounded-lg bg-muted/10">
         <p className="text-muted text-sm">Insufficient valuation data for chart</p>
@@ -213,19 +235,25 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
 
       {/* Time range selector */}
       <div className="flex items-center gap-1 mt-3 border-t border-border pt-3">
-        {timeRanges.map((range) => (
-          <button
-            key={range}
-            onClick={() => setActiveRange(range)}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-              activeRange === range
-                ? "text-green bg-green/10"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            {range}
-          </button>
-        ))}
+        {timeRanges.map((range) => {
+          const isSelected = activeRange === range;
+          const isEffective = effectiveRange === range;
+          return (
+            <button
+              key={range}
+              onClick={() => setActiveRange(range)}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                isSelected && isEffective
+                  ? "text-green bg-green/10"
+                  : isSelected && !isEffective
+                  ? "text-muted bg-muted/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              {range}
+            </button>
+          );
+        })}
       </div>
 
       {/* Funding vs Valuation bar */}
