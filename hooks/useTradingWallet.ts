@@ -146,12 +146,15 @@ async function fetchBalance(): Promise<{
 export function useTradingWallet() {
   const queryClient = useQueryClient();
   const { ready, authenticated, user } = usePrivy();
-  const { wallets } = useWallets();
+  const { wallets, ready: walletsReady } = useWallets();
   const { client: smartWalletClient } = useSmartWallets();
   const isVisible = useDocumentVisibility();
 
   // Get embedded wallet (the trading wallet)
-  const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+  // Only search when wallets are ready to avoid false negatives
+  const embeddedWallet = walletsReady
+    ? wallets.find((w) => w.walletClientType === "privy")
+    : undefined;
 
   // Get external wallet (user's connected EOA)
   const externalWallet = wallets.find((w) => w.walletClientType !== "privy");
@@ -219,7 +222,8 @@ export function useTradingWallet() {
   const balance = balanceData?.balance ?? tradingWallet?.balance ?? "0";
   const balanceUsd = balanceData?.balanceUsd ?? tradingWallet?.balanceUsd ?? "0";
   const isActive = tradingWallet?.status === "ACTIVE";
-  const needsCreation = ready && authenticated && !tradingWallet && !isLoadingWallet;
+  // Only show creation prompt when wallets are ready AND embedded wallet exists
+  const needsCreation = ready && walletsReady && authenticated && !tradingWallet && !isLoadingWallet;
 
   // Format balance for display
   const formattedBalance = parseFloat(balance).toLocaleString(undefined, {
@@ -238,6 +242,7 @@ export function useTradingWallet() {
     isLoading: isLoadingWallet || isLoadingBalance,
     isLoadingWallet,
     isLoadingBalance,
+    walletsReady,
     walletError,
 
     // Computed values

@@ -1,17 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
 
 export function CreateWalletPrompt() {
-  const { wallets } = useWallets();
-  const { createWallet, isCreatingWallet, needsCreation } = useTradingWallet();
+  const { createWallet, isCreatingWallet, needsCreation, embeddedWallet, walletsReady } = useTradingWallet();
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-
-  // Find the embedded wallet (Privy wallet)
-  const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
 
   if (!needsCreation) return null;
 
@@ -80,10 +75,10 @@ export function CreateWalletPrompt() {
           <div className="mt-4 flex items-center gap-3">
             <button
               onClick={handleCreate}
-              disabled={isCreating || !embeddedWallet}
+              disabled={isCreating || !walletsReady || !embeddedWallet}
               className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {isCreating ? "Creating..." : !embeddedWallet ? "Loading Wallet..." : "Create Trading Wallet"}
+              {isCreating ? "Creating..." : !walletsReady ? "Loading Wallets..." : !embeddedWallet ? "Waiting for Embedded Wallet..." : "Create Trading Wallet"}
             </button>
           </div>
           {error && (

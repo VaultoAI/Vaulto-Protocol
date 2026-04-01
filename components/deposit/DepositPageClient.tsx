@@ -45,6 +45,7 @@ export function DepositPageClient() {
     formattedBalance,
     balance,
     isLoadingWallet,
+    walletsReady,
     needsCreation,
     createWallet,
     isCreatingWallet,
@@ -208,8 +209,8 @@ export function DepositPageClient() {
     });
   }, [balance]);
 
-  // Show loading skeleton while Privy initializes or wallet is loading
-  if (!ready || isLoadingWallet) {
+  // Show loading skeleton while Privy initializes, wallets are loading, or trading wallet is loading
+  if (!ready || !walletsReady || isLoadingWallet) {
     return (
       <>
         {/* Header Skeleton */}
