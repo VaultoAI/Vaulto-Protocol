@@ -83,7 +83,8 @@ export function WithdrawInline() {
         const tx = await smartWalletClient.sendTransaction({
           to: result.txData.to as `0x${string}`,
           data: result.txData.data as `0x${string}`,
-          chain: polygon,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          chain: polygon as any,
         });
 
         await fetch("/api/trading-wallet/withdraw/execute", {
