@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { ConnectWalletWithBalance } from "@/components/ConnectWalletWithBalance";
+import { WalletDropdown } from "@/components/WalletDropdown";
 
 /**
  * Horizontal top navigation bar.
@@ -39,7 +39,7 @@ export function TopNav() {
         </div>
 
         {/* Right: Wallet */}
-        <ConnectWalletWithBalance />
+        <WalletDropdown />
       </div>
     </header>
   );

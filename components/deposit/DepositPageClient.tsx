@@ -8,9 +8,12 @@ import { useTradingWallet } from "@/hooks/useTradingWallet";
 import { useWalletNetWorth } from "@/hooks/useWalletNetWorth";
 import { useExternalUsdcBalance } from "@/hooks/useExternalUsdcBalance";
 import { useReferralStats } from "@/hooks/useReferralStats";
+import { useProfile } from "@/hooks/useProfile";
 import { MiniChart } from "@/components/MiniChart";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
-import { Check, ExternalLink, Wallet, Loader2, Copy } from "lucide-react";
+import { generateUsername } from "@/lib/utils/username";
+import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil } from "lucide-react";
 
 // Lazy-load modal to reduce initial bundle
 const WithdrawModal = dynamic(
@@ -39,6 +42,14 @@ export function DepositPageClient() {
 
   // Fetch referral stats
   const { referralCode, referralCount, bonusPoints, isLoading: isLoadingReferral } = useReferralStats();
+
+  // Fetch profile data
+  const { profile, updateProfile, isUpdating: isUpdatingProfile } = useProfile();
+
+  // Profile editing state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const {
     tradingWallet,
@@ -196,6 +207,54 @@ export function DepositPageClient() {
     }
   };
 
+  // Profile name handling
+  const walletAddress = tradingWallet?.address ?? null;
+  const displayName = profile?.name || (walletAddress ? generateUsername(walletAddress) : "User");
+
+  const handleStartEditName = () => {
+    setNameInput(profile?.name || "");
+    setNameError(null);
+    setIsEditingName(true);
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setNameInput(profile?.name || "");
+    setNameError(null);
+  };
+
+  const handleSaveName = async () => {
+    const trimmedName = nameInput.trim();
+    if (trimmedName.length === 0) {
+      setNameError("Username cannot be empty");
+      return;
+    }
+    if (trimmedName.length > 50) {
+      setNameError("Username must be at most 50 characters");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_\s]+$/.test(trimmedName)) {
+      setNameError("Only letters, numbers, spaces, and underscores allowed");
+      return;
+    }
+
+    try {
+      await updateProfile({ name: trimmedName });
+      setIsEditingName(false);
+      setNameError(null);
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : "Failed to save");
+    }
+  };
+
+  const handleImageChange = async (dataUrl: string | null) => {
+    try {
+      await updateProfile({ image: dataUrl });
+    } catch (err) {
+      console.error("Failed to update image:", err);
+    }
+  };
+
   const isDepositing = depositStatus === "initiating" || depositStatus === "pending" || depositStatus === "confirming" || isInitiatingDeposit || isSending || isConfirmingTx;
 
   // Generate demo chart data - flat line at current balance value
@@ -304,10 +363,70 @@ export function DepositPageClient() {
 
   return (
     <>
-      {/* Header - Balances + Add Funds */}
+      {/* Header - Profile + Balances */}
       <div className="flex items-center justify-between gap-8">
+        {/* Profile Avatar + Name */}
+        <div className="flex items-center gap-4">
+          <ProfileAvatar
+            image={profile?.image ?? null}
+            walletAddress={walletAddress}
+            size={56}
+            editable
+            onImageChange={handleImageChange}
+          />
+          <div className="min-w-0">
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => {
+                    setNameInput(e.target.value);
+                    if (nameError) setNameError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveName();
+                    if (e.key === "Escape") handleCancelEditName();
+                  }}
+                  className="rounded-md border border-foreground/20 bg-transparent px-2 py-1 text-lg font-semibold text-foreground focus:border-foreground/50 focus:outline-none"
+                  placeholder="Enter username"
+                  maxLength={50}
+                  autoFocus
+                  disabled={isUpdatingProfile}
+                />
+                <button
+                  onClick={handleSaveName}
+                  disabled={isUpdatingProfile}
+                  className="rounded-md p-1 text-green-500 transition hover:bg-green-500/10 disabled:opacity-50"
+                >
+                  {isUpdatingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={handleCancelEditName}
+                  disabled={isUpdatingProfile}
+                  className="rounded-md p-1 text-red-500 transition hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-foreground">{displayName}</span>
+                <button
+                  onClick={handleStartEditName}
+                  className="rounded-md p-1 text-muted transition hover:bg-foreground/10 hover:text-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            {nameError && <p className="mt-0.5 text-xs text-red-500">{nameError}</p>}
+            {profile?.email && <p className="text-sm text-muted truncate">{profile.email}</p>}
+          </div>
+        </div>
+
         {/* Portfolio Value */}
-        <div>
+        <div className="border-l border-border pl-8">
           <span className="text-4xl font-semibold tracking-tight text-foreground">
             ${formattedBalance}
           </span>
@@ -315,7 +434,7 @@ export function DepositPageClient() {
         </div>
 
         {/* Wallet Total */}
-        <div className="border-l border-border pl-8">
+        <div className="ml-auto border-l border-border pl-8">
           <span className="text-4xl font-semibold tracking-tight text-muted">
             {isLoadingNetWorth ? (
               <span className="inline-block h-10 w-32 animate-pulse rounded bg-foreground/10" />
@@ -327,63 +446,10 @@ export function DepositPageClient() {
           </span>
           <p className="mt-1 text-sm text-muted">Wallet Total</p>
         </div>
-
-        {/* Add Funds - input on top, button on bottom */}
-        <div className="ml-auto flex flex-col items-end gap-2">
-          {/* Max link */}
-          <button
-            onClick={handleSetMaxDeposit}
-            disabled={isLoadingExternalBalance || !externalUsdcBalance || parseFloat(externalUsdcBalance) <= 0}
-            className="text-xs text-muted hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-default"
-          >
-            Max: ${isLoadingExternalBalance ? "..." : externalUsdcBalance}
-          </button>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={depositAmount}
-              onChange={(e) => {
-                setDepositAmount(e.target.value);
-                setDepositError(null);
-                if (depositStatus === "error") setDepositStatus("idle");
-              }}
-              disabled={isDepositing}
-              className="w-32 rounded-lg border border-border bg-transparent py-2 pl-7 pr-14 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-foreground/50 disabled:opacity-50"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">USDC</span>
-          </div>
-          <button
-            onClick={handleDeposit}
-            disabled={
-              !depositAmount ||
-              parseFloat(depositAmount) <= 0 ||
-              isDepositing ||
-              !isPolygon ||
-              depositStatus === "success"
-            }
-            className="w-32 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isDepositing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              "Add Funds"
-            )}
-          </button>
-        </div>
       </div>
 
       {/* Feedback Messages */}
       <div className="mt-4 space-y-2">
-        {/* Network Warning */}
-        {!isPolygon && (
-          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-700 dark:text-yellow-400">
-            Please switch to Polygon network to deposit
-          </div>
-        )}
-
         {/* Error Message */}
         {depositError && (
           <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">

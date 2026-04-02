@@ -40,11 +40,13 @@ export async function GET(request: NextRequest) {
   }
 
   if (!MORALIS_API_KEY) {
-    console.error("MORALIS_API_KEY is not configured");
-    return NextResponse.json(
-      { error: "API not configured" },
-      { status: 500 }
-    );
+    console.warn("[wallet-networth] MORALIS_API_KEY is not configured");
+    // Return empty data instead of error - allows UI to gracefully show "—"
+    return NextResponse.json({
+      totalNetWorthUsd: null,
+      chains: [],
+      error: "Service temporarily unavailable",
+    });
   }
 
   try {
