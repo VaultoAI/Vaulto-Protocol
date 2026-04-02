@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
@@ -218,12 +218,80 @@ export function useTradingWallet() {
     },
   });
 
+  // Auto-creation state
+  const isAutoCreatingRef = useRef(false);
+  const [isAutoCreating, setIsAutoCreating] = useState(false);
+  const [autoCreateError, setAutoCreateError] = useState<string | null>(null);
+
+  // Auto-create trading wallet when conditions are met
+  useEffect(() => {
+    const shouldAutoCreate =
+      ready &&
+      walletsReady &&
+      authenticated &&
+      embeddedWallet?.address &&
+      !tradingWallet &&
+      !isLoadingWallet &&
+      !createWalletMutation.isPending &&
+      !isAutoCreatingRef.current;
+
+    if (!shouldAutoCreate) return;
+
+    const autoCreate = async () => {
+      isAutoCreatingRef.current = true;
+      setIsAutoCreating(true);
+      setAutoCreateError(null);
+
+      try {
+        await createWalletMutation.mutateAsync(embeddedWallet.address);
+      } catch (err) {
+        // Handle "already exists" errors silently - just refetch
+        if (err instanceof Error) {
+          const errorMessage = err.message.toLowerCase();
+          if (
+            errorMessage.includes("already exists") ||
+            errorMessage.includes("duplicate") ||
+            errorMessage.includes("conflict")
+          ) {
+            // Wallet already exists, just refetch to get the data
+            await refetchWallet();
+          } else {
+            setAutoCreateError(err.message);
+          }
+        } else {
+          setAutoCreateError("Failed to create trading wallet");
+        }
+      } finally {
+        setIsAutoCreating(false);
+        isAutoCreatingRef.current = false;
+      }
+    };
+
+    autoCreate();
+  }, [
+    ready,
+    walletsReady,
+    authenticated,
+    embeddedWallet?.address,
+    tradingWallet,
+    isLoadingWallet,
+    createWalletMutation,
+    refetchWallet,
+  ]);
+
   // Computed values
   const balance = balanceData?.balance ?? tradingWallet?.balance ?? "0";
   const balanceUsd = balanceData?.balanceUsd ?? tradingWallet?.balanceUsd ?? "0";
   const isActive = tradingWallet?.status === "ACTIVE";
-  // Only show creation prompt when wallets are ready AND embedded wallet exists
-  const needsCreation = ready && walletsReady && authenticated && !tradingWallet && !isLoadingWallet;
+  // Only show creation prompt when auto-creation failed (so manual prompt shows as fallback)
+  const needsCreation =
+    ready &&
+    walletsReady &&
+    authenticated &&
+    !tradingWallet &&
+    !isLoadingWallet &&
+    !isAutoCreating &&
+    autoCreateError !== null;
 
   // Format balance for display
   const formattedBalance = parseFloat(balance).toLocaleString(undefined, {
@@ -251,6 +319,8 @@ export function useTradingWallet() {
     formattedBalance,
     isActive,
     needsCreation,
+    isAutoCreating,
+    autoCreateError,
     chainId: tradingWallet?.chainId ?? CHAIN_IDS.POLYGON,
 
     // Actions

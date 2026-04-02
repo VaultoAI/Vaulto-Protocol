@@ -30,6 +30,7 @@ export function TradingWalletDashboard() {
     isActive,
     refetchBalance,
     isLoadingBalance,
+    isAutoCreating,
   } = useTradingWallet();
 
   const handleCopyAddress = () => {
@@ -40,8 +41,8 @@ export function TradingWalletDashboard() {
     }
   };
 
-  // Show wallet creation prompt if needed
-  if (needsCreation) {
+  // Show auto-creation loading or manual creation prompt
+  if (isAutoCreating || needsCreation) {
     return <CreateWalletPrompt />;
   }
 
