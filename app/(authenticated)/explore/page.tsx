@@ -4,6 +4,8 @@ import {
 import { ExploreTopSection } from "@/components/ExploreTopSection";
 import { ExploreAssets } from "@/components/ExploreAssets";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Explore page - displays available private company stocks.
  * Auth is handled by the (authenticated) layout.

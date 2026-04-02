@@ -2,6 +2,8 @@ import { getPrivateCompanies, getCompanySlug } from "@/lib/vaulto/companies";
 import { CompanyDetailPage } from "@/components/CompanyDetailPage";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 interface CompanyPageProps {
   params: Promise<{ companyName: string }>;
 }

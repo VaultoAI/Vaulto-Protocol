@@ -83,12 +83,15 @@ async function fetchPrivateCompaniesUncached(): Promise<PrivateCompany[]> {
   }
 }
 
+/** Cache tag for on-demand revalidation via revalidateTag("vaulto-private-companies") */
+export const PRIVATE_COMPANIES_CACHE_TAG = "vaulto-private-companies";
+
 /** Cached fetch for private companies (5 min cache). */
 export async function getPrivateCompanies(): Promise<PrivateCompany[]> {
   return unstable_cache(
     fetchPrivateCompaniesUncached,
     ["vaulto-private-companies"],
-    { revalidate: 300 }
+    { revalidate: 300, tags: [PRIVATE_COMPANIES_CACHE_TAG] }
   )();
 }
 
