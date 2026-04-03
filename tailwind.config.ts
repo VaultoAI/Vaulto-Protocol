@@ -17,7 +17,7 @@ const config: Config = {
         "card-hover": "var(--card-hover)",
         "badge-bg": "var(--badge-bg)",
         "badge-text": "var(--badge-text)",
-        green: "var(--green)",
+        green: "rgb(var(--green) / <alpha-value>)",
         red: "var(--red)",
         "chart-green": "var(--chart-green)",
         "chart-red": "var(--chart-red)",
