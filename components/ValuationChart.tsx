@@ -256,29 +256,35 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
         })}
       </div>
 
-      {/* Funding vs Valuation bar */}
-      <div className="mt-6 space-y-3">
-        {/* Labels and values above bar */}
-        <div className="flex justify-between">
-          <div className="flex flex-col">
-            <span className="text-base text-muted">Total Funding</span>
-            <span className="text-2xl font-semibold text-foreground">{formatValuation(company.totalFundingUsd)}</span>
+      {/* Funding vs Valuation summary */}
+      <div className="mt-6 p-4 rounded-lg bg-muted/5 border border-border">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted mb-1">Total Funding</p>
+            <p className="text-2xl font-semibold text-foreground">
+              {formatValuation(company.totalFundingUsd)}
+            </p>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-base text-muted">Valuation</span>
-            <span className="text-2xl font-semibold text-foreground">{formatValuation(currentValuation)}</span>
+          <div className="text-right">
+            <p className="text-sm text-muted mb-1">Valuation</p>
+            <p className="text-2xl font-semibold text-foreground">
+              {formatValuation(currentValuation)}
+            </p>
           </div>
         </div>
-        {/* Progress bar with reduced rounding */}
-        <div className="relative h-8 rounded-md border border-border bg-muted/10 overflow-hidden p-0.5">
+        {/* Progress bar */}
+        <div className="relative h-2 rounded-full bg-muted/20 overflow-hidden mt-4">
           <div
-            className="h-full rounded transition-all duration-500 ease-out"
+            className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
               width: `${Math.min((company.totalFundingUsd / currentValuation) * 100, 100)}%`,
               background: `linear-gradient(90deg, ${color} 0%, ${color}cc 100%)`
             }}
           />
         </div>
+        <p className="text-xs text-muted/60 mt-3">
+          Funding represents {((company.totalFundingUsd / currentValuation) * 100).toFixed(1)}% of current valuation
+        </p>
       </div>
     </div>
   );

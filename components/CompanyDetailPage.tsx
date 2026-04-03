@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
-import { getSyntheticSymbol, formatValuation } from "@/lib/vaulto/companies";
+import { getSyntheticSymbol, formatValuation, getCompanySlug } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { ValuationChart, type HoverData } from "@/components/ValuationChart";
+import { ImpliedValuationChart, type ImpliedHoverData, type ImpliedChartData } from "@/components/ImpliedValuationChart";
 import { CompanyAbout } from "@/components/CompanyAbout";
+import {
+  hasImpliedValuationData,
+  getImpliedValuationSlug,
+  type ImpliedValuationHistoryResponse,
+} from "@/lib/polymarket/implied-valuations";
 
 // Lazy-load TradeWidget to reduce initial bundle
 const TradeWidget = dynamic(
@@ -34,6 +40,8 @@ interface CompanyDetailPageProps {
  * Full company detail page matching Robinhood design.
  * Layout: Chart (left) + Trade Widget (right) stacked above About section.
  */
+type ChartType = "funding" | "market";
+
 export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
   const symbol = getSyntheticSymbol(company.name);
   const basePrice = getCurrentPrice(company);
@@ -45,17 +53,96 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
   // State for hover data
   const [hoverData, setHoverData] = useState<HoverData | null>(null);
+  const [impliedHoverData, setImpliedHoverData] = useState<ImpliedHoverData | null>(null);
+
+  // Chart type toggle
+  const [chartType, setChartType] = useState<ChartType>("funding");
+  const [impliedData, setImpliedData] = useState<ImpliedValuationHistoryResponse | null>(null);
+  const [impliedDataLoading, setImpliedDataLoading] = useState(false);
+  const [impliedChartData, setImpliedChartData] = useState<ImpliedChartData | null>(null);
+
+  // Check if company has implied valuation data
+  const hasMarketData = hasImpliedValuationData(company.name);
+  const impliedValuationSlug = getImpliedValuationSlug(company.name);
+
+  // Fetch implied valuation data when switching to market view
+  useEffect(() => {
+    if (chartType === "market" && !impliedData && !impliedDataLoading && impliedValuationSlug) {
+      setImpliedDataLoading(true);
+      fetch(`/api/implied-valuations/${impliedValuationSlug}/history?range=ALL`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          setImpliedData(data);
+          setImpliedDataLoading(false);
+        })
+        .catch(() => setImpliedDataLoading(false));
+    }
+  }, [chartType, impliedData, impliedDataLoading, impliedValuationSlug]);
 
   const handleChartHover = useCallback((data: HoverData | null) => {
     setHoverData(data);
   }, []);
 
-  // Calculate displayed price based on hover
-  // When hovering, scale the price proportionally to the valuation change
-  const displayedValuation = hoverData?.valuation ?? currentValuation;
-  const displayedPrice = hoverData
-    ? basePrice * (hoverData.valuation / currentValuation)
-    : basePrice;
+  const handleImpliedChartHover = useCallback((data: ImpliedHoverData | null) => {
+    setImpliedHoverData(data);
+  }, []);
+
+  const handleImpliedDataChange = useCallback((data: ImpliedChartData | null) => {
+    setImpliedChartData(data);
+  }, []);
+
+  // Get market implied current valuation (when available)
+  const marketImpliedValuation = impliedChartData?.endValue ?? null;
+
+  // Calculate displayed price based on hover and chart type
+  // When in market view, use market implied valuation as the base
+  const displayedValuation = (() => {
+    if (chartType === "market") {
+      if (impliedHoverData) return impliedHoverData.valuation;
+      return marketImpliedValuation ?? currentValuation;
+    }
+    return hoverData?.valuation ?? currentValuation;
+  })();
+
+  // Scale price proportionally to valuation
+  const displayedPrice = (() => {
+    if (chartType === "market") {
+      const marketBase = marketImpliedValuation ?? currentValuation;
+      if (impliedHoverData) {
+        return basePrice * (impliedHoverData.valuation / currentValuation);
+      }
+      return basePrice * (marketBase / currentValuation);
+    }
+    if (hoverData) {
+      return basePrice * (hoverData.valuation / currentValuation);
+    }
+    return basePrice;
+  })();
+
+  // Get date to display based on chart type
+  const displayedDate = chartType === "market" && impliedHoverData
+    ? impliedHoverData.timestamp
+    : hoverData?.date;
+
+  // Get change data based on chart type
+  const displayedChange = (() => {
+    if (chartType === "market" && impliedChartData) {
+      // For market view, show change in valuation (in billions) over the time range
+      const changeInBillions = impliedChartData.changeAmount / 1_000_000_000;
+      return {
+        amount: changeInBillions,
+        percent: impliedChartData.changePercent,
+        isPositive: impliedChartData.isPositive,
+        label: impliedChartData.range === "ALL" ? "All Time" : impliedChartData.range,
+      };
+    }
+    return {
+      amount: changeAmount,
+      percent: changePercent,
+      isPositive,
+      label: "Last Round",
+    };
+  })();
 
   return (
     <div>
@@ -92,9 +179,9 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
           {/* Change indicator */}
           <div className="flex items-center gap-2 mt-1 mb-6">
-            {hoverData ? (
+            {displayedDate ? (
               <span className="text-sm text-muted transition-all duration-150 ease-out">
-                {new Date(hoverData.date).toLocaleDateString("en-US", {
+                {new Date(displayedDate).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -102,16 +189,59 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
               </span>
             ) : (
               <>
-                <span className={`text-sm font-medium ${isPositive ? "text-green" : "text-red"}`}>
-                  {isPositive ? "+" : "-"}${Math.abs(changeAmount).toFixed(2)} ({isPositive ? "+" : "-"}{changePercent.toFixed(2)}%)
+                <span className={`text-sm font-medium ${displayedChange.isPositive ? "text-green" : "text-red"}`}>
+                  {displayedChange.isPositive ? "+" : "-"}
+                  {chartType === "market"
+                    ? `$${Math.abs(displayedChange.amount).toFixed(1)}B`
+                    : `$${Math.abs(displayedChange.amount).toFixed(2)}`
+                  }
+                  {" "}({displayedChange.isPositive ? "+" : "-"}{Math.abs(displayedChange.percent).toFixed(2)}%)
                 </span>
-                <span className="text-sm text-muted">Last Round</span>
+                <span className="text-sm text-muted">{displayedChange.label}</span>
               </>
             )}
           </div>
 
-          {/* Chart */}
-          <ValuationChart company={company} onHover={handleChartHover} />
+          {/* Chart Type Toggle + Charts Container */}
+          <div className="w-full">
+            {hasMarketData && (
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={() => setChartType("funding")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    chartType === "funding"
+                      ? "bg-green/10 text-green border border-green/20"
+                      : "text-muted hover:text-foreground border border-transparent"
+                  }`}
+                >
+                  Funding History
+                </button>
+                <button
+                  onClick={() => setChartType("market")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    chartType === "market"
+                      ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                      : "text-muted hover:text-foreground border border-transparent"
+                  }`}
+                >
+                  Market Implied
+                </button>
+              </div>
+            )}
+
+            {/* Charts */}
+            {chartType === "funding" ? (
+              <ValuationChart company={company} onHover={handleChartHover} />
+            ) : (
+              <ImpliedValuationChart
+                companySlug={impliedValuationSlug || ""}
+                companyName={company.name}
+                initialData={impliedData}
+                onHover={handleImpliedChartHover}
+                onDataChange={handleImpliedDataChange}
+              />
+            )}
+          </div>
 
         </div>
 
