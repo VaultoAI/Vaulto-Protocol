@@ -12,6 +12,8 @@ const STATIC_LOGO_MAP: Record<string, string> = {
   waymo: "waymo.png",
   databricks: "databricks.png",
   bytedance: "bytedance.svg",
+  safesuperintelligence: "ssi.jpg",
+  ssi: "ssi.jpg",
 };
 
 /**
@@ -88,6 +90,9 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   mercury: "mercury.com",
   // AI
   thinkingmachineslab: "thinkingmachines.ai",
+  // AI Safety
+  safesuperintelligence: "ssi.inc",
+  ssi: "ssi.inc",
 };
 
 /**

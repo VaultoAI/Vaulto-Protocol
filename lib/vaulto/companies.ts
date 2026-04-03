@@ -166,6 +166,7 @@ const SYMBOL_OVERRIDES: Record<string, string> = {
   "Fanatics Holdings": "vFanatics",
   "Mercury Technologies": "vMercury",
   "Thinking Machines Lab": "vTML",
+  "Safe Superintelligence": "vSSI",
 };
 
 /** Generate synthetic token symbol from company name (e.g., SpaceX -> vSpaceX). */
