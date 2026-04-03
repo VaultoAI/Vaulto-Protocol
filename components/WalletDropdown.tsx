@@ -15,7 +15,8 @@ import {
   LogOut,
   Check,
 } from "lucide-react";
-import { GradientAvatar } from "@/components/GradientAvatar";
+import { useProfile } from "@/hooks/useProfile";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { generateUsername } from "@/lib/utils/username";
 
 export function WalletDropdown() {
@@ -28,6 +29,7 @@ export function WalletDropdown() {
     isActive,
     externalWallet,
   } = useTradingWallet();
+  const { image: profileImage, name: profileName } = useProfile();
 
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -176,10 +178,15 @@ export function WalletDropdown() {
             {/* Wallet Info Header */}
             <div className="border-b border-gray-100 px-4 py-3 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <GradientAvatar address={walletAddress!} size={32} className="rounded-full" />
+                <ProfileAvatar
+                  image={profileImage}
+                  walletAddress={walletAddress ?? null}
+                  size={32}
+                  editable={false}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {generateUsername(walletAddress!)}
+                    {profileName || generateUsername(walletAddress!)}
                   </p>
                   <p className="text-xs text-gray-500 font-mono truncate dark:text-gray-400">
                     {truncatedAddress}
