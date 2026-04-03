@@ -234,16 +234,6 @@ export function ImpliedValuationChart({
 
   return (
     <div className="w-full">
-      {/* Market Implied Badge */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="px-2 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500 rounded">
-          Market Implied
-        </span>
-        <span className="text-xs text-muted">
-          Based on Polymarket prediction markets
-        </span>
-      </div>
-
       {/* Chart */}
       <div className="w-full relative overflow-hidden">
         <svg
