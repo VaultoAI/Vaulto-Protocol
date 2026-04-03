@@ -132,10 +132,10 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
                   .map((round, index) => (
                     <tr key={index} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
                       <td className="py-2.5 px-4">
-                        <span className="font-medium text-foreground">{round.type}</span>
+                        <span className="font-medium text-foreground">{round.type || "—"}</span>
                       </td>
                       <td className="py-2.5 px-4 text-muted">
-                        {new Date(round.date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        {round.date ? new Date(round.date).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—"}
                       </td>
                       <td className="py-2.5 px-4 text-right text-foreground">
                         {round.amountRaisedUsd

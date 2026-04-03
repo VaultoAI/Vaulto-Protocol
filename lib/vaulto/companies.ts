@@ -51,7 +51,36 @@ export interface PrivateCompanyMetrics {
   totalFunding: number;
 }
 
-const VAULTO_API_URL = "https://api.vaulto.ai/api/private-companies";
+const VAULTO_API_URL = process.env.NEXT_PUBLIC_VAULTO_API_URL
+  ? `${process.env.NEXT_PUBLIC_VAULTO_API_URL}/api/private-companies`
+  : "https://api.vaulto.ai/api/private-companies";
+
+/**
+ * TEMPORARY OVERRIDE: Fix TML $50B round display issues.
+ * Removes type and date for the round with $50B post-money valuation.
+ * TODO: Remove this once the API data is corrected.
+ */
+function applyTMLOverride(companies: PrivateCompany[]): PrivateCompany[] {
+  return companies.map((company) => {
+    if (company.name === "Thinking Machines Lab" && company.fundingHistory) {
+      return {
+        ...company,
+        fundingHistory: company.fundingHistory.map((round) => {
+          // Target the $50B round (50 billion = 50_000_000_000)
+          if (round.postMoneyValuationUsd === 50_000_000_000) {
+            return {
+              ...round,
+              type: "", // Remove description/type
+              date: "", // Remove date
+            };
+          }
+          return round;
+        }),
+      };
+    }
+    return company;
+  });
+}
 
 async function fetchPrivateCompaniesUncached(): Promise<PrivateCompany[]> {
   try {

@@ -2,10 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePrivy } from "@privy-io/react-auth";
-import { useFundWallet } from "@privy-io/react-auth";
-import { useTradingWallet } from "@/hooks/useTradingWallet";
+import dynamic from "next/dynamic";
+import { usePrivy, useFundWallet } from "@privy-io/react-auth";
 import { polygon } from "viem/chains";
+import { useTradingWallet } from "@/hooks/useTradingWallet";
+
+const DepositModal = dynamic(
+  () => import("@/components/trading-wallet/DepositModal").then((mod) => mod.DepositModal),
+  { ssr: false }
+);
 import {
   ChevronDown,
   Copy,
@@ -164,7 +169,9 @@ export function WalletDropdown() {
           <span className="sm:hidden text-muted text-xs">
             ${formattedBalance}
           </span>
-          <span className="hidden sm:inline font-mono">{truncatedAddress}</span>
+          <span className="hidden sm:inline font-mono">
+            {profileName || truncatedAddress}
+          </span>
           <ChevronDown
             className={`h-4 w-4 text-gray-500 transition-transform ${
               isOpen ? "rotate-180" : ""
