@@ -37,7 +37,7 @@ export interface CompanyIPO {
 
 /** Known IPO market cap events on Polymarket */
 const IPO_EVENTS = [
-  { eventId: "183726", company: "SpaceX", slug: "spacex-ipo-closing-market-cap-higher-strikes", website: "https://www.spacex.com" },
+  { eventId: "307967", company: "SpaceX", slug: "spacex-ipo-closing-market-cap", website: "https://www.spacex.com" },
   { eventId: "48292", company: "OpenAI", slug: "openai-ipo-closing-market-cap", website: "https://openai.com" },
   { eventId: "48300", company: "Anthropic", slug: "anthropic-ipo-closing-market-cap", website: "https://www.anthropic.com" },
   { eventId: "48298", company: "Stripe", slug: "stripe-ipo-closing-market-cap", website: "https://stripe.com" },
