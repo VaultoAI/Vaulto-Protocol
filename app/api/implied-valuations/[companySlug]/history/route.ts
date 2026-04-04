@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const revalidate = 300; // 5 minutes
 
-const VAULTO_API_URL =
-  process.env.NEXT_PUBLIC_VAULTO_API_URL || "https://api.vaulto.ai";
+const IMPLIED_VALUATIONS_API_URL =
+  process.env.NEXT_PUBLIC_IMPLIED_VALUATIONS_API_URL ||
+  process.env.NEXT_PUBLIC_VAULTO_API_URL ||
+  "https://api.vaulto.ai";
 
 export async function GET(
   request: NextRequest,
@@ -24,7 +26,7 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const range = searchParams.get("range") || "ALL";
 
-    const url = `${VAULTO_API_URL}/api/implied-valuations/${companySlug}/history?range=${range}`;
+    const url = `${IMPLIED_VALUATIONS_API_URL}/api/implied-valuations/${companySlug}/history?range=${range}`;
 
     const res = await fetch(url, {
       method: "GET",

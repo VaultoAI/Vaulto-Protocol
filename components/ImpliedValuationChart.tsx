@@ -7,6 +7,7 @@ import {
   type TimeRange,
   formatImpliedValuation,
   formatProbability,
+  formatVolume,
 } from "@/lib/polymarket/implied-valuations";
 
 export interface ImpliedHoverData {
@@ -52,11 +53,11 @@ const MIN_POINTS_FOR_RANGE: Record<TimeRange, number> = {
 
 /** Minimum market age (hours) required for each range to be available */
 const MIN_HOURS_FOR_RANGE: Record<TimeRange, number> = {
-  "1D": 4,    // Need at least 4 hours of data for 1D
-  "1W": 48,   // Need at least 2 days for 1W
-  "1M": 168,  // Need at least 1 week (168 hours) for 1M
-  "3M": 720,  // Need at least 1 month (720 hours) for 3M
-  "ALL": 0,   // ALL is always available
+  "1D": 4,     // Need at least 4 hours of data for 1D
+  "1W": 48,    // Need at least 2 days for 1W
+  "1M": 720,   // Need at least 30 days (720 hours) for 1M
+  "3M": 2160,  // Need at least 90 days (2160 hours) for 3M
+  "ALL": 0,    // ALL is always available
 };
 
 /**
@@ -123,15 +124,40 @@ export function ImpliedValuationChart({
   const [data, setData] = useState<ImpliedValuationHistoryResponse | null>(initialData ?? null);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
   const [loading, setLoading] = useState(!initialData);
+  const [error, setError] = useState<string | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [hasUserChangedRange, setHasUserChangedRange] = useState(false);
   const [hasAutoFallback, setHasAutoFallback] = useState(false);
+  // Store the full market age from initial ALL load to keep range buttons stable
+  const [fullMarketAgeHours, setFullMarketAgeHours] = useState<number | null>(null);
+  // Total volume from current valuation endpoint
+  const [totalVolume, setTotalVolume] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Fetch current valuation to get totalVolume
+  useEffect(() => {
+    async function fetchCurrentValuation() {
+      try {
+        const res = await fetch(`/api/implied-valuations/${companySlug}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.totalVolume != null) {
+            setTotalVolume(json.totalVolume);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch current valuation:", err);
+      }
+    }
+
+    fetchCurrentValuation();
+  }, [companySlug]);
 
   // Fetch data when range changes
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
+      setError(null);
       try {
         const res = await fetch(
           `/api/implied-valuations/${companySlug}/history?range=${activeRange}`
@@ -139,9 +165,14 @@ export function ImpliedValuationChart({
         if (res.ok) {
           const json = await res.json();
           setData(json);
+        } else if (res.status === 404) {
+          setError("Market data not available for this company yet.");
+        } else {
+          setError("Failed to load market data.");
         }
-      } catch (error) {
-        console.error("Failed to fetch implied valuation history:", error);
+      } catch (err) {
+        console.error("Failed to fetch implied valuation history:", err);
+        setError("Failed to load market data.");
       } finally {
         setLoading(false);
       }
@@ -155,14 +186,25 @@ export function ImpliedValuationChart({
 
   const history = useMemo(() => data?.history ?? [], [data]);
 
-  // Calculate market age from history
-  const marketAgeHours = useMemo(() => {
+  // Calculate market age from history for current range
+  const currentMarketAgeHours = useMemo(() => {
     // Prefer metadata from API if available
     if (data?.metadata?.marketAgeHours !== undefined) {
       return data.metadata.marketAgeHours;
     }
     return getMarketAgeHours(history);
   }, [data, history]);
+
+  // Store full market age on initial ALL load to keep range buttons stable
+  useEffect(() => {
+    // Only update fullMarketAgeHours when we have ALL data (initial load or ALL range selected)
+    if (activeRange === "ALL" && currentMarketAgeHours > 0 && !loading) {
+      setFullMarketAgeHours(currentMarketAgeHours);
+    }
+  }, [activeRange, currentMarketAgeHours, loading]);
+
+  // Use stored full market age for range availability, fall back to current if not yet set
+  const marketAgeHours = fullMarketAgeHours ?? currentMarketAgeHours;
 
   // Determine which ranges are available
   const availableRanges = useMemo(
@@ -308,7 +350,12 @@ export function ImpliedValuationChart({
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
-  const timeRanges: TimeRange[] = ["1D", "1W", "1M", "3M", "ALL"];
+  // Filter time ranges based on market age - only show ranges with sufficient data
+  // Compute directly to avoid stale memoization issues
+  const timeRanges: TimeRange[] = (["1D", "1W", "1M", "3M", "ALL"] as TimeRange[]).filter(range => {
+    const minHours = MIN_HOURS_FOR_RANGE[range];
+    return marketAgeHours >= minHours;
+  });
 
   const handleRangeChange = (range: TimeRange) => {
     setHasUserChangedRange(true);
@@ -328,8 +375,54 @@ export function ImpliedValuationChart({
     );
   }
 
-  // Insufficient data state
-  if (!hasSufficientData || history.length < 2) {
+  // Error state - show message and allow switching back to funding chart
+  if (error && !data) {
+    return (
+      <div className="w-full">
+        <div className="w-full h-[280px] flex items-center justify-center rounded-lg bg-muted/10">
+          <div className="text-center px-4">
+            <p className="text-muted text-sm mb-2">{error}</p>
+            <p className="text-muted/60 text-xs">
+              Market implied valuations from prediction markets are coming soon.
+              <br />
+              Switch to Funding view to see historical valuation data.
+            </p>
+          </div>
+        </div>
+
+        {/* Chart type toggle - always show so users can switch back */}
+        <div className="flex items-center justify-end mt-3 border-t border-border pt-3">
+          {onChartTypeChange && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onChartTypeChange("funding")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  chartType === "funding"
+                    ? "text-green bg-green/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Funding
+              </button>
+              <button
+                onClick={() => onChartTypeChange("market")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  chartType === "market"
+                    ? "text-blue-500 bg-blue-500/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Valuation
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Insufficient data state (only show if no error - error state handles API failures)
+  if ((!hasSufficientData || history.length < 2) && !error) {
     // Find available ranges to suggest
     const suggestedRanges = (["1D", "1W", "1M", "3M", "ALL"] as TimeRange[]).filter(
       (r) => availableRanges[r] && r !== activeRange
@@ -371,20 +464,15 @@ export function ImpliedValuationChart({
           <div className="flex items-center gap-1">
             {timeRanges.map((range) => {
               const isSelected = activeRange === range;
-              const isAvailable = availableRanges[range];
               return (
                 <button
                   key={range}
-                  onClick={() => isAvailable && handleRangeChange(range)}
-                  disabled={!isAvailable}
+                  onClick={() => handleRangeChange(range)}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     isSelected
                       ? "text-blue-500 bg-blue-500/10"
-                      : isAvailable
-                      ? "text-muted hover:text-foreground"
-                      : "text-muted/40 cursor-not-allowed"
+                      : "text-muted hover:text-foreground"
                   }`}
-                  title={!isAvailable ? `Need more market history for ${range}` : undefined}
                 >
                   {range}
                 </button>
@@ -504,20 +592,15 @@ export function ImpliedValuationChart({
         <div className="flex items-center gap-1">
           {timeRanges.map((range) => {
             const isSelected = activeRange === range;
-            const isAvailable = availableRanges[range];
             return (
               <button
                 key={range}
-                onClick={() => isAvailable && handleRangeChange(range)}
-                disabled={!isAvailable}
+                onClick={() => handleRangeChange(range)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   isSelected
                     ? "text-blue-500 bg-blue-500/10"
-                    : isAvailable
-                    ? "text-muted hover:text-foreground"
-                    : "text-muted/40 cursor-not-allowed"
+                    : "text-muted hover:text-foreground"
                 }`}
-                title={!isAvailable ? `Need more market history for ${range}` : undefined}
               >
                 {range}
               </button>
@@ -553,27 +636,45 @@ export function ImpliedValuationChart({
         )}
       </div>
 
-      {/* Current implied valuation summary */}
-      <div className="mt-6 p-4 rounded-lg bg-muted/5 border border-border">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted mb-1">Market Implied Valuation</p>
-            <p className="text-2xl font-semibold text-foreground">
-              {formatImpliedValuation(currentValuation)}
-            </p>
+      {/* Current implied valuation summary - Polymarket inspired */}
+      <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-[#1a1f2e] dark:to-[#141824] border border-gray-200 dark:border-[#2d3548]">
+        <div className="flex items-center justify-between mb-3">
+          {/* Left: Logo + Valuation */}
+          <div className="flex items-start gap-3">
+            <a
+              href={`https://polymarket.com/event/${companySlug}-ipo`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 hover:opacity-80 transition-opacity"
+            >
+              <img
+                src="/polymarket-small.png"
+                alt="Polymarket"
+                className="w-8 h-8 rounded-lg object-contain"
+              />
+            </a>
+            <div>
+              <p className="text-sm text-[#8b95a8] mb-1">Implied Valuation</p>
+              <p className="text-2xl font-semibold text-black dark:text-white">
+                {formatImpliedValuation(currentValuation)}
+              </p>
+              {totalVolume != null && totalVolume > 0 && (
+                <p className="text-xs text-[#8b95a8] mt-1">
+                  Volume: {formatVolume(totalVolume)}
+                </p>
+              )}
+            </div>
           </div>
+          {/* Right: No IPO */}
           {history[history.length - 1]?.noIpoProbability != null && (
             <div className="text-right">
-              <p className="text-sm text-muted mb-1">No IPO Probability</p>
-              <p className="text-lg font-medium text-blue-500">
+              <p className="text-sm text-[#8b95a8] mb-1">No IPO</p>
+              <p className="text-2xl font-semibold text-black dark:text-white">
                 {formatProbability(history[history.length - 1].noIpoProbability ?? null)}
               </p>
             </div>
           )}
         </div>
-        <p className="text-xs text-muted/60 mt-3">
-          Updated every 5 minutes from Polymarket prediction market data
-        </p>
       </div>
     </div>
   );

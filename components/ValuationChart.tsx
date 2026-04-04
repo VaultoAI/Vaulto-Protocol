@@ -287,24 +287,24 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
         )}
       </div>
 
-      {/* Funding vs Valuation summary */}
-      <div className="mt-6 p-4 rounded-lg bg-muted/5 border border-border">
-        <div className="flex items-center justify-between">
+      {/* Funding vs Valuation summary - Matching Polymarket box design */}
+      <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-[#1a1f2e] dark:to-[#141824] border border-gray-200 dark:border-[#2d3548]">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-sm text-muted mb-1">Total Funding</p>
-            <p className="text-2xl font-semibold text-foreground">
+            <p className="text-sm text-[#8b95a8] mb-1">Total Funding</p>
+            <p className="text-2xl font-semibold text-black dark:text-white">
               {formatValuation(company.totalFundingUsd)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted mb-1">Valuation</p>
-            <p className="text-2xl font-semibold text-foreground">
+            <p className="text-sm text-[#8b95a8] mb-1">Valuation</p>
+            <p className="text-2xl font-semibold text-black dark:text-white">
               {formatValuation(currentValuation)}
             </p>
           </div>
         </div>
         {/* Progress bar */}
-        <div className="relative h-2 rounded-full bg-muted/20 overflow-hidden mt-4">
+        <div className="relative h-2 rounded-full bg-[#2d3548] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
@@ -313,9 +313,6 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
             }}
           />
         </div>
-        <p className="text-xs text-muted/60 mt-3">
-          Funding represents {((company.totalFundingUsd / currentValuation) * 100).toFixed(1)}% of current valuation
-        </p>
       </div>
     </div>
   );

@@ -146,17 +146,6 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
   return (
     <div>
-      {/* Back navigation */}
-      <Link
-        href="/explore"
-        className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors mb-6"
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to Explore
-      </Link>
-
       {/* Main content: Chart + Trade Widget */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left side: Company info + Chart */}

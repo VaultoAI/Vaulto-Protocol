@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 
 export const revalidate = 300; // 5 minutes
 
-const VAULTO_API_URL =
-  process.env.NEXT_PUBLIC_VAULTO_API_URL || "https://api.vaulto.ai";
+const IMPLIED_VALUATIONS_API_URL =
+  process.env.NEXT_PUBLIC_IMPLIED_VALUATIONS_API_URL ||
+  process.env.NEXT_PUBLIC_VAULTO_API_URL ||
+  "https://api.vaulto.ai";
 
 export async function GET() {
   try {
@@ -16,7 +18,7 @@ export async function GET() {
       );
     }
 
-    const url = `${VAULTO_API_URL}/api/implied-valuations`;
+    const url = `${IMPLIED_VALUATIONS_API_URL}/api/implied-valuations`;
 
     const res = await fetch(url, {
       method: "GET",

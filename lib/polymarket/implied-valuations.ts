@@ -38,6 +38,7 @@ export interface ImpliedValuationHistoryResponse {
   dataPoints: number;
   category: string;
   metadata?: ImpliedValuationMetadata;
+  totalVolume?: number | null;
 }
 
 /** Response from /api/implied-valuations/:companySlug */
@@ -74,8 +75,10 @@ export interface AllImpliedValuationsResponse {
 
 export type TimeRange = "1D" | "1W" | "1M" | "3M" | "ALL";
 
-const VAULTO_API_URL =
-  process.env.NEXT_PUBLIC_VAULTO_API_URL || "https://api.vaulto.ai";
+const IMPLIED_VALUATIONS_API_URL =
+  process.env.NEXT_PUBLIC_IMPLIED_VALUATIONS_API_URL ||
+  process.env.NEXT_PUBLIC_IMPLIED_VALUATIONS_API_URL ||
+  "https://api.vaulto.ai";
 
 /**
  * Fetch implied valuation history for a company
@@ -91,7 +94,7 @@ async function fetchImpliedValuationHistoryUncached(
       return null;
     }
 
-    const url = `${VAULTO_API_URL}/api/implied-valuations/${companySlug}/history?range=${range}`;
+    const url = `${IMPLIED_VALUATIONS_API_URL}/api/implied-valuations/${companySlug}/history?range=${range}`;
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -140,7 +143,7 @@ async function fetchImpliedValuationUncached(
       return null;
     }
 
-    const url = `${VAULTO_API_URL}/api/implied-valuations/${companySlug}`;
+    const url = `${IMPLIED_VALUATIONS_API_URL}/api/implied-valuations/${companySlug}`;
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -186,7 +189,7 @@ async function fetchAllImpliedValuationsUncached(): Promise<AllImpliedValuations
       return null;
     }
 
-    const url = `${VAULTO_API_URL}/api/implied-valuations`;
+    const url = `${IMPLIED_VALUATIONS_API_URL}/api/implied-valuations`;
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -242,6 +245,20 @@ export function formatImpliedValuation(valueUsd: number): string {
 export function formatProbability(probability: number | null): string {
   if (probability === null || !Number.isFinite(probability)) return "—";
   return `${(probability * 100).toFixed(1)}%`;
+}
+
+/**
+ * Format volume for display (e.g., $1.2M, $500K)
+ */
+export function formatVolume(volume: number | null | undefined): string {
+  if (volume === null || volume === undefined || !Number.isFinite(volume) || volume === 0) return "—";
+  if (volume >= 1_000_000) {
+    return `$${(volume / 1_000_000).toFixed(1)}M`;
+  }
+  if (volume >= 1_000) {
+    return `$${(volume / 1_000).toFixed(1)}K`;
+  }
+  return `$${volume.toFixed(0)}`;
 }
 
 /**
