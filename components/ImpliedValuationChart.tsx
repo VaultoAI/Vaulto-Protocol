@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   type ImpliedValuationHistoryResponse,
+  type ImpliedValuationHistoryPoint,
   type TimeRange,
   formatImpliedValuation,
   formatProbability,
@@ -32,6 +33,74 @@ interface ImpliedValuationChartProps {
   onDataChange?: (data: ImpliedChartData | null) => void;
 }
 
+// ============================================================================
+// Market Age Validation Helpers
+// ============================================================================
+
+/** Minimum data points required for a meaningful chart for each range */
+const MIN_POINTS_FOR_RANGE: Record<TimeRange, number> = {
+  "1D": 6,
+  "1W": 7,
+  "1M": 10,
+  "3M": 20,
+  "ALL": 5,
+};
+
+/** Minimum market age (hours) required for each range to be available */
+const MIN_HOURS_FOR_RANGE: Record<TimeRange, number> = {
+  "1D": 4,    // Need at least 4 hours of data for 1D
+  "1W": 48,   // Need at least 2 days for 1W
+  "1M": 168,  // Need at least 1 week (168 hours) for 1M
+  "3M": 720,  // Need at least 1 month (720 hours) for 3M
+  "ALL": 0,   // ALL is always available
+};
+
+/**
+ * Check if there's enough data points for a meaningful chart
+ */
+function hasMinimumDataForRange(
+  history: ImpliedValuationHistoryPoint[],
+  range: TimeRange
+): boolean {
+  return history.length >= MIN_POINTS_FOR_RANGE[range];
+}
+
+/**
+ * Calculate market age in hours from history data
+ */
+function getMarketAgeHours(history: ImpliedValuationHistoryPoint[]): number {
+  if (history.length < 2) return 0;
+  const oldestTimestamp = new Date(history[0].timestamp).getTime();
+  const newestTimestamp = new Date(history[history.length - 1].timestamp).getTime();
+  return (newestTimestamp - oldestTimestamp) / (1000 * 60 * 60);
+}
+
+/**
+ * Determine which ranges have sufficient data
+ */
+function getAvailableRanges(marketAgeHours: number): Record<TimeRange, boolean> {
+  return {
+    "1D": marketAgeHours >= MIN_HOURS_FOR_RANGE["1D"],
+    "1W": marketAgeHours >= MIN_HOURS_FOR_RANGE["1W"],
+    "1M": marketAgeHours >= MIN_HOURS_FOR_RANGE["1M"],
+    "3M": marketAgeHours >= MIN_HOURS_FOR_RANGE["3M"],
+    "ALL": true, // ALL is always available
+  };
+}
+
+/**
+ * Get the best available range for the current market age
+ */
+function getBestAvailableRange(marketAgeHours: number): TimeRange {
+  const ranges: TimeRange[] = ["1D", "1W", "1M", "3M", "ALL"];
+  for (const range of ranges) {
+    if (marketAgeHours >= MIN_HOURS_FOR_RANGE[range]) {
+      return range;
+    }
+  }
+  return "ALL";
+}
+
 /**
  * Interactive implied valuation chart matching Robinhood design.
  * Displays market-implied valuations from Polymarket prediction markets.
@@ -50,6 +119,7 @@ export function ImpliedValuationChart({
   const [loading, setLoading] = useState(!initialData);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [hasUserChangedRange, setHasUserChangedRange] = useState(false);
+  const [hasAutoFallback, setHasAutoFallback] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Fetch data when range changes
@@ -78,6 +148,42 @@ export function ImpliedValuationChart({
   }, [companySlug, activeRange, initialData, hasUserChangedRange]);
 
   const history = useMemo(() => data?.history ?? [], [data]);
+
+  // Calculate market age from history
+  const marketAgeHours = useMemo(() => {
+    // Prefer metadata from API if available
+    if (data?.metadata?.marketAgeHours !== undefined) {
+      return data.metadata.marketAgeHours;
+    }
+    return getMarketAgeHours(history);
+  }, [data, history]);
+
+  // Determine which ranges are available
+  const availableRanges = useMemo(
+    () => getAvailableRanges(marketAgeHours),
+    [marketAgeHours]
+  );
+
+  // Check if current range has sufficient data
+  const hasSufficientData = useMemo(() => {
+    // Prefer metadata from API if available
+    if (data?.metadata?.sufficientDataForRange !== undefined) {
+      return data.metadata.sufficientDataForRange;
+    }
+    return hasMinimumDataForRange(history, activeRange);
+  }, [data, history, activeRange]);
+
+  // Auto-fallback to best available range when current range has insufficient data
+  useEffect(() => {
+    if (!loading && history.length > 0 && !hasSufficientData && !hasUserChangedRange) {
+      const bestRange = getBestAvailableRange(marketAgeHours);
+      if (bestRange !== activeRange) {
+        setHasAutoFallback(true);
+        setActiveRange(bestRange);
+        onRangeChange?.(bestRange);
+      }
+    }
+  }, [loading, history, hasSufficientData, hasUserChangedRange, marketAgeHours, activeRange, onRangeChange]);
 
   // Current valuation from history (ensures consistency with line chart's last point)
   const currentValuation = useMemo(() => {
@@ -217,16 +323,69 @@ export function ImpliedValuationChart({
   }
 
   // Insufficient data state
-  if (history.length < 2) {
+  if (!hasSufficientData || history.length < 2) {
+    // Find available ranges to suggest
+    const suggestedRanges = (["1D", "1W", "1M", "3M", "ALL"] as TimeRange[]).filter(
+      (r) => availableRanges[r] && r !== activeRange
+    );
+
     return (
-      <div className="w-full h-[340px] flex items-center justify-center rounded-lg bg-muted/10">
-        <div className="text-center px-4">
-          <p className="text-muted text-sm mb-2">Building history...</p>
-          <p className="text-muted/60 text-xs">
-            Market implied valuations are updated every 5 minutes.
-            <br />
-            Check back soon for historical data.
-          </p>
+      <div className="w-full">
+        <div className="w-full h-[280px] flex items-center justify-center rounded-lg bg-muted/10">
+          <div className="text-center px-4">
+            <p className="text-muted text-sm mb-2">
+              {history.length < 2
+                ? "Building market history..."
+                : `Not enough data for ${activeRange} view`}
+            </p>
+            <p className="text-muted/60 text-xs">
+              {history.length < 2 ? (
+                <>
+                  Market implied valuations are updated every 5 minutes.
+                  <br />
+                  Check back soon for historical data.
+                </>
+              ) : suggestedRanges.length > 0 ? (
+                <>
+                  This market is relatively new ({Math.floor(marketAgeHours)} hours old).
+                  <br />
+                  Try a shorter time range: {suggestedRanges.join(", ")}
+                </>
+              ) : (
+                <>
+                  This market is new. More data will be available soon.
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Time range selector - always show so users can switch */}
+        <div className="flex items-center gap-1 mt-3 border-t border-border pt-3">
+          {timeRanges.map((range) => {
+            const isSelected = activeRange === range;
+            const isAvailable = availableRanges[range];
+            return (
+              <button
+                key={range}
+                onClick={() => isAvailable && handleRangeChange(range)}
+                disabled={!isAvailable}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  isSelected
+                    ? "text-blue-500 bg-blue-500/10"
+                    : isAvailable
+                    ? "text-muted hover:text-foreground"
+                    : "text-muted/40 cursor-not-allowed"
+                }`}
+                title={!isAvailable ? `Need more market history for ${range}` : undefined}
+              >
+                {range}
+              </button>
+            );
+          })}
+          {loading && (
+            <div className="ml-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          )}
         </div>
       </div>
     );
@@ -312,15 +471,20 @@ export function ImpliedValuationChart({
       <div className="flex items-center gap-1 mt-3 border-t border-border pt-3">
         {timeRanges.map((range) => {
           const isSelected = activeRange === range;
+          const isAvailable = availableRanges[range];
           return (
             <button
               key={range}
-              onClick={() => handleRangeChange(range)}
+              onClick={() => isAvailable && handleRangeChange(range)}
+              disabled={!isAvailable}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 isSelected
                   ? "text-blue-500 bg-blue-500/10"
-                  : "text-muted hover:text-foreground"
+                  : isAvailable
+                  ? "text-muted hover:text-foreground"
+                  : "text-muted/40 cursor-not-allowed"
               }`}
+              title={!isAvailable ? `Need more market history for ${range}` : undefined}
             >
               {range}
             </button>

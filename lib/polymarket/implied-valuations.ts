@@ -21,6 +21,13 @@ export interface ImpliedValuationHistoryPoint {
   noIpoProbability?: number | null;
 }
 
+/** Metadata for frontend decision making */
+export interface ImpliedValuationMetadata {
+  marketAgeHours: number;
+  oldestDatapoint: string | null;
+  sufficientDataForRange: boolean;
+}
+
 /** Response from /api/implied-valuations/:companySlug/history */
 export interface ImpliedValuationHistoryResponse {
   companySlug: string;
@@ -30,6 +37,7 @@ export interface ImpliedValuationHistoryResponse {
   range: string;
   dataPoints: number;
   category: string;
+  metadata?: ImpliedValuationMetadata;
 }
 
 /** Response from /api/implied-valuations/:companySlug */
