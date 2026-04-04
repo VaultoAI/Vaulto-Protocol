@@ -70,45 +70,6 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
 
       </section>
 
-      {/* Products - horizontal scrolling chips */}
-      {company.products && company.products.filter(p => p.name).length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold text-foreground mb-1">Products</h2>
-          <div className="border-t border-border mb-4" />
-
-          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-            {company.products
-              .filter(p => p.name)
-              .map((product, index) => (
-                <div
-                  key={index}
-                  className="group relative flex-shrink-0 rounded-lg border border-border bg-badge-bg/50 px-3 md:px-4 py-2.5 md:py-2 hover:bg-card-hover active:bg-card-hover transition-colors cursor-default"
-                >
-                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                    {product.name}
-                  </span>
-                  {/* Tooltip on hover (hidden on mobile) */}
-                  {product.description && (
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden md:group-hover:block z-10">
-                      <div className="bg-foreground text-background text-xs rounded-lg px-3 py-2 max-w-[200px] shadow-lg">
-                        {product.description}
-                      </div>
-                      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
-          </div>
-        </section>
-      )}
-
-      {/* News & Press */}
-      <NewsSection
-        companyName={company.name}
-        ceo={company.ceo}
-        products={company.products?.map((p) => p.name).filter(Boolean)}
-      />
-
       {/* Funding History */}
       {company.fundingHistory && company.fundingHistory.length > 0 && (
         <section>
@@ -156,6 +117,45 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
                   ))}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {/* News & Press */}
+      <NewsSection
+        companyName={company.name}
+        ceo={company.ceo}
+        products={company.products?.map((p) => p.name).filter(Boolean)}
+      />
+
+      {/* Products - horizontal scrolling chips */}
+      {company.products && company.products.filter(p => p.name).length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold text-foreground mb-1">Products</h2>
+          <div className="border-t border-border mb-4" />
+
+          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            {company.products
+              .filter(p => p.name)
+              .map((product, index) => (
+                <div
+                  key={index}
+                  className="group relative flex-shrink-0 rounded-lg border border-border bg-badge-bg/50 px-3 md:px-4 py-2.5 md:py-2 hover:bg-card-hover active:bg-card-hover transition-colors cursor-default"
+                >
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                    {product.name}
+                  </span>
+                  {/* Tooltip on hover (hidden on mobile) */}
+                  {product.description && (
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden md:group-hover:block z-10">
+                      <div className="bg-foreground text-background text-xs rounded-lg px-3 py-2 max-w-[200px] shadow-lg">
+                        {product.description}
+                      </div>
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-foreground" />
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         </section>
       )}

@@ -74,7 +74,7 @@ export function MiniChart({
   // Build gradient fill path
   const gradientPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${height} L ${points[0].x.toFixed(2)} ${height} Z`;
 
-  const color = isPositive ? "var(--chart-green)" : "var(--chart-red)";
+  const color = isPositive ? "#3b82f6" : "#ef4444";
   const clipId = `chart-clip-${reactId.replace(/:/g, "")}`;
 
   return (

@@ -152,8 +152,22 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
         <div className="flex-1 min-w-0">
           {/* Company header */}
           <div className="flex items-center gap-3 mb-2">
-            <CompanyLogo name={company.name} website={company.website} size={32} />
-            <h1 className="text-2xl font-semibold text-foreground">{company.name}</h1>
+            {company.website ? (
+              <a
+                href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              >
+                <CompanyLogo name={company.name} website={company.website} size={32} />
+                <h1 className="text-2xl font-semibold text-foreground">{company.name}</h1>
+              </a>
+            ) : (
+              <>
+                <CompanyLogo name={company.name} website={company.website} size={32} />
+                <h1 className="text-2xl font-semibold text-foreground">{company.name}</h1>
+              </>
+            )}
           </div>
 
           {/* Price */}
