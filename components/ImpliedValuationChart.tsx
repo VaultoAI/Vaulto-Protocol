@@ -639,31 +639,17 @@ export function ImpliedValuationChart({
       {/* Current implied valuation summary - Polymarket inspired */}
       <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-[#1a1f2e] dark:to-[#141824] border border-gray-200 dark:border-[#2d3548]">
         <div className="flex items-center justify-between mb-3">
-          {/* Left: Logo + Valuation */}
-          <div className="flex items-start gap-3">
-            <a
-              href={`https://polymarket.com/event/${companySlug}-ipo`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity"
-            >
-              <img
-                src="/polymarket-small.png"
-                alt="Polymarket"
-                className="w-8 h-8 rounded-lg object-contain"
-              />
-            </a>
-            <div>
-              <p className="text-sm text-[#8b95a8] mb-1">Implied Valuation</p>
-              <p className="text-2xl font-semibold text-black dark:text-white">
-                {formatImpliedValuation(currentValuation)}
+          {/* Left: Valuation */}
+          <div>
+            <p className="text-sm text-[#8b95a8] mb-1">Implied Valuation</p>
+            <p className="text-2xl font-semibold text-black dark:text-white">
+              {formatImpliedValuation(currentValuation)}
+            </p>
+            {totalVolume != null && totalVolume > 0 && (
+              <p className="text-xs text-[#8b95a8] mt-1">
+                Volume: {formatVolume(totalVolume)}
               </p>
-              {totalVolume != null && totalVolume > 0 && (
-                <p className="text-xs text-[#8b95a8] mt-1">
-                  Volume: {formatVolume(totalVolume)}
-                </p>
-              )}
-            </div>
+            )}
           </div>
           {/* Right: No IPO */}
           {history[history.length - 1]?.noIpoProbability != null && (

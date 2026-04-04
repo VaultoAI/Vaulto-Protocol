@@ -304,7 +304,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
           </div>
         </div>
         {/* Progress bar */}
-        <div className="relative h-2 rounded-full bg-[#2d3548] overflow-hidden">
+        <div className="relative h-2 rounded-full bg-gray-200 dark:bg-[#2d3548] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
