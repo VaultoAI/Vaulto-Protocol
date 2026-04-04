@@ -15,7 +15,7 @@ interface CompanyAboutProps {
  * key statistics, products, and funding history.
  */
 export function CompanyAbout({ company }: CompanyAboutProps) {
-  const [showFullDesc, setShowFullDesc] = useState(true);
+  const [showFullDesc, setShowFullDesc] = useState(false);
 
   const descriptionLimit = 360;
   const isLong = company.description && company.description.length > descriptionLimit;
