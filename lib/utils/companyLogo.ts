@@ -82,6 +82,9 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   whoop: "whoop.com",
   // Prediction markets
   polymarket: "polymarket.com",
+  // Legal Tech
+  harvey: "harvey.ai",
+  harveyai: "harvey.ai",
   // Sports/Entertainment
   fanatics: "fanatics.com",
   fanaticsholdings: "fanaticsinc.com",

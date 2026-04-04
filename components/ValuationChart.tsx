@@ -10,9 +10,14 @@ export interface HoverData {
   date: string;
 }
 
+type ChartType = "funding" | "market";
+
 interface ValuationChartProps {
   company: PrivateCompany;
   onHover?: (data: HoverData | null) => void;
+  chartType?: ChartType;
+  onChartTypeChange?: (type: ChartType) => void;
+  hasMarketData?: boolean;
 }
 
 type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
@@ -22,7 +27,7 @@ type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
  * Plots real postMoneyValuationUsd from funding history.
  * Green line on dark-transparent background with hover tooltip.
  */
-export function ValuationChart({ company, onHover }: ValuationChartProps) {
+export function ValuationChart({ company, onHover, chartType, onChartTypeChange, hasMarketData }: ValuationChartProps) {
   const allHistory = useMemo(() => getValuationHistory(company), [company]);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -234,26 +239,52 @@ export function ValuationChart({ company, onHover }: ValuationChartProps) {
       </div>
 
       {/* Time range selector */}
-      <div className="flex items-center gap-1 mt-3 border-t border-border pt-3">
-        {timeRanges.map((range) => {
-          const isSelected = activeRange === range;
-          const isEffective = effectiveRange === range;
-          return (
+      <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
+        <div className="flex items-center gap-1">
+          {timeRanges.map((range) => {
+            const isSelected = activeRange === range;
+            const isEffective = effectiveRange === range;
+            return (
+              <button
+                key={range}
+                onClick={() => setActiveRange(range)}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  isSelected && isEffective
+                    ? "text-green bg-green/10"
+                    : isSelected && !isEffective
+                    ? "text-muted bg-muted/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                {range}
+              </button>
+            );
+          })}
+        </div>
+        {hasMarketData && onChartTypeChange && (
+          <div className="flex items-center gap-1">
             <button
-              key={range}
-              onClick={() => setActiveRange(range)}
+              onClick={() => onChartTypeChange("funding")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                isSelected && isEffective
+                chartType === "funding"
                   ? "text-green bg-green/10"
-                  : isSelected && !isEffective
-                  ? "text-muted bg-muted/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
-              {range}
+              Funding
             </button>
-          );
-        })}
+            <button
+              onClick={() => onChartTypeChange("market")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                chartType === "market"
+                  ? "text-blue-500 bg-blue-500/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Valuation
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Funding vs Valuation summary */}

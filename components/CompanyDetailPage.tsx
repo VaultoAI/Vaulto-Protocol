@@ -202,36 +202,16 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
             )}
           </div>
 
-          {/* Chart Type Toggle + Charts Container */}
+          {/* Charts Container */}
           <div className="w-full">
-            {hasMarketData && (
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  onClick={() => setChartType("funding")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    chartType === "funding"
-                      ? "bg-green/10 text-green border border-green/20"
-                      : "text-muted hover:text-foreground border border-transparent"
-                  }`}
-                >
-                  Funding History
-                </button>
-                <button
-                  onClick={() => setChartType("market")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    chartType === "market"
-                      ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
-                      : "text-muted hover:text-foreground border border-transparent"
-                  }`}
-                >
-                  Market Implied
-                </button>
-              </div>
-            )}
-
-            {/* Charts */}
             {chartType === "funding" ? (
-              <ValuationChart company={company} onHover={handleChartHover} />
+              <ValuationChart
+                company={company}
+                onHover={handleChartHover}
+                chartType={chartType}
+                onChartTypeChange={setChartType}
+                hasMarketData={hasMarketData}
+              />
             ) : (
               <ImpliedValuationChart
                 companySlug={impliedValuationSlug || ""}
@@ -239,8 +219,15 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                 initialData={impliedData}
                 onHover={handleImpliedChartHover}
                 onDataChange={handleImpliedDataChange}
+                chartType={chartType}
+                onChartTypeChange={setChartType}
               />
             )}
+          </div>
+
+          {/* About + Key Stats section - inside left column so trading widget stays sticky */}
+          <div className="mt-10">
+            <CompanyAbout company={company} />
           </div>
 
         </div>
@@ -261,11 +248,6 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* About + Key Stats section */}
-      <div className="mt-10">
-        <CompanyAbout company={company} />
       </div>
     </div>
   );

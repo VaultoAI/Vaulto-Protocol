@@ -24,6 +24,8 @@ export interface ImpliedChartData {
   isPositive: boolean;
 }
 
+type ChartType = "funding" | "market";
+
 interface ImpliedValuationChartProps {
   companySlug: string;
   companyName: string;
@@ -31,6 +33,8 @@ interface ImpliedValuationChartProps {
   onHover?: (data: ImpliedHoverData | null) => void;
   onRangeChange?: (range: TimeRange) => void;
   onDataChange?: (data: ImpliedChartData | null) => void;
+  chartType?: ChartType;
+  onChartTypeChange?: (type: ChartType) => void;
 }
 
 // ============================================================================
@@ -113,6 +117,8 @@ export function ImpliedValuationChart({
   onHover,
   onRangeChange,
   onDataChange,
+  chartType,
+  onChartTypeChange,
 }: ImpliedValuationChartProps) {
   const [data, setData] = useState<ImpliedValuationHistoryResponse | null>(initialData ?? null);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
@@ -361,30 +367,56 @@ export function ImpliedValuationChart({
         </div>
 
         {/* Time range selector - always show so users can switch */}
-        <div className="flex items-center gap-1 mt-3 border-t border-border pt-3">
-          {timeRanges.map((range) => {
-            const isSelected = activeRange === range;
-            const isAvailable = availableRanges[range];
-            return (
+        <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
+          <div className="flex items-center gap-1">
+            {timeRanges.map((range) => {
+              const isSelected = activeRange === range;
+              const isAvailable = availableRanges[range];
+              return (
+                <button
+                  key={range}
+                  onClick={() => isAvailable && handleRangeChange(range)}
+                  disabled={!isAvailable}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    isSelected
+                      ? "text-blue-500 bg-blue-500/10"
+                      : isAvailable
+                      ? "text-muted hover:text-foreground"
+                      : "text-muted/40 cursor-not-allowed"
+                  }`}
+                  title={!isAvailable ? `Need more market history for ${range}` : undefined}
+                >
+                  {range}
+                </button>
+              );
+            })}
+            {loading && (
+              <div className="ml-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            )}
+          </div>
+          {onChartTypeChange && (
+            <div className="flex items-center gap-1">
               <button
-                key={range}
-                onClick={() => isAvailable && handleRangeChange(range)}
-                disabled={!isAvailable}
+                onClick={() => onChartTypeChange("funding")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  isSelected
-                    ? "text-blue-500 bg-blue-500/10"
-                    : isAvailable
-                    ? "text-muted hover:text-foreground"
-                    : "text-muted/40 cursor-not-allowed"
+                  chartType === "funding"
+                    ? "text-green bg-green/10"
+                    : "text-muted hover:text-foreground"
                 }`}
-                title={!isAvailable ? `Need more market history for ${range}` : undefined}
               >
-                {range}
+                Funding
               </button>
-            );
-          })}
-          {loading && (
-            <div className="ml-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <button
+                onClick={() => onChartTypeChange("market")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  chartType === "market"
+                    ? "text-blue-500 bg-blue-500/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Valuation
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -468,30 +500,56 @@ export function ImpliedValuationChart({
       </div>
 
       {/* Time range selector */}
-      <div className="flex items-center gap-1 mt-3 border-t border-border pt-3">
-        {timeRanges.map((range) => {
-          const isSelected = activeRange === range;
-          const isAvailable = availableRanges[range];
-          return (
+      <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
+        <div className="flex items-center gap-1">
+          {timeRanges.map((range) => {
+            const isSelected = activeRange === range;
+            const isAvailable = availableRanges[range];
+            return (
+              <button
+                key={range}
+                onClick={() => isAvailable && handleRangeChange(range)}
+                disabled={!isAvailable}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  isSelected
+                    ? "text-blue-500 bg-blue-500/10"
+                    : isAvailable
+                    ? "text-muted hover:text-foreground"
+                    : "text-muted/40 cursor-not-allowed"
+                }`}
+                title={!isAvailable ? `Need more market history for ${range}` : undefined}
+              >
+                {range}
+              </button>
+            );
+          })}
+          {loading && (
+            <div className="ml-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          )}
+        </div>
+        {onChartTypeChange && (
+          <div className="flex items-center gap-1">
             <button
-              key={range}
-              onClick={() => isAvailable && handleRangeChange(range)}
-              disabled={!isAvailable}
+              onClick={() => onChartTypeChange("funding")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                isSelected
-                  ? "text-blue-500 bg-blue-500/10"
-                  : isAvailable
-                  ? "text-muted hover:text-foreground"
-                  : "text-muted/40 cursor-not-allowed"
+                chartType === "funding"
+                  ? "text-green bg-green/10"
+                  : "text-muted hover:text-foreground"
               }`}
-              title={!isAvailable ? `Need more market history for ${range}` : undefined}
             >
-              {range}
+              Funding
             </button>
-          );
-        })}
-        {loading && (
-          <div className="ml-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <button
+              onClick={() => onChartTypeChange("market")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                chartType === "market"
+                  ? "text-blue-500 bg-blue-500/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Valuation
+            </button>
+          </div>
         )}
       </div>
 

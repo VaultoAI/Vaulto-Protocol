@@ -155,7 +155,7 @@ export function WalletDropdown() {
         type="button"
         className="flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-black shadow-sm ring-1 ring-black/10 transition hover:bg-gray-50 dark:bg-white dark:text-black dark:ring-white/20 dark:hover:bg-gray-100"
       >
-        <span className="font-mono">
+        <span className={profileName ? "font-username" : "font-mono"}>
           {profileName || truncatedAddress}
         </span>
         <ChevronDown
@@ -178,7 +178,7 @@ export function WalletDropdown() {
                 editable={false}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <p className="text-sm font-medium font-username text-gray-900 dark:text-white">
                   {profileName || generateUsername(walletAddress!)}
                 </p>
                 <p className="text-xs text-gray-500 font-mono truncate dark:text-gray-400">

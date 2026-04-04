@@ -47,7 +47,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         )}
 
         {/* Company info grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8 md:gap-x-16 lg:gap-x-48">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6">
           <InfoItem label="CEO" value={company.ceo || "—"} />
           <InfoItem label="Employees" value={company.employees ? company.employees.toLocaleString() : "—"} />
           <InfoItem label="Industry" value={company.industry || "—"} />
@@ -55,7 +55,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         </div>
 
         {/* Key facts */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8 md:gap-x-16 lg:gap-x-48 mt-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6 mt-6">
           <InfoItem label="Price / Share" value={formatPricePerShare(company.lastFundingEstPricePerShareUsd)} />
           <InfoItem label="Last Round" value={company.lastFundingRoundType || "—"} />
           <InfoItem
@@ -175,19 +175,19 @@ function InfoItem({
   href?: string;
 }) {
   return (
-    <div>
-      <p className="text-sm font-semibold text-foreground">{label}</p>
+    <div className="min-w-0">
+      <p className="text-xs text-muted mb-1">{label}</p>
       {isLink && href ? (
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-green hover:underline"
+          className="text-sm font-medium text-green hover:underline truncate block"
         >
           {value}
         </a>
       ) : (
-        <p className="text-sm text-muted">{value}</p>
+        <p className="text-sm font-medium text-foreground truncate">{value}</p>
       )}
     </div>
   );
