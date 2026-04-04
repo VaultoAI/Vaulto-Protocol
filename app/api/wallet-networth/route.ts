@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         accept: "application/json",
         "X-API-Key": MORALIS_API_KEY,
       },
-      next: { revalidate: 60 }, // Cache for 60 seconds
+      next: { revalidate: 300 }, // Cache for 5 minutes
     });
 
     if (!response.ok) {

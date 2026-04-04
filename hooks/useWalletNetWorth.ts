@@ -34,8 +34,8 @@ export function useWalletNetWorth(address: string | undefined) {
     queryKey: ["wallet-networth", address],
     queryFn: () => fetchWalletNetWorth(address!),
     enabled: !!address,
-    staleTime: 60_000, // 1 minute
-    refetchInterval: 120_000, // Refetch every 2 minutes
+    staleTime: 300_000, // 5 minutes
+    refetchInterval: 600_000, // Refetch every 10 minutes
   });
 
   // Format the total net worth for display
