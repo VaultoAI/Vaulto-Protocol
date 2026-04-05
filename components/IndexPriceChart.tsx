@@ -13,12 +13,11 @@ interface IndexPriceChartProps {
   onHover?: (data: IndexHoverData | null) => void;
 }
 
-type TimeRange = "1W" | "1M" | "3M" | "ALL";
+type TimeRange = "1W" | "1M" | "ALL";
 
 const RANGE_LIMITS: Record<TimeRange, number> = {
   "1W": 7,
   "1M": 30,
-  "3M": 90,
   "ALL": 365,
 };
 
@@ -132,7 +131,7 @@ export function IndexPriceChart({ history, onHover }: IndexPriceChartProps) {
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
-  const timeRanges: TimeRange[] = ["1W", "1M", "3M", "ALL"];
+  const timeRanges: TimeRange[] = ["1W", "1M", "ALL"];
 
   // Show placeholder if no history data
   if (history.length < 2) {

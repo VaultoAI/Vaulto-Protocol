@@ -153,7 +153,6 @@ export function IndexDetailPage({
             <IndexHoldingsTable
               holdings={index.holdings}
               companies={companies}
-              indexPrice={currentPrice}
             />
           </div>
         </div>

@@ -5,12 +5,10 @@ import type { IndexHolding } from "@/lib/vaulto/indexes";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol, getCompanySlug } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
-import { formatPrice } from "@/lib/vaulto/companyUtils";
 
 interface IndexHoldingsTableProps {
   holdings: IndexHolding[];
   companies: PrivateCompany[];
-  indexPrice: number;
 }
 
 /**
@@ -20,7 +18,6 @@ interface IndexHoldingsTableProps {
 export function IndexHoldingsTable({
   holdings,
   companies,
-  indexPrice,
 }: IndexHoldingsTableProps) {
   // Sort holdings by weight descending
   const sortedHoldings = [...holdings].sort((a, b) => b.weight - a.weight);
@@ -29,11 +26,10 @@ export function IndexHoldingsTable({
     <div className="rounded-xl border border-border overflow-hidden">
       {/* Table header */}
       <div className="bg-badge-bg/50 border-b border-border px-4 py-2.5">
-        <div className="grid grid-cols-[1fr_80px_80px_100px] md:grid-cols-[1fr_100px_100px_120px] gap-2">
+        <div className="grid grid-cols-[1fr_80px_80px] md:grid-cols-[1fr_100px_100px] gap-2">
           <span className="text-xs font-medium text-muted uppercase tracking-wide">Company</span>
           <span className="text-xs font-medium text-muted uppercase tracking-wide text-right">Symbol</span>
           <span className="text-xs font-medium text-muted uppercase tracking-wide text-right">Weight</span>
-          <span className="text-xs font-medium text-muted uppercase tracking-wide text-right">Contribution</span>
         </div>
       </div>
 
@@ -43,7 +39,6 @@ export function IndexHoldingsTable({
           key={holding.companyName}
           holding={holding}
           companies={companies}
-          indexPrice={indexPrice}
         />
       ))}
     </div>
@@ -53,10 +48,9 @@ export function IndexHoldingsTable({
 interface HoldingRowProps {
   holding: IndexHolding;
   companies: PrivateCompany[];
-  indexPrice: number;
 }
 
-function HoldingRow({ holding, companies, indexPrice }: HoldingRowProps) {
+function HoldingRow({ holding, companies }: HoldingRowProps) {
   const company = holding.isCash
     ? null
     : companies.find(
@@ -66,11 +60,8 @@ function HoldingRow({ holding, companies, indexPrice }: HoldingRowProps) {
   const symbol = company ? getSyntheticSymbol(company.name) : "--";
   const slug = company ? getCompanySlug(company.name) : null;
 
-  // Contribution is weight * index price
-  const contribution = holding.weight * indexPrice;
-
   const content = (
-    <div className="grid grid-cols-[1fr_80px_80px_100px] md:grid-cols-[1fr_100px_100px_120px] gap-2 items-center">
+    <div className="grid grid-cols-[1fr_80px_80px] md:grid-cols-[1fr_100px_100px] gap-2 items-center">
       {/* Company name + logo */}
       <div className="flex items-center gap-3 min-w-0">
         {holding.isCash ? (
@@ -95,11 +86,6 @@ function HoldingRow({ holding, companies, indexPrice }: HoldingRowProps) {
       {/* Weight */}
       <span className="text-sm font-medium text-foreground text-right tabular-nums">
         {(holding.weight * 100).toFixed(2)}%
-      </span>
-
-      {/* Contribution */}
-      <span className="text-sm text-foreground text-right tabular-nums">
-        {formatPrice(contribution)}
       </span>
     </div>
   );

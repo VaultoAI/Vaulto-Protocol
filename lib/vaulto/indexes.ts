@@ -278,7 +278,8 @@ async function fetchIndexHistoryUncached(
       return [];
     }
 
-    return json.data.history;
+    // API returns newest first, but chart expects oldest first - reverse the array
+    return json.data.history.slice().reverse();
   } catch (error) {
     console.error("Failed to fetch index history:", error);
     return [];
