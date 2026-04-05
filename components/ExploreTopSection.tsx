@@ -47,30 +47,34 @@ export function ExploreTopSection({ companies, newlyAdded: newlyAddedProp }: Exp
         }}
       />
 
-      {/* Trending */}
-      <TopColumn
-        title="Trending"
-        badge="24H"
-        companies={trending}
-        hasBorderLeft
-        renderMetric={(company) => (
-          <span className="text-xs text-muted">
-            {formatValuation(company.valuationUsd)}
-          </span>
-        )}
-      />
+      {/* Trending - hidden on mobile */}
+      <div className="hidden md:block">
+        <TopColumn
+          title="Trending"
+          badge="24H"
+          companies={trending}
+          hasBorderLeft
+          renderMetric={(company) => (
+            <span className="text-xs text-muted">
+              {formatValuation(company.valuationUsd)}
+            </span>
+          )}
+        />
+      </div>
 
-      {/* Newly Added */}
-      <TopColumn
-        title="Newly Added"
-        companies={newlyAdded}
-        hasBorderLeft
-        renderMetric={() => (
-          <span className="text-xs text-muted">
-            Pre-IPO Stock
-          </span>
-        )}
-      />
+      {/* Newly Added - hidden on mobile */}
+      <div className="hidden md:block">
+        <TopColumn
+          title="Newly Added"
+          companies={newlyAdded}
+          hasBorderLeft
+          renderMetric={() => (
+            <span className="text-xs text-muted">
+              Pre-IPO Stock
+            </span>
+          )}
+        />
+      </div>
     </div>
   );
 }

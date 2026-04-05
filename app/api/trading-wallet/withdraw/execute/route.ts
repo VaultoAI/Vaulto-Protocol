@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { getWithdrawalTxData } from "@/lib/trading-wallet/execute-withdrawal";
+import { createPublicClient, http } from "viem";
+import { polygon } from "viem/chains";
 
 export async function POST(request: Request) {
   try {
@@ -92,13 +94,36 @@ export async function POST(request: Request) {
         );
       }
 
-      // Update withdrawal with tx hash
+      // First update to PROCESSING
       await db.withdrawal.update({
         where: { id: withdrawalId },
         data: {
           txHash,
           status: "PROCESSING",
           executedAt: new Date(),
+        },
+      });
+
+      // Wait for transaction confirmation on Polygon
+      const publicClient = createPublicClient({
+        chain: polygon,
+        transport: http(),
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash as `0x${string}`,
+        confirmations: 1,
+        timeout: 60_000, // 60 second timeout
+      });
+
+      // Update status based on result
+      const finalStatus = receipt.status === "success" ? "COMPLETED" : "REJECTED";
+
+      await db.withdrawal.update({
+        where: { id: withdrawalId },
+        data: {
+          status: finalStatus,
+          ...(finalStatus === "COMPLETED" && { completedAt: new Date() }),
         },
       });
 
@@ -112,6 +137,7 @@ export async function POST(request: Request) {
             txHash,
             amount: withdrawal.amount.toString(),
             toAddress: withdrawal.toAddress,
+            finalStatus,
           }),
           entityType: "Withdrawal",
           entityId: withdrawalId,
@@ -120,10 +146,13 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.json({
-        success: true,
-        status: "PROCESSING",
+        success: receipt.status === "success",
+        status: finalStatus,
         txHash,
-        message: "Withdrawal transaction submitted",
+        message:
+          finalStatus === "COMPLETED"
+            ? "Withdrawal completed successfully"
+            : "Transaction failed on-chain",
       });
     }
 

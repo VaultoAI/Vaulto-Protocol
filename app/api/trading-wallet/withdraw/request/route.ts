@@ -59,9 +59,6 @@ export async function POST(request: Request) {
             },
           },
         },
-        walletVerifications: {
-          where: { status: "VERIFIED" },
-        },
       },
     });
 
@@ -75,21 +72,6 @@ export async function POST(request: Request) {
     if (user.tradingWallet.status !== "ACTIVE") {
       return NextResponse.json(
         { error: "Trading wallet is not active" },
-        { status: 400 }
-      );
-    }
-
-    // Check if toAddress is a verified wallet (for compliance)
-    const isVerifiedDestination = user.walletVerifications.some(
-      (w) => w.walletAddress.toLowerCase() === toAddress.toLowerCase()
-    );
-
-    if (!isVerifiedDestination) {
-      return NextResponse.json(
-        {
-          error: "Destination address not verified",
-          message: "You can only withdraw to wallets verified during onboarding",
-        },
         { status: 400 }
       );
     }

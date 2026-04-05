@@ -6,7 +6,7 @@ import { DepositPageClient } from "@/components/deposit/DepositPageClient";
  */
 export default async function ProfilePage() {
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
       <DepositPageClient />
     </div>
   );

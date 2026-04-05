@@ -9,7 +9,7 @@ import { ExploreAssetsNav } from "@/components/ExploreAssetsNav";
 import { ExploreAssetsGrid } from "@/components/ExploreAssetsGrid";
 import { IndexesSection } from "@/components/IndexesSection";
 import { ExploreTopSection } from "@/components/ExploreTopSection";
-import type { VaultoIndex } from "@/lib/vaulto/indexes";
+import type { VaultoIndex, IndexPricesMap } from "@/lib/vaulto/indexes";
 
 type SortOption = "Most Popular" | "Price: High to Low" | "Price: Low to High" | "Name: A-Z";
 type ViewMode = "grid" | "list";
@@ -17,13 +17,15 @@ type ViewMode = "grid" | "list";
 interface ExplorePageClientProps {
   companies: PrivateCompany[];
   indexes: VaultoIndex[];
+  indexPrices?: IndexPricesMap;
+  newlyAdded?: PrivateCompany[];
 }
 
 /**
  * Client-side wrapper for Explore page that manages state
  * and renders sections in the correct order.
  */
-export function ExplorePageClient({ companies, indexes }: ExplorePageClientProps) {
+export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyAdded }: ExplorePageClientProps) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("All assets");
   const [sortBy, setSortBy] = useState<SortOption>("Most Popular");
@@ -79,35 +81,51 @@ export function ExplorePageClient({ companies, indexes }: ExplorePageClientProps
 
   return (
     <div>
-      {/* Nav at the top */}
-      <ExploreAssetsNav
-        search={search}
-        setSearch={setSearch}
-        activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        showSortDropdown={showSortDropdown}
-        setShowSortDropdown={setShowSortDropdown}
-        filteredCount={filteredCompanies.length}
-      />
-
-      {/* Divider */}
-      <div className="border-b border-border" />
+      {/* Nav at the top - mobile only */}
+      <div className="md:hidden">
+        <ExploreAssetsNav
+          search={search}
+          setSearch={setSearch}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          showSortDropdown={showSortDropdown}
+          setShowSortDropdown={setShowSortDropdown}
+          filteredCount={filteredCompanies.length}
+        />
+      </div>
 
       {/* Index Products section */}
-      <IndexesSection indexes={indexes} companies={companies} />
+      <IndexesSection indexes={indexes} companies={companies} indexPrices={indexPrices} />
 
-      {/* Divider */}
-      <div className="border-b border-border" />
+      {/* Divider - hidden on mobile */}
+      <div className="hidden md:block border-b border-border" />
 
       {/* Top section: Gainers, Trending, Newly Added */}
-      <ExploreTopSection companies={companies} />
+      <ExploreTopSection companies={companies} newlyAdded={newlyAdded} />
 
-      {/* Divider */}
-      <div className="border-b border-border" />
+      {/* Divider - hidden on mobile */}
+      <div className="hidden md:block border-b border-border" />
+
+      {/* Nav above asset grid - desktop only */}
+      <div className="hidden md:block">
+        <ExploreAssetsNav
+          search={search}
+          setSearch={setSearch}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          showSortDropdown={showSortDropdown}
+          setShowSortDropdown={setShowSortDropdown}
+          filteredCount={filteredCompanies.length}
+        />
+      </div>
 
       {/* Asset grid */}
       <div className="py-6">

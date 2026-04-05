@@ -268,7 +268,7 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                 href={JUPITER_LINKS[company.name]}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 w-full flex items-center justify-center gap-2 py-4 px-4 bg-white hover:bg-gray-100 text-black text-lg font-bold rounded-xl transition-colors"
+                className="mt-4 w-full flex items-center justify-center gap-2 py-4 px-4 bg-black text-white shadow-sm ring-1 ring-black/10 hover:bg-gray-800 dark:bg-white dark:text-black dark:ring-white/20 dark:hover:bg-gray-100 text-lg font-bold rounded-xl transition-colors"
               >
                 Trade Now
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -39,7 +39,8 @@ export function WithdrawInline() {
     }
   };
 
-  const handleRequestWithdrawal = async () => {
+  const handleWithdraw = async () => {
+    // Validate inputs
     if (!amount || parseFloat(amount) <= 0) {
       setError("Please enter a valid amount");
       return;
@@ -51,61 +52,83 @@ export function WithdrawInline() {
     }
 
     setError(null);
+
     try {
-      const result = await requestWithdrawal({
+      // Step 1: Request withdrawal from API
+      const requestResult = await requestWithdrawal({
         amount,
         toAddress,
       });
 
-      setWithdrawalId(result.id);
-      setRequiresMfa(result.requiresMfa);
+      setWithdrawalId(requestResult.id);
+      setRequiresMfa(requestResult.requiresMfa);
 
-      if (result.requiresMfa) {
+      // If MFA is required, go to MFA step
+      if (requestResult.requiresMfa) {
         setStep("mfa");
-      } else {
-        setStep("review");
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to request withdrawal");
-    }
-  };
 
-  const handleExecuteWithdrawal = async () => {
-    if (!withdrawalId) return;
+      // Step 2: Execute withdrawal with Privy modal
+      setStep("pending");
+      const executeResult = await executeWithdrawal(requestResult.id);
 
-    setError(null);
-    setStep("pending");
+      if (executeResult.status === "READY_TO_SIGN" && executeResult.txData && smartWalletClient) {
+        // Use the embedded wallet to sign via Privy with native modal
+        const tx = await smartWalletClient.sendTransaction(
+          {
+            to: executeResult.txData.to as `0x${string}`,
+            data: executeResult.txData.data as `0x${string}`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            chain: polygon as any,
+          },
+          {
+            uiOptions: {
+              showWalletUIs: true,
+              description: `Withdraw ${amount} USDC to ${toAddress.slice(0, 6)}...${toAddress.slice(-4)}`,
+              buttonText: "Confirm Withdrawal",
+              transactionInfo: {
+                title: "Withdrawal Details",
+                action: "Withdraw USDC",
+              },
+              successHeader: "Withdrawal Sent!",
+              successDescription: "Your USDC is being sent to your wallet",
+            },
+          }
+        );
 
-    try {
-      const result = await executeWithdrawal(withdrawalId);
-
-      if (result.status === "READY_TO_SIGN" && result.txData && smartWalletClient) {
-        const tx = await smartWalletClient.sendTransaction({
-          to: result.txData.to as `0x${string}`,
-          data: result.txData.data as `0x${string}`,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          chain: polygon as any,
-        });
-
-        await fetch("/api/trading-wallet/withdraw/execute", {
+        // Confirm the transaction with our backend and wait for blockchain confirmation
+        const confirmRes = await fetch("/api/trading-wallet/withdraw/execute", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ withdrawalId, txHash: tx }),
+          body: JSON.stringify({ withdrawalId: requestResult.id, txHash: tx }),
         });
+
+        const confirmResult = await confirmRes.json();
+
+        if (!confirmRes.ok || !confirmResult.success) {
+          throw new Error(confirmResult.error || confirmResult.message || "Transaction confirmation failed");
+        }
 
         setTxHash(tx);
         setStep("success");
         invalidateAll();
-      } else if (result.txHash) {
-        setTxHash(result.txHash);
+      } else if (executeResult.txHash) {
+        setTxHash(executeResult.txHash);
         setStep("success");
         invalidateAll();
       } else {
         throw new Error("Unexpected response from withdrawal execution");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to execute withdrawal");
-      setStep("review");
+      const errorMessage = err instanceof Error ? err.message : "Failed to process withdrawal";
+      // Check if user cancelled the Privy modal
+      if (errorMessage.toLowerCase().includes("cancel") || errorMessage.toLowerCase().includes("rejected")) {
+        setError("Withdrawal cancelled");
+      } else {
+        setError(errorMessage);
+      }
+      setStep("input");
     }
   };
 
@@ -181,9 +204,6 @@ export function WithdrawInline() {
               disabled={isWithdrawDisabled}
               className="w-full rounded-lg border border-border bg-transparent px-3 py-3 text-foreground font-mono text-sm placeholder:text-muted focus:outline-none focus:border-foreground/50 disabled:opacity-50"
             />
-            <p className="mt-1.5 text-xs text-muted">
-              Must be a verified wallet from your onboarding
-            </p>
           </div>
         </div>
 
@@ -194,89 +214,28 @@ export function WithdrawInline() {
           </div>
         )}
 
-        {/* Continue Button */}
+        {/* Withdraw Button */}
         <button
-          onClick={handleRequestWithdrawal}
+          onClick={handleWithdraw}
           disabled={
             !amount ||
             parseFloat(amount) <= 0 ||
             !toAddress ||
             isRequestingWithdrawal ||
+            isExecutingWithdrawal ||
             isWithdrawDisabled
           }
           className="mt-4 w-full rounded-lg bg-foreground py-3 text-sm font-medium text-background hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {isRequestingWithdrawal ? (
+          {isRequestingWithdrawal || isExecutingWithdrawal ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Processing...
             </>
           ) : (
-            "Continue"
+            "Withdraw"
           )}
         </button>
-      </div>
-    );
-  }
-
-  // Review Step
-  if (step === "review") {
-    return (
-      <div>
-        <h3 className="text-sm font-medium text-foreground mb-4">Review Withdrawal</h3>
-
-        <div className="rounded-lg border border-border p-4 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted">Amount</span>
-            <span className="font-medium text-foreground">${amount} USDC</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted">To</span>
-            <span className="font-mono text-foreground text-xs">
-              {toAddress.slice(0, 10)}...{toAddress.slice(-8)}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted">Network</span>
-            <span className="text-foreground">Polygon</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted">Gas Fee</span>
-            <span className="text-green-600 dark:text-green-400">
-              Sponsored (Free)
-            </span>
-          </div>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
-
-        <div className="mt-4 flex gap-3">
-          <button
-            onClick={() => setStep("input")}
-            className="flex-1 rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors"
-          >
-            Back
-          </button>
-          <button
-            onClick={handleExecuteWithdrawal}
-            disabled={isExecutingWithdrawal}
-            className="flex-1 rounded-lg bg-foreground px-4 py-3 text-sm font-medium text-background hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isExecutingWithdrawal ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Withdrawing...
-              </>
-            ) : (
-              "Confirm Withdrawal"
-            )}
-          </button>
-        </div>
       </div>
     );
   }

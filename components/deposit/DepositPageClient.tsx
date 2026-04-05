@@ -270,26 +270,37 @@ export function DepositPageClient() {
   if (!ready || !walletsReady || isLoadingWallet) {
     return (
       <>
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between gap-8">
-          <div>
-            <div className="h-10 w-40 animate-pulse rounded bg-foreground/10" />
-            <div className="mt-2 h-4 w-24 animate-pulse rounded bg-foreground/10" />
+        {/* Header Skeleton - Mobile responsive */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="h-12 w-12 animate-pulse rounded-full bg-foreground/10" />
+              <div>
+                <div className="h-5 w-28 animate-pulse rounded bg-foreground/10 sm:h-6 sm:w-40" />
+                <div className="mt-2 h-3 w-20 animate-pulse rounded bg-foreground/10 sm:h-4 sm:w-24" />
+              </div>
+            </div>
+            {/* Mobile portfolio skeleton */}
+            <div className="text-right sm:hidden">
+              <div className="h-7 w-24 animate-pulse rounded bg-foreground/10" />
+              <div className="mt-1 h-3 w-14 ml-auto animate-pulse rounded bg-foreground/10" />
+            </div>
           </div>
-          <div className="border-l border-border pl-8">
+          {/* Desktop portfolio skeleton */}
+          <div className="hidden border-l border-border pl-8 sm:block">
             <div className="h-10 w-32 animate-pulse rounded bg-foreground/10" />
             <div className="mt-2 h-4 w-20 animate-pulse rounded bg-foreground/10" />
           </div>
-          <div className="ml-auto flex flex-col items-end gap-2">
-            <div className="h-4 w-20 animate-pulse rounded bg-foreground/10" />
-            <div className="h-9 w-32 animate-pulse rounded-lg bg-foreground/10" />
-            <div className="h-9 w-32 animate-pulse rounded-lg bg-foreground/10" />
+          {/* Desktop wallet total skeleton - hidden on mobile */}
+          <div className="ml-auto hidden border-l border-border pl-8 md:block">
+            <div className="h-10 w-32 animate-pulse rounded bg-foreground/10" />
+            <div className="mt-2 h-4 w-20 animate-pulse rounded bg-foreground/10" />
           </div>
         </div>
 
         {/* Chart Skeleton */}
-        <div className="mt-8 -mx-5 border-t border-border pt-8 pb-4 px-5">
-          <div className="h-[180px] w-full animate-pulse rounded bg-foreground/10" />
+        <div className="mt-6 -mx-5 border-t border-border pt-6 pb-4 px-5 sm:mt-8 sm:pt-8">
+          <div className="h-[140px] w-full animate-pulse rounded bg-foreground/10" />
         </div>
 
         {/* Referral Skeleton */}
@@ -362,77 +373,87 @@ export function DepositPageClient() {
   return (
     <>
       {/* Header - Profile + Balances */}
-      <div className="flex items-center justify-between gap-8">
-        {/* Profile Avatar + Name */}
-        <div className="flex items-center gap-4">
-          <ProfileAvatar
-            image={profile?.image ?? null}
-            walletAddress={walletAddress}
-            size={56}
-            editable
-            onImageChange={handleImageChange}
-          />
-          <div className="min-w-0">
-            {isEditingName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={nameInput}
-                  onChange={(e) => {
-                    setNameInput(e.target.value);
-                    if (nameError) setNameError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveName();
-                    if (e.key === "Escape") handleCancelEditName();
-                  }}
-                  className="rounded-md border border-foreground/20 bg-transparent px-2 py-1 text-lg font-semibold text-foreground focus:border-foreground/50 focus:outline-none"
-                  placeholder="Enter username"
-                  maxLength={50}
-                  autoFocus
-                  disabled={isUpdatingProfile}
-                />
-                <button
-                  onClick={handleSaveName}
-                  disabled={isUpdatingProfile}
-                  className="rounded-md p-1 text-green-500 transition hover:bg-green-500/10 disabled:opacity-50"
-                >
-                  {isUpdatingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                </button>
-                <button
-                  onClick={handleCancelEditName}
-                  disabled={isUpdatingProfile}
-                  className="rounded-md p-1 text-red-500 transition hover:bg-red-500/10 disabled:opacity-50"
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-foreground">{displayName}</span>
-                <button
-                  onClick={handleStartEditName}
-                  className="rounded-md p-1 text-muted transition hover:bg-foreground/10 hover:text-foreground"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-            {nameError && <p className="mt-0.5 text-xs text-red-500">{nameError}</p>}
-            {profile?.email && <p className="text-sm text-muted truncate">{profile.email}</p>}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+        {/* Profile Avatar + Name + Portfolio (mobile combined row) */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <ProfileAvatar
+              image={profile?.image ?? null}
+              walletAddress={walletAddress}
+              size={48}
+              editable
+              onImageChange={handleImageChange}
+            />
+            <div className="min-w-0">
+              {isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => {
+                      setNameInput(e.target.value);
+                      if (nameError) setNameError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveName();
+                      if (e.key === "Escape") handleCancelEditName();
+                    }}
+                    className="w-32 rounded-md border border-foreground/20 bg-transparent px-2 py-1 text-base font-semibold text-foreground focus:border-foreground/50 focus:outline-none sm:w-auto sm:text-lg"
+                    placeholder="Enter username"
+                    maxLength={50}
+                    autoFocus
+                    disabled={isUpdatingProfile}
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    disabled={isUpdatingProfile}
+                    className="rounded-md p-1 text-green-500 transition hover:bg-green-500/10 disabled:opacity-50"
+                  >
+                    {isUpdatingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={handleCancelEditName}
+                    disabled={isUpdatingProfile}
+                    className="rounded-md p-1 text-red-500 transition hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-foreground sm:text-lg">{displayName}</span>
+                  <button
+                    onClick={handleStartEditName}
+                    className="rounded-md p-1 text-muted transition hover:bg-foreground/10 hover:text-foreground"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+              {nameError && <p className="mt-0.5 text-xs text-red-500">{nameError}</p>}
+              {profile?.email && <p className="text-xs text-muted truncate sm:text-sm">{profile.email}</p>}
+            </div>
+          </div>
+
+          {/* Portfolio Value - mobile inline */}
+          <div className="text-right sm:hidden">
+            <span className="text-2xl font-semibold tracking-tight text-foreground">
+              ${formattedBalance}
+            </span>
+            <p className="text-xs text-muted">Portfolio</p>
           </div>
         </div>
 
-        {/* Portfolio Value */}
-        <div className="border-l border-border pl-8">
+        {/* Portfolio Value - desktop */}
+        <div className="hidden border-l border-border pl-8 sm:block">
           <span className="text-4xl font-semibold tracking-tight text-foreground">
             ${formattedBalance}
           </span>
           <p className="mt-1 text-sm text-muted">Portfolio Value</p>
         </div>
 
-        {/* Wallet Total */}
-        <div className="ml-auto border-l border-border pl-8">
+        {/* Wallet Total - hidden on mobile */}
+        <div className="ml-auto hidden border-l border-border pl-8 md:block">
           <span className="text-4xl font-semibold tracking-tight text-muted">
             {isLoadingNetWorth ? (
               <span className="inline-block h-10 w-32 animate-pulse rounded bg-foreground/10" />
@@ -481,48 +502,50 @@ export function DepositPageClient() {
       </div>
 
       {/* Chart Section */}
-      <div className="mt-8 -mx-5 border-t border-border pt-8 pb-4 px-5">
-        <MiniChart
-          data={chartData}
-          width={800}
-          height={180}
-          isPositive={isPositive}
-          strokeWidth={2}
-          showGradient={true}
-        />
+      <div className="mt-6 -mx-5 border-t border-border pt-6 pb-4 px-5 sm:mt-8 sm:pt-8">
+        <div className="w-full overflow-hidden">
+          <MiniChart
+            data={chartData}
+            width={800}
+            height={140}
+            isPositive={isPositive}
+            strokeWidth={2}
+            showGradient={true}
+          />
+        </div>
       </div>
 
       {/* Transactions Section */}
       <div className="mt-6 pt-6 border-t border-border">
-        <h3 className="text-sm font-medium text-foreground mb-4">Transactions</h3>
+        <h3 className="text-sm font-medium text-foreground mb-3 sm:mb-4">Transactions</h3>
         {transactions.length === 0 ? (
           <p className="text-sm text-muted">No transactions yet</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {transactions.map((tx) => (
               <div
                 key={tx.id}
-                className="flex items-center justify-between py-2"
+                className="flex items-center justify-between py-1.5 sm:py-2"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5 sm:gap-3">
                   <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
                       tx.type === "deposit"
                         ? "bg-green-500/10 text-green-500"
                         : "bg-red-500/10 text-red-500"
                     }`}
                   >
                     {tx.type === "deposit" ? (
-                      <ArrowDownLeft className="h-4 w-4" />
+                      <ArrowDownLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     ) : (
-                      <ArrowUpRight className="h-4 w-4" />
+                      <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-xs font-medium text-foreground sm:text-sm">
                       {tx.type === "deposit" ? "Deposit" : "Withdrawal"}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-[10px] text-muted sm:text-xs">
                       {new Date(tx.timestamp).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
@@ -549,9 +572,9 @@ export function DepositPageClient() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <span
-                    className={`text-sm font-medium ${
+                    className={`text-xs font-medium sm:text-sm ${
                       tx.type === "deposit" ? "text-green-500" : "text-red-500"
                     }`}
                   >
@@ -567,7 +590,7 @@ export function DepositPageClient() {
                       rel="noopener noreferrer"
                       className="text-muted hover:text-foreground transition-colors"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </a>
                   )}
                 </div>
@@ -579,10 +602,10 @@ export function DepositPageClient() {
 
       {/* Referral Section */}
       <div className="mt-6 pt-6 border-t border-border">
-        <h3 className="text-sm font-medium text-foreground mb-4">Invite Friends</h3>
+        <h3 className="text-sm font-medium text-foreground mb-3 sm:mb-4">Invite Friends</h3>
         <div className="flex items-center gap-2">
-          <div className="flex-1 rounded-lg border border-border bg-foreground/5 px-3 py-2.5">
-            <span className="text-sm text-muted font-mono truncate block">
+          <div className="flex-1 min-w-0 rounded-lg border border-border bg-foreground/5 px-3 py-2.5">
+            <span className="text-xs text-muted font-mono truncate block sm:text-sm">
               {!mounted
                 ? "Loading..."
                 : referralCode
@@ -595,22 +618,22 @@ export function DepositPageClient() {
           <button
             onClick={handleCopyReferral}
             disabled={!referralCode}
-            className="rounded-lg border border-border px-3 py-2.5 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="shrink-0 rounded-lg border border-border px-3 py-2.5 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {copied ? (
               <>
                 <Check className="h-4 w-4" />
-                Copied
+                <span className="hidden sm:inline">Copied</span>
               </>
             ) : (
               <>
                 <Copy className="h-4 w-4" />
-                Copy
+                <span className="hidden sm:inline">Copy</span>
               </>
             )}
           </button>
         </div>
-        <div className="mt-3 flex items-center gap-4 text-sm text-muted">
+        <div className="mt-3 flex items-center gap-3 text-xs text-muted sm:gap-4 sm:text-sm">
           <span>{referralCount} Referral{referralCount !== 1 ? "s" : ""}</span>
           <span className="text-border">•</span>
           <span>{bonusPoints.toLocaleString()} Bonus Points</span>
@@ -619,11 +642,11 @@ export function DepositPageClient() {
 
       {/* Wallet Section */}
       <div className="mt-6 pt-6 border-t border-border">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => setIsWithdrawOpen(true)}
             disabled={parseFloat(balance) <= 0}
-            className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 sm:py-2.5"
           >
             Withdraw
           </button>
@@ -631,10 +654,11 @@ export function DepositPageClient() {
             href={`https://polygonscan.com/address/${tradingWallet.address}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors sm:gap-1.5 sm:text-sm"
           >
-            <span>View on Polygon</span>
-            <ExternalLink className="h-4 w-4" />
+            <span className="hidden sm:inline">View on Polygon</span>
+            <span className="sm:hidden">View Wallet</span>
+            <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </a>
         </div>
       </div>
