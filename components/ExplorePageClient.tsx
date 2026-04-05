@@ -32,6 +32,9 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
+  // Track if user is actively interacting with nav filters (mobile only behavior)
+  const hasActiveNavInteraction = search.trim() !== "" || activeCategory !== "All assets";
+
   const filteredCompanies = useMemo(() => {
     let result = [...companies];
 
@@ -98,14 +101,18 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
         />
       </div>
 
-      {/* Index Products section */}
-      <IndexesSection indexes={indexes} companies={companies} indexPrices={indexPrices} />
+      {/* Index Products section - hidden on mobile when nav has active interaction */}
+      <div className={hasActiveNavInteraction ? "hidden md:block" : ""}>
+        <IndexesSection indexes={indexes} companies={companies} indexPrices={indexPrices} />
+      </div>
 
       {/* Divider - hidden on mobile */}
       <div className="hidden md:block border-b border-border" />
 
-      {/* Top section: Gainers, Trending, Newly Added */}
-      <ExploreTopSection companies={companies} newlyAdded={newlyAdded} />
+      {/* Top section: Gainers, Trending, Newly Added - hidden on mobile when nav has active interaction */}
+      <div className={hasActiveNavInteraction ? "hidden md:block" : ""}>
+        <ExploreTopSection companies={companies} newlyAdded={newlyAdded} />
+      </div>
 
       {/* Divider - hidden on mobile */}
       <div className="hidden md:block border-b border-border" />
