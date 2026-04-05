@@ -110,7 +110,7 @@ async function fetchCompanyNewsUncached(
     const res = await fetch(url.toString(), {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      next: { revalidate: 300 },
+      next: { revalidate: 3600 },
     });
 
     if (!res.ok) {
@@ -164,7 +164,7 @@ async function fetchCompanyNewsUncached(
 }
 
 /**
- * Get company news with caching (5-minute TTL)
+ * Get company news with caching (1-hour TTL)
  */
 export async function getCompanyNews(
   params: CompanyNewsParams
@@ -177,7 +177,7 @@ export async function getCompanyNews(
   const cachedFetch = unstable_cache(
     () => fetchCompanyNewsUncached(params),
     [cacheKey],
-    { revalidate: 300 }
+    { revalidate: 3600 }
   );
 
   return cachedFetch();

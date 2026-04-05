@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCompanyNews } from "@/lib/news/fetcher";
 
-export const revalidate = 300; // 5 minutes
+export const revalidate = 3600; // 1 hour
 
 export async function GET(request: NextRequest) {
   try {
