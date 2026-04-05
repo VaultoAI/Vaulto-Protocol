@@ -38,12 +38,9 @@ export function useWalletNetWorth(address: string | undefined) {
     refetchInterval: 600_000, // Refetch every 10 minutes
   });
 
-  // Format the total net worth for display
+  // Format the total net worth for display (rounded to nearest dollar)
   const formattedNetWorth = data?.totalNetWorthUsd
-    ? parseFloat(data.totalNetWorthUsd).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
+    ? Math.round(parseFloat(data.totalNetWorthUsd)).toLocaleString()
     : null;
 
   return {

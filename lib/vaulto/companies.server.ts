@@ -7,39 +7,35 @@ import { prisma } from "@/lib/prisma";
 import { getPrivateCompanies, type PrivateCompany } from "./companies";
 
 /**
- * Get the most recently added companies based on createdAt from the database.
- * Returns full PrivateCompany data by matching against API companies.
+ * Get the most recently added companies from the private_companies table.
+ * Orders by id DESC (highest ID = most recently added).
+ * Falls back to the last entries from the API if database query fails.
  */
 export async function getNewlyAddedCompanies(count: number = 3): Promise<PrivateCompany[]> {
+  // Get full company data from the API first
+  const allCompanies = await getPrivateCompanies();
+
   if (!prisma) {
-    console.warn("[getNewlyAddedCompanies] Prisma not available, falling back to empty");
-    return [];
+    console.warn("[getNewlyAddedCompanies] Prisma not available, using last API entries");
+    return allCompanies.slice(-count).reverse();
   }
 
   try {
-    // Get the most recently created company names from the database
-    const recentCompanies = await prisma.privateCompany.findMany({
-      orderBy: { createdAt: "desc" },
-      take: count,
-      select: {
-        id: true,
-        name: true,
-        createdAt: true,
-      },
-    });
+    // Query private_companies table directly, ordered by id DESC (newest first)
+    const recentCompanies = await prisma.$queryRaw<{ id: number; name: string }[]>`
+      SELECT id, name FROM private_companies ORDER BY id DESC LIMIT ${count}
+    `;
 
     if (recentCompanies.length === 0) {
-      return [];
+      // Fall back to last entries from API
+      return allCompanies.slice(-count).reverse();
     }
 
-    // Get full company data from the API
-    const allCompanies = await getPrivateCompanies();
-
-    // Match by name and preserve the createdAt order
+    // Match by name and preserve the id DESC order from database
     const recentCompanyNames = new Set(recentCompanies.map((c) => c.name.toLowerCase()));
     const matched = allCompanies.filter((c) => recentCompanyNames.has(c.name.toLowerCase()));
 
-    // Sort by the database createdAt order (preserve the order from DB query)
+    // Sort by the database id order (preserve the order from DB query)
     const nameOrderMap = new Map(
       recentCompanies.map((c, idx) => [c.name.toLowerCase(), idx])
     );
@@ -49,16 +45,10 @@ export async function getNewlyAddedCompanies(count: number = 3): Promise<Private
       return orderA - orderB;
     });
 
-    // Add createdAt to matched companies
-    const createdAtMap = new Map(
-      recentCompanies.map((c) => [c.name.toLowerCase(), c.createdAt.toISOString()])
-    );
-    return matched.map((company) => ({
-      ...company,
-      createdAt: createdAtMap.get(company.name.toLowerCase()),
-    }));
+    return matched;
   } catch (error) {
-    console.error("[getNewlyAddedCompanies] Failed to fetch:", error);
-    return [];
+    console.error("[getNewlyAddedCompanies] Failed to fetch from DB, using last API entries:", error);
+    // Fall back to last entries from API
+    return allCompanies.slice(-count).reverse();
   }
 }

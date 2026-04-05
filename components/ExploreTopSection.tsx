@@ -10,20 +10,24 @@ import {
   formatPrice,
   getTopGainers,
   getTrending,
+  getNewlyAdded,
 } from "@/lib/vaulto/companyUtils";
 
 interface ExploreTopSectionProps {
   companies: PrivateCompany[];
-  newlyAdded: PrivateCompany[];
+  /** Pre-fetched newly added companies from the database. Falls back to sorting by lastFundingDate if not provided. */
+  newlyAdded?: PrivateCompany[];
 }
 
 /**
  * Top section with three columns: Top Gainers, Trending, Newly Added
  * Matches Ondo Finance layout with tighter spacing.
  */
-export function ExploreTopSection({ companies, newlyAdded }: ExploreTopSectionProps) {
+export function ExploreTopSection({ companies, newlyAdded: newlyAddedProp }: ExploreTopSectionProps) {
   const gainers = getTopGainers(companies, 3);
   const trending = getTrending(companies, 3);
+  // Use pre-fetched newlyAdded from database if provided, otherwise fall back to utility function
+  const newlyAdded = newlyAddedProp ?? getNewlyAdded(companies, 3);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
