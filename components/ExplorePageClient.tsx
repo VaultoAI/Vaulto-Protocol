@@ -33,8 +33,8 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   // Track if user is actively interacting with nav controls (mobile only behavior)
-  // Hide indexes/trending sections when: sort dropdown open OR list view selected
-  const hasActiveNavInteraction = showSortDropdown || viewMode === "list";
+  // Hide indexes/trending sections when: non-default sort selected OR list view selected
+  const hasActiveNavInteraction = sortBy !== "Most Popular" || viewMode === "list";
 
   const filteredCompanies = useMemo(() => {
     let result = [...companies];
