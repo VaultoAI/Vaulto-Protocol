@@ -48,9 +48,10 @@ export function getDailyChange(company: PrivateCompany) {
     const diff = latest - previous;
     const percentChange = previous > 0 ? Math.abs(diff / previous) * 100 : 0;
 
-    // Scale the valuation change to a per-share price change
-    const price = company.lastFundingEstPricePerShareUsd ?? getLatestPostMoneyValuation(company) / 1_000_000_000;
-    const priceChange = price * (percentChange / 100);
+    // Calculate price change using previous price (not current price)
+    // previousPrice * percentChange = priceChange
+    const previousPrice = previous / 1_000_000_000;
+    const priceChange = previousPrice * (percentChange / 100);
 
     return {
       changeAmount: Math.round(priceChange * 100) / 100,

@@ -237,18 +237,29 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
         {/* Right side: Trade Widget (Coming Soon) */}
         <div className="w-full lg:w-[340px] shrink-0">
-          <div className="lg:sticky lg:top-8 relative">
-            {/* Coming Soon Overlay */}
-            <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
-              <div className="text-center px-4 md:px-6 py-3 md:py-4">
-                <p className="text-black/70 dark:text-white/90 uppercase tracking-widest text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">Coming Soon</p>
-                <p className="text-black dark:text-white text-base md:text-lg font-semibold">Trading</p>
+          <div className="lg:sticky lg:top-8">
+            <div className="relative">
+              {/* Coming Soon Overlay */}
+              <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
+                <div className="text-center px-4 md:px-6 py-3 md:py-4">
+                  <p className="text-black/70 dark:text-white/90 uppercase tracking-widest text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">Coming Soon</p>
+                  <p className="text-black dark:text-white text-base md:text-lg font-semibold">Trading</p>
+                </div>
+              </div>
+              {/* Dimmed Widget */}
+              <div className="blur-[1px] opacity-70 pointer-events-none">
+                <TradeWidget company={company} />
               </div>
             </div>
-            {/* Dimmed Widget */}
-            <div className="blur-[1px] opacity-70 pointer-events-none">
-              <TradeWidget company={company} />
-            </div>
+            {/* Trade on Jupiter button */}
+            <a
+              href="https://jup.ag"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold rounded-xl transition-colors"
+            >
+              Trade on Jupiter
+            </a>
           </div>
         </div>
       </div>

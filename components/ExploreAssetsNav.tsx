@@ -1,87 +1,48 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import type { PrivateCompany } from "@/lib/vaulto/companies";
-import { getSyntheticSymbol } from "@/lib/vaulto/companies";
-import { AssetCard } from "@/components/AssetCard";
-import { AssetListRow } from "@/components/AssetListRow";
-import { CATEGORIES, getCompanyCategory } from "@/lib/vaulto/companyUtils";
+import { CATEGORIES } from "@/lib/vaulto/companyUtils";
 import type { Category } from "@/lib/vaulto/companyUtils";
-import type { PriceChangesMap } from "@/lib/polymarket/implied-valuations";
-
-interface ExploreAssetsProps {
-  companies: PrivateCompany[];
-  priceChanges24h?: PriceChangesMap;
-}
 
 type SortOption = "Most Popular" | "Price: High to Low" | "Price: Low to High" | "Name: A-Z";
 type ViewMode = "grid" | "list";
 
+interface ExploreAssetsNavProps {
+  search: string;
+  setSearch: (value: string) => void;
+  activeCategory: Category;
+  setActiveCategory: (value: Category) => void;
+  sortBy: SortOption;
+  setSortBy: (value: SortOption) => void;
+  viewMode: ViewMode;
+  setViewMode: (value: ViewMode) => void;
+  showSortDropdown: boolean;
+  setShowSortDropdown: (value: boolean) => void;
+  filteredCount: number;
+}
+
 /**
- * Explore Assets section matching Ondo Finance design.
- * Includes search, category filters, view toggle, sort, and asset grid.
+ * Navigation section for Explore Assets - search, filters, view toggle, sort.
  */
-export function ExploreAssets({ companies }: ExploreAssetsProps) {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<Category>("All assets");
-  const [sortBy, setSortBy] = useState<SortOption>("Most Popular");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
-
-  const filteredCompanies = useMemo(() => {
-    let result = [...companies];
-
-    // Search filter
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter((c) => {
-        const symbol = getSyntheticSymbol(c.name).toLowerCase();
-        return (
-          c.name.toLowerCase().includes(q) ||
-          symbol.includes(q) ||
-          c.industry.toLowerCase().includes(q)
-        );
-      });
-    }
-
-    // Category filter
-    if (activeCategory !== "All assets") {
-      result = result.filter((c) => {
-        const categories = getCompanyCategory(c);
-        return categories.includes(activeCategory);
-      });
-    }
-
-    // Sort
-    switch (sortBy) {
-      case "Most Popular":
-        result.sort((a, b) => b.valuationUsd - a.valuationUsd);
-        break;
-      case "Price: High to Low":
-        result.sort((a, b) =>
-          (b.lastFundingEstPricePerShareUsd ?? 0) - (a.lastFundingEstPricePerShareUsd ?? 0)
-        );
-        break;
-      case "Price: Low to High":
-        result.sort((a, b) =>
-          (a.lastFundingEstPricePerShareUsd ?? 0) - (b.lastFundingEstPricePerShareUsd ?? 0)
-        );
-        break;
-      case "Name: A-Z":
-        result.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
-
-    return result;
-  }, [companies, search, activeCategory, sortBy]);
-
+export function ExploreAssetsNav({
+  search,
+  setSearch,
+  activeCategory,
+  setActiveCategory,
+  sortBy,
+  setSortBy,
+  viewMode,
+  setViewMode,
+  showSortDropdown,
+  setShowSortDropdown,
+  filteredCount,
+}: ExploreAssetsNavProps) {
   return (
-    <div className="mt-12">
+    <div className="py-6">
       {/* Section header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-foreground">
           Explore Assets
-          <span className="text-sm text-muted ml-2 font-normal">({filteredCompanies.length})</span>
+          <span className="text-sm text-muted ml-2 font-normal">({filteredCount})</span>
         </h2>
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 text-sm text-muted">
@@ -96,7 +57,7 @@ export function ExploreAssets({ companies }: ExploreAssetsProps) {
       </div>
 
       {/* Search + Filters row */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
         {/* Search */}
         <div className="relative w-full lg:w-[320px] shrink-0">
           <svg
@@ -221,41 +182,6 @@ export function ExploreAssets({ companies }: ExploreAssetsProps) {
           </div>
         </div>
       </div>
-
-      {/* Assets grid or list */}
-      {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredCompanies.map((company) => (
-            <AssetCard key={company.id} company={company} />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-badge-bg/50">
-                <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Asset</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Price</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Last Round</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">Valuation</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider w-[120px]">Chart</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCompanies.map((company) => (
-                <AssetListRow key={company.id} company={company} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {filteredCompanies.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16">
-          <p className="text-muted text-sm">No assets found matching your criteria.</p>
-        </div>
-      )}
     </div>
   );
 }

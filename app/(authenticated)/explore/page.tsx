@@ -3,6 +3,9 @@ import {
 } from "@/lib/vaulto/companies";
 import { ExploreTopSection } from "@/components/ExploreTopSection";
 import { ExploreAssets } from "@/components/ExploreAssets";
+import { IndexesSection } from "@/components/IndexesSection";
+import { VAULTO_INDEXES, getIndexPrices } from "@/lib/vaulto/indexes";
+import { get24hPriceChanges } from "@/lib/polymarket/implied-valuations";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +14,20 @@ export const dynamic = "force-dynamic";
  * Auth is handled by the (authenticated) layout.
  */
 export default async function ExplorePage() {
-  const companies = await getPrivateCompanies();
+  const [companies, indexPrices, priceChanges24h] = await Promise.all([
+    getPrivateCompanies(),
+    getIndexPrices(),
+    get24hPriceChanges(),
+  ]);
 
   return (
     <div>
+      {/* Index Products section */}
+      <IndexesSection indexes={VAULTO_INDEXES} companies={companies} indexPrices={indexPrices} />
+
+      {/* Divider */}
+      <div className="border-b border-border" />
+
       {/* Top section: Gainers, Trending, Newly Added */}
       <ExploreTopSection companies={companies} />
 

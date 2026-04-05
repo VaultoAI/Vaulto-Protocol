@@ -11,10 +11,22 @@ import {
   formatPrice,
   getValuationSparkline,
 } from "@/lib/vaulto/companyUtils";
+import type { PriceChange24h } from "@/lib/polymarket/implied-valuations";
 
 interface AssetCardProps {
   company: PrivateCompany;
+  priceChange24h?: PriceChange24h;
 }
+
+// Companies that are tradable on Jupiter
+const TRADABLE_COMPANIES = new Set([
+  "SpaceX",
+  "Anthropic",
+  "OpenAI",
+  "Anduril",
+  "Kalshi",
+  "Polymarket",
+]);
 
 /**
  * Asset card matching Ondo Finance design.
@@ -26,10 +38,18 @@ export function AssetCard({ company }: AssetCardProps) {
   const price = getCurrentPrice(company);
   const { changeAmount, changePercent, isPositive } = getDailyChange(company);
   const sparklineData = getValuationSparkline(company);
+  const isTradable = TRADABLE_COMPANIES.has(company.name);
 
   return (
     <Link href={`/explore/${getCompanySlug(company.name)}`} className="block">
-      <div className="group rounded-xl border border-border bg-card-bg p-5 transition-all duration-200 hover:shadow-md hover:border-border/80 cursor-pointer">
+      <div className="group relative rounded-xl border border-border bg-card-bg p-5 transition-all duration-200 hover:shadow-md hover:border-border/80 cursor-pointer">
+        {/* Tradable indicator */}
+        {isTradable && (
+          <div className="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-white text-[10px] font-medium text-black">
+            Tradable
+          </div>
+        )}
+
         {/* Header: Logo + Ticker + Name */}
         <div className="flex items-center gap-3 mb-4">
           <CompanyLogo name={company.name} website={company.website} size={36} />

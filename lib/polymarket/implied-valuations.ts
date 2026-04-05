@@ -296,3 +296,104 @@ export function getImpliedValuationSlug(companyName: string): string | null {
 export function hasImpliedValuationData(companyName: string): boolean {
   return companyName in COMPANY_SLUG_MAP;
 }
+
+/** 24hr price change data for a company */
+export interface PriceChange24h {
+  companyName: string;
+  changePercent: number;
+  isPositive: boolean;
+}
+
+/** Map of company name to 24hr price change data */
+export type PriceChangesMap = Record<string, PriceChange24h>;
+
+/**
+ * Calculate 24hr change from valuation history.
+ * Uses the first and last data points from the 1D history.
+ */
+function calculate24hChange(
+  history: ImpliedValuationHistoryPoint[]
+): { changePercent: number; isPositive: boolean } | null {
+  if (!history || history.length < 2) return null;
+
+  const oldest = history[0].value;
+  const latest = history[history.length - 1].value;
+
+  if (oldest <= 0) return null;
+
+  const changePercent = ((latest - oldest) / oldest) * 100;
+  return {
+    changePercent: Math.abs(Math.round(changePercent * 100) / 100),
+    isPositive: changePercent >= 0,
+  };
+}
+
+/**
+ * Fetch 24hr price changes for all companies with implied valuation data.
+ * Returns a map of company name to change data.
+ */
+async function fetch24hPriceChangesUncached(): Promise<PriceChangesMap> {
+  const priceChanges: PriceChangesMap = {};
+  const apiKey = process.env.VAULTO_API_TOKEN;
+
+  if (!apiKey) {
+    console.error("Missing VAULTO_API_TOKEN environment variable");
+    return priceChanges;
+  }
+
+  // Fetch 1D history for all companies in parallel
+  const companyEntries = Object.entries(COMPANY_SLUG_MAP);
+  const results = await Promise.allSettled(
+    companyEntries.map(async ([companyName, slug]) => {
+      try {
+        const url = `${IMPLIED_VALUATIONS_API_URL}/api/implied-valuations/${slug}/history?range=1D`;
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+          },
+          next: { revalidate: 300 },
+        });
+
+        if (!res.ok) return null;
+
+        const data = (await res.json()) as ImpliedValuationHistoryResponse;
+        const change = calculate24hChange(data.history);
+
+        if (change) {
+          return {
+            companyName,
+            ...change,
+          };
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  // Build the map from successful results
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value) {
+      priceChanges[result.value.companyName] = result.value;
+    }
+  }
+
+  return priceChanges;
+}
+
+/** Cache tag for 24hr price changes */
+export const PRICE_CHANGES_24H_CACHE_TAG = "price-changes-24h";
+
+/**
+ * Cached fetch for 24hr price changes (5 min cache).
+ */
+export async function get24hPriceChanges(): Promise<PriceChangesMap> {
+  return unstable_cache(
+    fetch24hPriceChangesUncached,
+    ["price-changes-24h"],
+    { revalidate: 300, tags: [PRICE_CHANGES_24H_CACHE_TAG] }
+  )();
+}

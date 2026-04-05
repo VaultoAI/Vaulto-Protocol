@@ -126,3 +126,4 @@ function TopColumn({ title, badge, companies, hasBorderLeft, renderMetric }: Top
     </div>
   );
 }
+
