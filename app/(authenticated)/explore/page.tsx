@@ -1,6 +1,5 @@
-import {
-  getPrivateCompanies,
-} from "@/lib/vaulto/companies";
+import { getPrivateCompanies } from "@/lib/vaulto/companies";
+import { getNewlyAddedCompanies } from "@/lib/vaulto/companies.server";
 import { ExploreTopSection } from "@/components/ExploreTopSection";
 import { ExploreAssets } from "@/components/ExploreAssets";
 import { IndexesSection } from "@/components/IndexesSection";
@@ -14,10 +13,11 @@ export const dynamic = "force-dynamic";
  * Auth is handled by the (authenticated) layout.
  */
 export default async function ExplorePage() {
-  const [companies, indexPrices, priceChanges24h] = await Promise.all([
+  const [companies, indexPrices, priceChanges24h, newlyAdded] = await Promise.all([
     getPrivateCompanies(),
     getIndexPrices(),
     get24hPriceChanges(),
+    getNewlyAddedCompanies(3),
   ]);
 
   return (
@@ -29,7 +29,7 @@ export default async function ExplorePage() {
       <div className="border-b border-border" />
 
       {/* Top section: Gainers, Trending, Newly Added */}
-      <ExploreTopSection companies={companies} />
+      <ExploreTopSection companies={companies} newlyAdded={newlyAdded} />
 
       {/* Divider */}
       <div className="border-b border-border" />

@@ -73,7 +73,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
 
   const width = 900;
   const height = 340;
-  const padding = { top: 20, right: 20, bottom: 40, left: 20 };
+  const padding = { top: 30, right: 20, bottom: 40, left: 20 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
@@ -166,7 +166,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
   return (
     <div className="w-full">
       {/* Chart */}
-      <div className="w-full relative overflow-hidden">
+      <div className="w-full relative overflow-visible">
         <svg
           ref={svgRef}
           width="100%"

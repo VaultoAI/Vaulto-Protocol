@@ -36,6 +36,7 @@ export interface PrivateCompany {
   ceo: string;
   products: Product[];
   fundingHistory: FundingRound[];
+  createdAt?: string; // Date when the company was added to the database
 }
 
 /** API response structure */

@@ -225,11 +225,19 @@ export function getTrending(companies: PrivateCompany[], count: number = 3): Pri
 }
 
 /**
- * Get "Newly Added" - simulate based on last funding date
+ * Get "Newly Added" - sort by createdAt (when added to database) if available,
+ * otherwise fall back to last funding date.
  */
 export function getNewlyAdded(companies: PrivateCompany[], count: number = 3): PrivateCompany[] {
   return [...companies]
-    .sort((a, b) => new Date(b.lastFundingDate).getTime() - new Date(a.lastFundingDate).getTime())
+    .sort((a, b) => {
+      // Use createdAt if both companies have it
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      // Fall back to last funding date
+      return new Date(b.lastFundingDate).getTime() - new Date(a.lastFundingDate).getTime();
+    })
     .slice(0, count);
 }
 
