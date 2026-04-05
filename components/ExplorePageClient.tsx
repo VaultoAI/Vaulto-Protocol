@@ -33,7 +33,12 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   // Track if user is actively interacting with nav filters (mobile only behavior)
-  const hasActiveNavInteraction = search.trim() !== "" || activeCategory !== "All assets";
+  // Hide indexes/trending sections when: searching, filtering by category, sort dropdown open, or non-default sort
+  const hasActiveNavInteraction =
+    search.trim() !== "" ||
+    activeCategory !== "All assets" ||
+    showSortDropdown ||
+    sortBy !== "Most Popular";
 
   const filteredCompanies = useMemo(() => {
     let result = [...companies];
