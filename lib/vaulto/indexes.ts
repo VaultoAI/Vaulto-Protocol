@@ -212,3 +212,92 @@ export async function getIndexPrices(): Promise<IndexPricesMap> {
     { revalidate: 60, tags: [INDEX_PRICES_CACHE_TAG] }
   )();
 }
+
+/**
+ * Get an index by its symbol (case-insensitive).
+ */
+export function getIndexBySymbol(symbol: string): VaultoIndex | undefined {
+  return VAULTO_INDEXES.find(
+    (idx) => idx.symbol.toLowerCase() === symbol.toLowerCase()
+  );
+}
+
+/** Historical price point for an index */
+export interface IndexHistoryPoint {
+  date: string;
+  price: number;
+  open: number;
+  high: number;
+  low: number;
+  volume: number;
+}
+
+/**
+ * Fetch historical price data for an index.
+ * @param symbol - Index symbol (e.g., "RVI", "VCX")
+ * @param limit - Number of days of history to fetch (default: 30)
+ */
+async function fetchIndexHistoryUncached(
+  symbol: string,
+  limit: number = 30
+): Promise<IndexHistoryPoint[]> {
+  try {
+    const apiKey = process.env.VAULTO_API_TOKEN;
+    if (!apiKey) {
+      console.error("Missing VAULTO_API_TOKEN environment variable");
+      return [];
+    }
+
+    const res = await fetch(
+      `${VAULTO_DATA_API_URL}/api/indexes/${symbol.toUpperCase()}/history?limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+        },
+        next: { revalidate: 300 }, // 5 minute cache
+      }
+    );
+
+    if (!res.ok) {
+      console.error(`Index history API error: ${res.status} ${res.statusText}`);
+      return [];
+    }
+
+    const json = (await res.json()) as {
+      success: boolean;
+      data: {
+        symbol: string;
+        history: IndexHistoryPoint[];
+        count: number;
+      };
+    };
+
+    if (!json.success || !json.data?.history) {
+      return [];
+    }
+
+    return json.data.history;
+  } catch (error) {
+    console.error("Failed to fetch index history:", error);
+    return [];
+  }
+}
+
+/** Cache tag for index history */
+export const INDEX_HISTORY_CACHE_TAG = "vaulto-index-history";
+
+/**
+ * Cached fetch for index historical data.
+ */
+export async function getIndexHistory(
+  symbol: string,
+  limit: number = 30
+): Promise<IndexHistoryPoint[]> {
+  return unstable_cache(
+    () => fetchIndexHistoryUncached(symbol, limit),
+    [`vaulto-index-history-${symbol.toLowerCase()}-${limit}`],
+    { revalidate: 300, tags: [INDEX_HISTORY_CACHE_TAG] }
+  )();
+}

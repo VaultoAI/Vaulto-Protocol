@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { VaultoIndex, IndexPricesMap } from "@/lib/vaulto/indexes";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { HoldingsAvatars } from "@/components/HoldingsAvatars";
@@ -78,7 +79,10 @@ function IndexItem({ index, companies, priceData, hasBorderLeft, isFirst }: Inde
   return (
     <div className={`${hasBorderLeft ? "md:pl-8 md:border-l md:border-border" : ""} ${isFirst ? "md:pr-8" : ""}`}>
       {/* Index item row */}
-      <div className="flex items-center gap-3 cursor-pointer group">
+      <Link
+        href={`/explore/index/${index.symbol.toLowerCase()}`}
+        className="flex items-center gap-3 cursor-pointer group hover:opacity-80 transition-opacity"
+      >
         {/* Holdings avatars as the "logo" */}
         <HoldingsAvatars
           holdings={index.holdings}
@@ -101,7 +105,7 @@ function IndexItem({ index, companies, priceData, hasBorderLeft, isFirst }: Inde
             {changePercent.toFixed(2)}%
           </span>
         </div>
-      </div>
+      </Link>
     </div>
   );
 }

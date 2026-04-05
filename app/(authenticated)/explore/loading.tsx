@@ -1,6 +1,52 @@
 export default function ExploreLoading() {
   return (
     <div>
+      {/* Index Products section */}
+      <div className="py-6">
+        {/* Title with NEW badge */}
+        <div className="flex items-center gap-2 mb-5">
+          <div className="h-5 w-28 animate-pulse rounded bg-badge-bg/50" />
+          <div className="h-5 w-10 animate-pulse rounded-md bg-badge-bg/50" />
+        </div>
+
+        {/* Index items in 2 columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className={`${i > 1 ? "md:pl-8 md:border-l md:border-border" : "md:pr-8"}`}
+            >
+              <div className="flex items-center gap-3">
+                {/* Holdings avatars skeleton (stacked circles) */}
+                <div className="flex -space-x-2">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div
+                      key={j}
+                      className="h-9 w-9 animate-pulse rounded-full bg-badge-bg/50 border-2 border-background"
+                    />
+                  ))}
+                </div>
+
+                {/* Name + symbol */}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-32 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+
+                {/* Price + change */}
+                <div className="flex flex-col items-end shrink-0 w-[90px] space-y-1">
+                  <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-12 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-b border-border" />
+
       {/* Top section: 3 columns like ExploreTopSection */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
         {[1, 2, 3].map((colIndex) => (

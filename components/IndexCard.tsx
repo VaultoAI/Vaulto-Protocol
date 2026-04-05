@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { HoldingsAvatars } from "@/components/HoldingsAvatars";
 import type { VaultoIndex, IndexPriceData } from "@/lib/vaulto/indexes";
 import { getIndexPrice, getIndexChange } from "@/lib/vaulto/indexes";
@@ -37,7 +38,10 @@ export function IndexCard({ index, companies, priceData }: IndexCardProps) {
   const holdingsCount = index.holdings.filter((h) => !h.isCash).length;
 
   return (
-    <div className="rounded-xl border border-border bg-background p-5 hover:bg-card-hover transition-colors">
+    <Link
+      href={`/explore/index/${index.symbol.toLowerCase()}`}
+      className="block rounded-xl border border-border bg-background p-5 hover:bg-card-hover transition-colors"
+    >
       {/* Top row: Symbol/Name and Issuer badge */}
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -84,6 +88,6 @@ export function IndexCard({ index, companies, priceData }: IndexCardProps) {
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

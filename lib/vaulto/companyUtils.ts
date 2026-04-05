@@ -61,8 +61,8 @@ export function getDailyChange(company: PrivateCompany) {
   }
 
   // Fallback for companies with fewer than 2 valuation data points
-  const today = new Date().toISOString().split("T")[0];
-  const seed = `${company.name}-${today}`;
+  // Use company name only as seed (no date) to ensure consistent values between server/client
+  const seed = `${company.name}-fallback`;
   const rand = seededRandom(seed);
   const rand2 = seededRandom(seed + "-dir");
 
