@@ -203,6 +203,7 @@ export function useTradingWallet() {
     mutationFn: confirmDeposit,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
     },
   });
 
@@ -215,6 +216,7 @@ export function useTradingWallet() {
     mutationFn: executeWithdrawal,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
     },
   });
 
@@ -345,6 +347,7 @@ export function useTradingWallet() {
     invalidateAll: () => {
       queryClient.invalidateQueries({ queryKey: ["trading-wallet"] });
       queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
     },
   };
 }

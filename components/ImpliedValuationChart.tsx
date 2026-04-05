@@ -636,17 +636,17 @@ export function ImpliedValuationChart({
         )}
       </div>
 
-      {/* Current implied valuation summary - Polymarket inspired */}
-      <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-[#1a1f2e] dark:to-[#141824] border border-gray-200 dark:border-[#2d3548]">
-        <div className="flex items-center justify-between mb-3">
+      {/* Current implied valuation summary */}
+      <div className="mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">
+        <div className="flex items-center justify-between">
           {/* Left: Valuation */}
           <div>
-            <p className="text-sm text-[#8b95a8] mb-1">Implied Valuation</p>
-            <p className="text-2xl font-semibold text-black dark:text-white">
+            <p className="text-sm text-muted mb-1">Implied Valuation</p>
+            <p className="text-2xl font-semibold text-foreground">
               {formatImpliedValuation(currentValuation)}
             </p>
             {totalVolume != null && totalVolume > 0 && (
-              <p className="text-xs text-[#8b95a8] mt-1">
+              <p className="text-xs text-muted mt-1">
                 Volume: {formatVolume(totalVolume)}
               </p>
             )}
@@ -654,8 +654,8 @@ export function ImpliedValuationChart({
           {/* Right: No IPO */}
           {history[history.length - 1]?.noIpoProbability != null && (
             <div className="text-right">
-              <p className="text-sm text-[#8b95a8] mb-1">No IPO</p>
-              <p className="text-2xl font-semibold text-black dark:text-white">
+              <p className="text-sm text-muted mb-1">No IPO</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {formatProbability(history[history.length - 1].noIpoProbability ?? null)}
               </p>
             </div>

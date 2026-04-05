@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
+import { usePortfolioHistory, Transaction } from "@/hooks/usePortfolioHistory";
 import { useWalletNetWorth } from "@/hooks/useWalletNetWorth";
 import { useExternalUsdcBalance } from "@/hooks/useExternalUsdcBalance";
 import { useReferralStats } from "@/hooks/useReferralStats";
@@ -13,7 +14,7 @@ import { MiniChart } from "@/components/MiniChart";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
-import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil } from "lucide-react";
+import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
 // Lazy-load modal to reduce initial bundle
 const WithdrawModal = dynamic(
@@ -257,16 +258,13 @@ export function DepositPageClient() {
 
   const isDepositing = depositStatus === "initiating" || depositStatus === "pending" || depositStatus === "confirming" || isInitiatingDeposit || isSending || isConfirmingTx;
 
-  // Generate demo chart data - flat line at current balance value
-  const chartData = useMemo(() => {
-    const balanceNum = parseFloat(balance) || 0;
-    // Create 30 data points with slight variation for visual interest
-    return Array.from({ length: 30 }, (_, i) => {
-      // Add small random variation (±2%) for visual effect
-      const variation = 1 + (Math.sin(i * 0.5) * 0.02);
-      return balanceNum * variation;
-    });
-  }, [balance]);
+  // Fetch real portfolio history and transactions
+  const { chartData, transactions } = usePortfolioHistory(tradingWallet?.address);
+
+  // Calculate if portfolio is positive (current balance >= initial)
+  const isPositive = chartData.length >= 2
+    ? chartData[chartData.length - 1] >= chartData[0]
+    : true;
 
   // Show loading skeleton while Privy initializes, wallets are loading, or trading wallet is loading
   if (!ready || !walletsReady || isLoadingWallet) {
@@ -488,10 +486,95 @@ export function DepositPageClient() {
           data={chartData}
           width={800}
           height={180}
-          isPositive={true}
+          isPositive={isPositive}
           strokeWidth={2}
           showGradient={true}
         />
+      </div>
+
+      {/* Transactions Section */}
+      <div className="mt-6 pt-6 border-t border-border">
+        <h3 className="text-sm font-medium text-foreground mb-4">Transactions</h3>
+        {transactions.length === 0 ? (
+          <p className="text-sm text-muted">No transactions yet</p>
+        ) : (
+          <div className="space-y-3">
+            {transactions.map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                      tx.type === "deposit"
+                        ? "bg-green-500/10 text-green-500"
+                        : "bg-red-500/10 text-red-500"
+                    }`}
+                  >
+                    {tx.type === "deposit" ? (
+                      <ArrowDownLeft className="h-4 w-4" />
+                    ) : (
+                      <ArrowUpRight className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {tx.type === "deposit" ? "Deposit" : "Withdrawal"}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {new Date(tx.timestamp).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      {" · "}
+                      <span
+                        className={`${
+                          tx.status === "COMPLETED"
+                            ? "text-green-500"
+                            : tx.status === "FAILED" || tx.status === "REJECTED"
+                              ? "text-red-500"
+                              : "text-yellow-500"
+                        }`}
+                      >
+                        {tx.status === "COMPLETED"
+                          ? "Completed"
+                          : tx.status === "PENDING" || tx.status === "PENDING_APPROVAL"
+                            ? "Pending"
+                            : tx.status === "CONFIRMING" || tx.status === "PROCESSING"
+                              ? "Processing"
+                              : tx.status}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-sm font-medium ${
+                      tx.type === "deposit" ? "text-green-500" : "text-red-500"
+                    }`}
+                  >
+                    {tx.type === "deposit" ? "+" : "-"}${tx.amount.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                  {tx.txHash && (
+                    <a
+                      href={`https://polygonscan.com/tx/${tx.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted hover:text-foreground transition-colors"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Referral Section */}

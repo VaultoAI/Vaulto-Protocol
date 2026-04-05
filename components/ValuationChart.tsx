@@ -287,24 +287,24 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
         )}
       </div>
 
-      {/* Funding vs Valuation summary - Matching Polymarket box design */}
-      <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-[#1a1f2e] dark:to-[#141824] border border-gray-200 dark:border-[#2d3548]">
+      {/* Funding vs Valuation summary */}
+      <div className="mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-sm text-[#8b95a8] mb-1">Total Funding</p>
-            <p className="text-2xl font-semibold text-black dark:text-white">
+            <p className="text-sm text-muted mb-1">Total Funding</p>
+            <p className="text-2xl font-semibold text-foreground">
               {formatValuation(company.totalFundingUsd)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-[#8b95a8] mb-1">Valuation</p>
-            <p className="text-2xl font-semibold text-black dark:text-white">
+            <p className="text-sm text-muted mb-1">Valuation</p>
+            <p className="text-2xl font-semibold text-foreground">
               {formatValuation(currentValuation)}
             </p>
           </div>
         </div>
         {/* Progress bar */}
-        <div className="relative h-2 rounded-full bg-gray-200 dark:bg-[#2d3548] overflow-hidden">
+        <div className="relative h-2 rounded-full bg-border overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
