@@ -121,17 +121,29 @@ async function executeWithdrawal(withdrawalId: string): Promise<{
     data: string;
     chainId: number;
   };
+  message?: string;
+  withdrawalId?: string;
 }> {
+  console.log("[useTradingWallet] executeWithdrawal called with:", withdrawalId);
+
   const res = await fetch("/api/trading-wallet/withdraw/execute", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ withdrawalId }),
   });
+
+  console.log("[useTradingWallet] Response status:", res.status);
+
+  const data = await res.json();
+  console.log("[useTradingWallet] Response data:", JSON.stringify(data, null, 2));
+
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to execute withdrawal");
+    const errorMsg = data.error || data.message || data.details || "Failed to execute withdrawal";
+    console.error("[useTradingWallet] Error response:", errorMsg);
+    throw new Error(errorMsg);
   }
-  return res.json();
+
+  return data;
 }
 
 async function fetchBalance(): Promise<{

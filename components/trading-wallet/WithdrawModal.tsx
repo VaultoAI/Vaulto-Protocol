@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
-import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
-import { polygon } from "viem/chains";
+import { useState, useEffect, useCallback } from "react";
+import { useSendTransaction } from "@privy-io/react-auth";
+import { useWaitForTransactionReceipt } from "wagmi";
+import { decodeFunctionData } from "viem";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
-import { X, Check, ExternalLink, AlertTriangle } from "lucide-react";
+import { X, Check, ExternalLink, AlertTriangle, Loader2 } from "lucide-react";
+import { ERC20_ABI } from "@/lib/trading-wallet/constants";
 
 interface WithdrawModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type WithdrawStep = "input" | "review" | "mfa" | "pending" | "success";
+type WithdrawStep = "input" | "mfa" | "signing" | "confirming" | "success";
 
 export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
@@ -21,20 +22,31 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [withdrawalId, setWithdrawalId] = useState<string | null>(null);
   const [requiresMfa, setRequiresMfa] = useState(false);
-  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+  const [isSending, setIsSending] = useState(false);
 
   const {
-    tradingWallet,
     balance,
     requestWithdrawal,
     executeWithdrawal,
     isRequestingWithdrawal,
     isExecutingWithdrawal,
     externalWallet,
+    embeddedWallet,
     invalidateAll,
   } = useTradingWallet();
 
-  const { client: smartWalletClient } = useSmartWallets();
+  // Use Privy's sendTransaction to sign from embedded wallet
+  const { sendTransaction } = useSendTransaction();
+
+  // Wait for transaction receipt (wagmi works with any txHash)
+  const {
+    isLoading: isConfirmingTx,
+    isSuccess: isConfirmed,
+    error: receiptError,
+  } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
   const handleSetMax = () => {
     setAmount(balance);
@@ -46,7 +58,51 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
     }
   };
 
+  // Handle transaction confirmation with backend
+  const handleConfirmation = useCallback(async () => {
+    if (txHash && isConfirmed && withdrawalId && step === "confirming") {
+      console.log("[WithdrawModal] Transaction confirmed, updating backend...");
+      try {
+        const confirmRes = await fetch("/api/trading-wallet/withdraw/execute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ withdrawalId, txHash }),
+        });
+
+        const confirmResult = await confirmRes.json();
+        console.log("[WithdrawModal] Backend confirm result:", confirmResult);
+
+        if (!confirmRes.ok || !confirmResult.success) {
+          throw new Error(confirmResult.error || confirmResult.message || "Failed to confirm withdrawal");
+        }
+
+        setStep("success");
+        invalidateAll();
+      } catch (err) {
+        console.error("[WithdrawModal] Confirmation error:", err);
+        setError(err instanceof Error ? err.message : "Failed to confirm withdrawal");
+        setStep("input");
+      }
+    }
+  }, [txHash, isConfirmed, withdrawalId, step, invalidateAll]);
+
+  // Trigger confirmation when tx is confirmed
+  useEffect(() => {
+    handleConfirmation();
+  }, [handleConfirmation]);
+
+  // Handle receipt errors
+  useEffect(() => {
+    if (receiptError) {
+      console.error("[WithdrawModal] Receipt error:", receiptError);
+      setError("Transaction failed on-chain");
+      setStep("input");
+    }
+  }, [receiptError]);
+
   const handleWithdraw = async () => {
+    const LOG = "[WithdrawModal]";
+
     // Validate inputs
     if (!amount || parseFloat(amount) <= 0) {
       setError("Please enter a valid amount");
@@ -59,82 +115,108 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
     }
 
     setError(null);
+    setTxHash(undefined);
 
     try {
+      console.log(`${LOG} Starting withdrawal flow`);
+      console.log(`${LOG} Amount: ${amount}, To: ${toAddress}`);
+
       // Step 1: Request withdrawal from API
+      console.log(`${LOG} Step 1: Requesting withdrawal...`);
       const requestResult = await requestWithdrawal({
         amount,
         toAddress,
       });
+      console.log(`${LOG} Request result:`, requestResult);
 
       setWithdrawalId(requestResult.id);
       setRequiresMfa(requestResult.requiresMfa);
 
       // If MFA is required, go to MFA step
       if (requestResult.requiresMfa) {
+        console.log(`${LOG} MFA required, stopping`);
         setStep("mfa");
         return;
       }
 
-      // Step 2: Execute withdrawal with Privy modal
-      setStep("pending");
+      // Step 2: Get transaction data
+      console.log(`${LOG} Step 2: Getting transaction data...`);
       const executeResult = await executeWithdrawal(requestResult.id);
+      console.log(`${LOG} Execute result:`, executeResult);
 
-      if (executeResult.status === "READY_TO_SIGN" && executeResult.txData && smartWalletClient) {
-        // Use the embedded wallet to sign via Privy with native modal
-        const tx = await smartWalletClient.sendTransaction(
-          {
-            to: executeResult.txData.to as `0x${string}`,
-            data: executeResult.txData.data as `0x${string}`,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            chain: polygon as any,
-          },
-          {
-            uiOptions: {
-              showWalletUIs: true,
-              description: `Withdraw ${amount} USDC to ${toAddress.slice(0, 6)}...${toAddress.slice(-4)}`,
-              buttonText: "Confirm Withdrawal",
-              transactionInfo: {
-                title: "Withdrawal Details",
-                action: "Withdraw USDC",
-              },
-              successHeader: "Withdrawal Sent!",
-              successDescription: "Your USDC is being sent to your wallet",
-            },
-          }
-        );
-
-        // Confirm the transaction with our backend and wait for blockchain confirmation
-        const confirmRes = await fetch("/api/trading-wallet/withdraw/execute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ withdrawalId: requestResult.id, txHash: tx }),
-        });
-
-        const confirmResult = await confirmRes.json();
-
-        if (!confirmRes.ok || !confirmResult.success) {
-          throw new Error(confirmResult.error || confirmResult.message || "Transaction confirmation failed");
+      if (executeResult.status === "READY_TO_SIGN" && executeResult.txData) {
+        if (!embeddedWallet?.address) {
+          throw new Error("Trading wallet not available");
         }
 
-        setTxHash(tx);
-        setStep("success");
-        invalidateAll();
-      } else if (executeResult.txHash) {
-        setTxHash(executeResult.txHash);
+        console.log(`${LOG} Step 3: Sending transaction via Privy (embedded wallet)...`);
+        console.log(`${LOG} txData.to (USDC contract):`, executeResult.txData.to);
+        console.log(`${LOG} txData.data (encoded transfer):`, executeResult.txData.data);
+        console.log(`${LOG} Embedded wallet address:`, embeddedWallet.address);
+
+        // Decode and verify the transfer amount
+        try {
+          const decoded = decodeFunctionData({
+            abi: ERC20_ABI,
+            data: executeResult.txData.data as `0x${string}`,
+          });
+          console.log(`${LOG} Decoded function:`, decoded.functionName);
+          if (decoded.functionName === "transfer" && decoded.args) {
+            const [toAddr, rawAmount] = decoded.args as [string, bigint];
+            const usdcAmount = Number(rawAmount) / 1_000_000;
+            console.log(`${LOG} Decoded transfer to:`, toAddr);
+            console.log(`${LOG} Decoded raw amount:`, rawAmount.toString());
+            console.log(`${LOG} Decoded USDC amount:`, usdcAmount);
+          }
+        } catch (decodeErr) {
+          console.error(`${LOG} Failed to decode txData:`, decodeErr);
+        }
+
+        setStep("signing");
+        setIsSending(true);
+
+        try {
+          // Sign from embedded wallet using Privy's sendTransaction
+          const receipt = await sendTransaction(
+            {
+              to: executeResult.txData.to as `0x${string}`,
+              data: executeResult.txData.data as `0x${string}`,
+              chainId: 137, // Polygon
+            },
+            {
+              address: embeddedWallet.address,
+            }
+          );
+
+          console.log(`${LOG} Transaction sent, txHash:`, receipt.hash);
+          setTxHash(receipt.hash);
+          setStep("confirming");
+        } catch (sendErr) {
+          console.error(`${LOG} Send error:`, sendErr);
+          const errorMessage = sendErr instanceof Error ? sendErr.message : "Transaction failed";
+          if (errorMessage.toLowerCase().includes("reject") || errorMessage.toLowerCase().includes("denied")) {
+            setError("Transaction rejected by user");
+          } else {
+            setError(errorMessage);
+          }
+          setStep("input");
+        } finally {
+          setIsSending(false);
+        }
+        return;
+      } else if (executeResult.status === "COMPLETED" && executeResult.txHash) {
+        // Already completed
+        console.log(`${LOG} Already completed with txHash:`, executeResult.txHash);
         setStep("success");
         invalidateAll();
       } else {
-        throw new Error("Unexpected response from withdrawal execution");
+        console.error(`${LOG} Unexpected response:`, executeResult);
+        throw new Error(`Unexpected response: status=${executeResult.status}`);
       }
     } catch (err) {
+      console.error(`${LOG} Error:`, err);
       const errorMessage = err instanceof Error ? err.message : "Failed to process withdrawal";
-      // Check if user cancelled the Privy modal
-      if (errorMessage.toLowerCase().includes("cancel") || errorMessage.toLowerCase().includes("rejected")) {
-        setError("Withdrawal cancelled");
-      } else {
-        setError(errorMessage);
-      }
+      setError(errorMessage);
       setStep("input");
     }
   };
@@ -146,9 +228,12 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
     setError(null);
     setWithdrawalId(null);
     setRequiresMfa(false);
-    setTxHash(null);
+    setTxHash(undefined);
+    setIsSending(false);
     onClose();
   };
+
+  const isProcessing = isRequestingWithdrawal || isExecutingWithdrawal || isSending || isConfirmingTx;
 
   if (!isOpen) return null;
 
@@ -244,12 +329,18 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                   !amount ||
                   parseFloat(amount) <= 0 ||
                   !toAddress ||
-                  isRequestingWithdrawal ||
-                  isExecutingWithdrawal
+                  isProcessing
                 }
-                className="flex-1 rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex-1 rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isRequestingWithdrawal || isExecutingWithdrawal ? "Processing..." : "Withdraw"}
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Withdraw"
+                )}
               </button>
             </div>
           </>
@@ -280,15 +371,38 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
           </div>
         )}
 
-        {step === "pending" && (
+        {step === "signing" && (
           <div className="py-8 text-center">
             <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-foreground/20 border-t-foreground" />
             <h3 className="text-lg font-medium text-foreground">
-              Processing Withdrawal
+              Confirm in Wallet
             </h3>
             <p className="mt-2 text-sm text-muted">
-              Please wait while we process your withdrawal...
+              Please confirm the transaction in your wallet...
             </p>
+          </div>
+        )}
+
+        {step === "confirming" && (
+          <div className="py-8 text-center">
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-foreground/20 border-t-foreground" />
+            <h3 className="text-lg font-medium text-foreground">
+              Confirming Transaction
+            </h3>
+            <p className="mt-2 text-sm text-muted">
+              Waiting for blockchain confirmation...
+            </p>
+            {txHash && (
+              <a
+                href={`https://polygonscan.com/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground"
+              >
+                View on PolygonScan
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
           </div>
         )}
 

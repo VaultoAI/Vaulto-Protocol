@@ -118,6 +118,10 @@ export async function POST(request: Request) {
 
     // Create withdrawal request
     const amountBigInt = parseUsdcAmount(amount);
+    console.log("[Withdraw Request] User-entered amount:", amount);
+    console.log("[Withdraw Request] Parsed amount (raw units):", amountBigInt.toString());
+    console.log("[Withdraw Request] Amount in USDC:", Number(amountBigInt) / 1_000_000);
+
     const withdrawal = await db.withdrawal.create({
       data: {
         tradingWalletId: user.tradingWallet.id,
