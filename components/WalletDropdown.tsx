@@ -68,6 +68,21 @@ export function WalletDropdown() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, []);
 
+  // Close dropdown on scroll (mobile only)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleScroll() {
+      // Only close on mobile (viewport width < 640px matches sm: breakpoint)
+      if (window.innerWidth < 640) {
+        setIsOpen(false);
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isOpen]);
+
   const handleCopyAddress = async () => {
     const address = tradingWallet?.address || embeddedWallet?.address;
     if (address) {
