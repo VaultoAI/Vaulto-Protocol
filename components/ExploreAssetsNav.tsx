@@ -78,8 +78,8 @@ export function ExploreAssetsNav({
           />
         </div>
 
-        {/* Category filters - scrollable on mobile, wrapped on desktop */}
-        <div className="flex items-center gap-1 flex-1 overflow-x-auto md:overflow-visible md:flex-wrap scrollbar-hide">
+        {/* Category filters - hidden on mobile, wrapped on desktop */}
+        <div className="hidden md:flex items-center gap-1 flex-wrap flex-1">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
