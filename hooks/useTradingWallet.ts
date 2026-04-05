@@ -295,11 +295,8 @@ export function useTradingWallet() {
     !isAutoCreating &&
     autoCreateError !== null;
 
-  // Format balance for display
-  const formattedBalance = parseFloat(balance).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  // Format balance for display (rounded to nearest dollar)
+  const formattedBalance = Math.round(parseFloat(balance)).toLocaleString();
 
   return {
     // Wallet state
