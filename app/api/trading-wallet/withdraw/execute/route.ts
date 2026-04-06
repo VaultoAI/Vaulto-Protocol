@@ -159,7 +159,7 @@ export async function POST(request: Request) {
           where: { id: withdrawalId },
           data: {
             status: finalStatus,
-            ...(finalStatus === "COMPLETED" && { completedAt: new Date() }),
+            executedAt: new Date(),
           },
         });
         console.log(`${LOG_PREFIX} Database updated to ${finalStatus}`);

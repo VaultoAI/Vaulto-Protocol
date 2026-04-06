@@ -59,8 +59,8 @@ async function createTradingWallet(
     body: JSON.stringify({ walletAddress }),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to create trading wallet");
+    const data = await res.json();
+    throw new Error(data.error || data.message || "Failed to create trading wallet");
   }
   return res.json();
 }
@@ -74,8 +74,8 @@ async function initiateDeposit(
     body: JSON.stringify({ amount }),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to initiate deposit");
+    const data = await res.json();
+    throw new Error(data.error || data.message || "Failed to initiate deposit");
   }
   return res.json();
 }
@@ -87,8 +87,8 @@ async function confirmDeposit(txHash: string): Promise<{ success: boolean }> {
     body: JSON.stringify({ txHash }),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to confirm deposit");
+    const data = await res.json();
+    throw new Error(data.error || data.message || "Failed to confirm deposit");
   }
   return res.json();
 }
@@ -106,8 +106,8 @@ async function requestWithdrawal(
     body: JSON.stringify(params),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to request withdrawal");
+    const data = await res.json();
+    throw new Error(data.error || data.message || "Failed to request withdrawal");
   }
   return res.json();
 }
@@ -170,8 +170,8 @@ async function detectDeposits(): Promise<{
     method: "POST",
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to detect deposits");
+    const data = await res.json();
+    throw new Error(data.error || data.message || "Failed to detect deposits");
   }
   return res.json();
 }
@@ -190,8 +190,8 @@ async function recoverWithdrawals(): Promise<{
     method: "POST",
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to recover withdrawals");
+    const data = await res.json();
+    throw new Error(data.error || data.message || "Failed to recover withdrawals");
   }
   return res.json();
 }
