@@ -78,10 +78,17 @@ enum AuditAction {
   TRADING_WALLET_CREATED
   TRADING_WALLET_DEPOSIT_INITIATED
   TRADING_WALLET_DEPOSIT_CONFIRMED
+  TRADING_WALLET_DEPOSIT_DETECTED
   TRADING_WALLET_WITHDRAWAL_REQUESTED
   TRADING_WALLET_WITHDRAWAL_APPROVED
   TRADING_WALLET_WITHDRAWAL_EXECUTED
   TRADING_WALLET_WITHDRAWAL_REJECTED
+  TRADING_WALLET_WITHDRAWAL_RECOVERED
+  // ETF trading actions
+  ETF_ORDER_PLACED
+  ETF_ORDER_FILLED
+  ETF_ORDER_CANCELED
+  ETF_ORDER_REJECTED
 }
 
 enum TradingWalletStatus {
@@ -103,6 +110,16 @@ enum WithdrawalStatus {
   PROCESSING
   COMPLETED
   REJECTED
+}
+
+enum EtfOrderStatus {
+  PENDING
+  SUBMITTED
+  PARTIALLY_FILLED
+  FILLED
+  CANCELED
+  REJECTED
+  EXPIRED
 }
 
 enum UserTier {
@@ -507,6 +524,8 @@ model TradingWallet {
   // Relations
   deposits          Deposit[]
   withdrawals       Withdrawal[]
+  etfOrders         EtfOrder[]
+  etfPositions      EtfPosition[]
 
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -585,4 +604,71 @@ model Withdrawal {
   @@index([txHash])
   @@index([status])
   @@index([toAddress])
+}
+
+// ============================================
+// ETF TRADING MODELS (Alpaca Integration)
+// ============================================
+
+model EtfOrder {
+  id                String          @id @default(cuid())
+  tradingWalletId   String
+  tradingWallet     TradingWallet   @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  // Alpaca identifiers
+  alpacaOrderId     String?         @unique
+  clientOrderId     String          @unique @default(cuid())
+
+  // Order details
+  symbol            String          // "RVI" or "VCX"
+  side              String          // "BUY" or "SELL"
+  type              String          // "MARKET" or "LIMIT"
+  notionalUsd       Decimal?        @db.Decimal(20, 2) // Dollar amount
+  qty               Decimal?        @db.Decimal(20, 8) // Share quantity
+  limitPrice        Decimal?        @db.Decimal(20, 4) // For limit orders
+
+  // Fill information
+  filledQty         Decimal         @default(0) @db.Decimal(20, 8)
+  filledAvgPrice    Decimal?        @db.Decimal(20, 4)
+
+  // Status tracking
+  status            EtfOrderStatus  @default(PENDING)
+  statusMessage     String?
+
+  // Timestamps
+  createdAt         DateTime        @default(now())
+  submittedAt       DateTime?
+  filledAt          DateTime?
+
+  @@index([tradingWalletId])
+  @@index([alpacaOrderId])
+  @@index([symbol])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model EtfPosition {
+  id                String          @id @default(cuid())
+  tradingWalletId   String
+  tradingWallet     TradingWallet   @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  // Position details
+  symbol            String          // "RVI" or "VCX"
+  qty               Decimal         @db.Decimal(20, 8)
+  costBasis         Decimal         @db.Decimal(20, 2) // Total cost
+  avgEntryPrice     Decimal         @db.Decimal(20, 4)
+
+  // Current valuation (updated periodically)
+  currentPrice      Decimal?        @db.Decimal(20, 4)
+  marketValue       Decimal?        @db.Decimal(20, 2)
+  unrealizedPl      Decimal?        @db.Decimal(20, 2)
+
+  lastSyncedAt      DateTime?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([tradingWalletId, symbol])
+  @@index([tradingWalletId])
+  @@index([symbol])
 }
