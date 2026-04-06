@@ -155,6 +155,47 @@ async function fetchBalance(): Promise<{
   return res.json();
 }
 
+async function detectDeposits(): Promise<{
+  detected: number;
+  deposits: Array<{
+    id: string;
+    txHash: string;
+    amount: string;
+    fromAddress: string;
+    confirmedAt: string;
+  }>;
+  message: string;
+}> {
+  const res = await fetch("/api/trading-wallet/deposit/detect", {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to detect deposits");
+  }
+  return res.json();
+}
+
+async function recoverWithdrawals(): Promise<{
+  recovered: number;
+  withdrawals: Array<{
+    id: string;
+    txHash: string;
+    previousStatus: string;
+    newStatus: string;
+  }>;
+  message: string;
+}> {
+  const res = await fetch("/api/trading-wallet/withdraw/recover", {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to recover withdrawals");
+  }
+  return res.json();
+}
+
 export function useTradingWallet() {
   const queryClient = useQueryClient();
   const { ready, authenticated, user } = usePrivy();
@@ -232,10 +273,85 @@ export function useTradingWallet() {
     },
   });
 
+  // Deposit detection mutation (for Privy fundWallet fiat on-ramp)
+  const detectDepositsMutation = useMutation({
+    mutationFn: detectDeposits,
+    onSuccess: (data) => {
+      if (data.detected > 0) {
+        queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
+        queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
+      }
+    },
+  });
+
+  // Withdrawal recovery mutation (for stuck withdrawals)
+  const recoverWithdrawalsMutation = useMutation({
+    mutationFn: recoverWithdrawals,
+    onSuccess: (data) => {
+      if (data.recovered > 0) {
+        queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
+        queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
+      }
+    },
+  });
+
   // Auto-creation state
   const isAutoCreatingRef = useRef(false);
   const [isAutoCreating, setIsAutoCreating] = useState(false);
   const [autoCreateError, setAutoCreateError] = useState<string | null>(null);
+
+  // Track last detection time to avoid too frequent checks
+  const lastDetectionRef = useRef<number>(0);
+
+  // Auto-detect deposits when tab becomes visible (user returns to app)
+  // This catches deposits made via fund wallet while user was in another tab
+  useEffect(() => {
+    if (!isVisible) return;
+    if (!tradingWallet?.address || tradingWallet.status !== "ACTIVE") return;
+    if (detectDepositsMutation.isPending) return;
+
+    // Throttle: only run detection once every 30 seconds
+    const now = Date.now();
+    if (now - lastDetectionRef.current < 30_000) return;
+
+    lastDetectionRef.current = now;
+
+    // Run detection in background (don't block UI)
+    detectDepositsMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        if (data.detected > 0) {
+          console.log(`[useTradingWallet] Auto-detected ${data.detected} deposit(s) on tab focus`);
+        }
+      },
+      onError: (err) => {
+        console.error("[useTradingWallet] Auto-detection failed:", err);
+      },
+    });
+  }, [isVisible, tradingWallet?.address, tradingWallet?.status, detectDepositsMutation]);
+
+  // Periodic polling for deposit detection (every 60 seconds when tab is visible)
+  // This ensures deposits from fiat on-ramp are reliably caught regardless of when they settle
+  useEffect(() => {
+    if (!isVisible) return;
+    if (!tradingWallet?.address || tradingWallet.status !== "ACTIVE") return;
+
+    const interval = setInterval(() => {
+      if (!detectDepositsMutation.isPending) {
+        detectDepositsMutation.mutate(undefined, {
+          onSuccess: (data) => {
+            if (data.detected > 0) {
+              console.log(`[useTradingWallet] Periodic detection found ${data.detected} deposit(s)`);
+            }
+          },
+          onError: (err) => {
+            console.error("[useTradingWallet] Periodic detection failed:", err);
+          },
+        });
+      }
+    }, 60_000); // Poll every 60 seconds
+
+    return () => clearInterval(interval);
+  }, [isVisible, tradingWallet?.address, tradingWallet?.status, detectDepositsMutation]);
 
   // Auto-create trading wallet when conditions are met
   useEffect(() => {
@@ -352,6 +468,12 @@ export function useTradingWallet() {
 
     executeWithdrawal: executeWithdrawalMutation.mutateAsync,
     isExecutingWithdrawal: executeWithdrawalMutation.isPending,
+
+    detectDeposits: detectDepositsMutation.mutateAsync,
+    isDetectingDeposits: detectDepositsMutation.isPending,
+
+    recoverWithdrawals: recoverWithdrawalsMutation.mutateAsync,
+    isRecoveringWithdrawals: recoverWithdrawalsMutation.isPending,
 
     // Refresh functions
     refetchWallet,

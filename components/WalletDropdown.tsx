@@ -33,6 +33,8 @@ export function WalletDropdown() {
     formattedBalance,
     isActive,
     externalWallet,
+    detectDeposits,
+    refetchBalance,
   } = useTradingWallet();
   const { image: profileImage, name: profileName } = useProfile();
 
@@ -104,6 +106,25 @@ export function WalletDropdown() {
           chain: polygon,
           asset: "USDC",
         },
+      });
+
+      // After fundWallet modal closes, attempt detection at multiple intervals
+      // Fiat on-ramp transactions can take several minutes to settle on-chain
+      const detectionDelays = [10_000, 30_000, 60_000]; // 10s, 30s, 60s
+
+      detectionDelays.forEach((delay) => {
+        setTimeout(async () => {
+          try {
+            const result = await detectDeposits();
+            if (result.detected > 0) {
+              console.log(`[WalletDropdown] Detected ${result.detected} new deposit(s) after ${delay / 1000}s`);
+            }
+            // Always refetch balance after each detection attempt
+            await refetchBalance();
+          } catch (err) {
+            console.error(`[WalletDropdown] Failed to detect deposits after ${delay / 1000}s:`, err);
+          }
+        }, delay);
       });
     } catch (error) {
       console.error("Failed to open fund wallet modal:", error);
