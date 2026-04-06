@@ -14,7 +14,7 @@ import { MiniChart } from "@/components/MiniChart";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
-import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 
 // Lazy-load modal to reduce initial bundle
 const WithdrawModal = dynamic(
@@ -502,12 +502,12 @@ export function DepositPageClient() {
       </div>
 
       {/* Chart Section */}
-      <div className="mt-6 -mx-5 border-t border-border pt-6 pb-4 px-5 sm:mt-8 sm:pt-8">
-        <div className="w-full overflow-hidden">
+      <div className="mt-6 -mx-5 border-t border-border pt-8 pb-16 px-5 sm:mt-8 sm:pt-10 sm:pb-20">
+        <div className="w-full py-4">
           <MiniChart
             data={chartData}
             width={800}
-            height={140}
+            height={160}
             isPositive={isPositive}
             strokeWidth={2}
             showGradient={true}
@@ -522,80 +522,107 @@ export function DepositPageClient() {
           <p className="text-sm text-muted">No transactions yet</p>
         ) : (
           <div className="space-y-2 sm:space-y-3">
-            {transactions.map((tx) => (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between py-1.5 sm:py-2"
-              >
-                <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
-                      tx.type === "deposit"
-                        ? "bg-green-500/10 text-green-500"
-                        : "bg-red-500/10 text-red-500"
-                    }`}
-                  >
-                    {tx.type === "deposit" ? (
-                      <ArrowDownLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    ) : (
-                      <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            {transactions.map((tx) => {
+              // Determine icon and colors based on transaction type
+              const isBuy = tx.type === "buy";
+              const isSell = tx.type === "sell";
+              const isDeposit = tx.type === "deposit";
+              const isWithdrawal = tx.type === "withdrawal";
+              const isEtfOrder = isBuy || isSell;
+
+              const iconBgClass = isDeposit || isBuy
+                ? "bg-green-500/10 text-green-500"
+                : "bg-red-500/10 text-red-500";
+
+              const amountColorClass = isDeposit || isBuy
+                ? "text-green-500"
+                : "text-red-500";
+
+              const getStatusLabel = (status: string) => {
+                if (status === "COMPLETED" || status === "FILLED") return "Completed";
+                if (status === "PENDING" || status === "PENDING_APPROVAL" || status === "SUBMITTED") return "Pending";
+                if (status === "CONFIRMING" || status === "PROCESSING" || status === "PARTIALLY_FILLED") return "Processing";
+                if (status === "CANCELED") return "Canceled";
+                if (status === "REJECTED" || status === "FAILED") return "Failed";
+                return status;
+              };
+
+              const getStatusColorClass = (status: string) => {
+                if (status === "COMPLETED" || status === "FILLED") return "text-green-500";
+                if (status === "FAILED" || status === "REJECTED" || status === "CANCELED") return "text-red-500";
+                return "text-yellow-500";
+              };
+
+              const getTypeLabel = () => {
+                if (isBuy) return `Buy ${tx.symbol}`;
+                if (isSell) return `Sell ${tx.symbol}`;
+                if (isDeposit) return "Deposit";
+                return "Withdrawal";
+              };
+
+              return (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between py-1.5 sm:py-2"
+                >
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div
+                      className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${iconBgClass}`}
+                    >
+                      {isBuy ? (
+                        <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      ) : isSell ? (
+                        <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      ) : isDeposit ? (
+                        <ArrowDownLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      ) : (
+                        <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-foreground sm:text-sm">
+                        {getTypeLabel()}
+                      </p>
+                      <p className="text-[10px] text-muted sm:text-xs">
+                        {new Date(tx.timestamp).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                        {" · "}
+                        <span className={getStatusColorClass(tx.status)}>
+                          {getStatusLabel(tx.status)}
+                        </span>
+                        {isEtfOrder && tx.filledQty !== undefined && tx.filledQty > 0 && (
+                          <span className="text-muted">
+                            {" · "}{tx.filledQty} shares
+                            {tx.filledAvgPrice && ` @ $${tx.filledAvgPrice.toFixed(2)}`}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className={`text-xs font-medium sm:text-sm ${amountColorClass}`}>
+                      {isDeposit || isBuy ? "+" : "-"}${tx.amount.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                    {tx.txHash && (
+                      <a
+                        href={`https://polygonscan.com/tx/${tx.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted hover:text-foreground transition-colors"
+                      >
+                        <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      </a>
                     )}
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-foreground sm:text-sm">
-                      {tx.type === "deposit" ? "Deposit" : "Withdrawal"}
-                    </p>
-                    <p className="text-[10px] text-muted sm:text-xs">
-                      {new Date(tx.timestamp).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                      {" · "}
-                      <span
-                        className={`${
-                          tx.status === "COMPLETED"
-                            ? "text-green-500"
-                            : tx.status === "FAILED" || tx.status === "REJECTED"
-                              ? "text-red-500"
-                              : "text-yellow-500"
-                        }`}
-                      >
-                        {tx.status === "COMPLETED"
-                          ? "Completed"
-                          : tx.status === "PENDING" || tx.status === "PENDING_APPROVAL"
-                            ? "Pending"
-                            : tx.status === "CONFIRMING" || tx.status === "PROCESSING"
-                              ? "Processing"
-                              : tx.status}
-                      </span>
-                    </p>
-                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span
-                    className={`text-xs font-medium sm:text-sm ${
-                      tx.type === "deposit" ? "text-green-500" : "text-red-500"
-                    }`}
-                  >
-                    {tx.type === "deposit" ? "+" : "-"}${tx.amount.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                  {tx.txHash && (
-                    <a
-                      href={`https://polygonscan.com/tx/${tx.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted hover:text-foreground transition-colors"
-                    >
-                      <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
