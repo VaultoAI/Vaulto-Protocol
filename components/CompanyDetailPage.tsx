@@ -7,6 +7,8 @@ import { getSyntheticSymbol, formatValuation, getCompanySlug } from "@/lib/vault
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { ValuationChart, type HoverData } from "@/components/ValuationChart";
 import { ImpliedValuationChart, type ImpliedHoverData, type ImpliedChartData } from "@/components/ImpliedValuationChart";
+import { LivePriceChart, type LiveHoverData, type LiveChartData } from "@/components/LivePriceChart";
+import { hasPrestockToken, getPrestockAddress } from "@/lib/prestock/tokens";
 import { CompanyAbout } from "@/components/CompanyAbout";
 import {
   hasImpliedValuationData,
@@ -51,7 +53,7 @@ const JUPITER_LINKS: Record<string, string> = {
  * Full company detail page matching Robinhood design.
  * Layout: Chart (left) + Trade Widget (right) stacked above About section.
  */
-type ChartType = "funding" | "market";
+type ChartType = "funding" | "market" | "live";
 
 export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
   const symbol = getSyntheticSymbol(company.name);
@@ -75,6 +77,14 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
   // Check if company has implied valuation data
   const hasMarketData = hasImpliedValuationData(company.name);
   const impliedValuationSlug = getImpliedValuationSlug(company.name);
+
+  // Check if company has prestock (live) data
+  const hasLiveData = hasPrestockToken(company.name);
+  const prestockAddress = getPrestockAddress(company.name);
+
+  // State for live chart
+  const [liveHoverData, setLiveHoverData] = useState<LiveHoverData | null>(null);
+  const [liveChartData, setLiveChartData] = useState<LiveChartData | null>(null);
 
   // Fetch implied valuation data when switching to market view
   useEffect(() => {
@@ -102,12 +112,28 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
     setImpliedChartData(data);
   }, []);
 
+  const handleLiveChartHover = useCallback((data: LiveHoverData | null) => {
+    setLiveHoverData(data);
+  }, []);
+
+  const handleLiveDataChange = useCallback((data: LiveChartData | null) => {
+    setLiveChartData(data);
+  }, []);
+
   // Get market implied current valuation (when available)
   const marketImpliedValuation = impliedChartData?.endValue ?? null;
 
+  // Get live prestock current price (when available)
+  const liveCurrentPrice = liveChartData?.endValue ?? null;
+
   // Calculate displayed price based on hover and chart type
   // When in market view, use market implied valuation as the base
+  // When in live view, show live prestock token price
   const displayedValuation = (() => {
+    if (chartType === "live") {
+      // For live view, we don't show valuation (token price is shown instead)
+      return currentValuation;
+    }
     if (chartType === "market") {
       if (impliedHoverData) return impliedHoverData.valuation;
       return marketImpliedValuation ?? currentValuation;
@@ -115,8 +141,13 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
     return hoverData?.valuation ?? currentValuation;
   })();
 
-  // Scale price proportionally to valuation
+  // Scale price proportionally to valuation (or show live token price)
   const displayedPrice = (() => {
+    if (chartType === "live") {
+      // For live view, show the token price
+      if (liveHoverData) return liveHoverData.price;
+      return liveCurrentPrice ?? basePrice;
+    }
     if (chartType === "market") {
       const marketBase = marketImpliedValuation ?? currentValuation;
       if (impliedHoverData) {
@@ -131,12 +162,26 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
   })();
 
   // Get date to display based on chart type
-  const displayedDate = chartType === "market" && impliedHoverData
-    ? impliedHoverData.timestamp
-    : hoverData?.date;
+  const displayedDate = (() => {
+    if (chartType === "live" && liveHoverData) {
+      return new Date(liveHoverData.timestamp).toISOString();
+    }
+    if (chartType === "market" && impliedHoverData) {
+      return impliedHoverData.timestamp;
+    }
+    return hoverData?.date;
+  })();
 
   // Get change data based on chart type
   const displayedChange = (() => {
+    if (chartType === "live" && liveChartData) {
+      return {
+        amount: liveChartData.changeAmount,
+        percent: liveChartData.changePercent,
+        isPositive: liveChartData.isPositive,
+        label: liveChartData.range === "ALL" ? "All Time" : liveChartData.range,
+      };
+    }
     if (chartType === "market" && impliedChartData) {
       // For market view, show change in valuation (in billions) over the time range
       const changeInBillions = impliedChartData.changeAmount / 1_000_000_000;
@@ -186,10 +231,17 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
             {formatPrice(displayedPrice)}
           </p>
 
-          {/* Valuation */}
-          <p className="text-lg text-muted font-medium transition-all duration-150 ease-out">
-            {formatValuation(displayedValuation)} valuation
-          </p>
+          {/* Valuation - hide for live view since we show token price */}
+          {chartType !== "live" && (
+            <p className="text-lg text-muted font-medium transition-all duration-150 ease-out">
+              {formatValuation(displayedValuation)} valuation
+            </p>
+          )}
+          {chartType === "live" && (
+            <p className="text-lg text-muted font-medium transition-all duration-150 ease-out">
+              Prestock Token Price
+            </p>
+          )}
 
           {/* Change indicator */}
           <div className="flex items-center gap-2 mt-1 mb-6">
@@ -199,6 +251,7 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
+                  ...(chartType === "live" ? { hour: "numeric", minute: "2-digit" } : {}),
                 })}
               </span>
             ) : (
@@ -207,6 +260,8 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                   {displayedChange.isPositive ? "+" : "-"}
                   {chartType === "market"
                     ? `$${Math.abs(displayedChange.amount).toFixed(1)}B`
+                    : chartType === "live"
+                    ? `$${Math.abs(displayedChange.amount).toFixed(4)}`
                     : `$${Math.abs(displayedChange.amount).toFixed(2)}`
                   }
                   {" "}({displayedChange.isPositive ? "+" : "-"}{Math.abs(displayedChange.percent).toFixed(2)}%)
@@ -218,15 +273,17 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
           {/* Charts Container */}
           <div className="w-full">
-            {chartType === "funding" ? (
+            {chartType === "funding" && (
               <ValuationChart
                 company={company}
                 onHover={handleChartHover}
                 chartType={chartType}
                 onChartTypeChange={setChartType}
                 hasMarketData={hasMarketData}
+                hasLiveData={hasLiveData}
               />
-            ) : (
+            )}
+            {chartType === "market" && (
               <ImpliedValuationChart
                 companySlug={impliedValuationSlug || ""}
                 companyName={company.name}
@@ -235,6 +292,18 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                 onDataChange={handleImpliedDataChange}
                 chartType={chartType}
                 onChartTypeChange={setChartType}
+                hasLiveData={hasLiveData}
+              />
+            )}
+            {chartType === "live" && prestockAddress && (
+              <LivePriceChart
+                tokenAddress={prestockAddress}
+                companyName={company.name}
+                onHover={handleLiveChartHover}
+                onDataChange={handleLiveDataChange}
+                chartType={chartType}
+                onChartTypeChange={setChartType}
+                hasMarketData={hasMarketData}
               />
             )}
           </div>
