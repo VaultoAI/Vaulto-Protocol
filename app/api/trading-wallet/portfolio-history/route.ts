@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-withdrawal";
+import { filterUsdcTransactions } from "@/lib/alchemy/transactions";
+import {
+  getCachedTransactions,
+  getSyncState,
+  triggerBackgroundSync,
+  isSyncStale,
+} from "@/lib/trading-wallet/transaction-sync";
 
 interface HistoryPoint {
   timestamp: string;
@@ -154,41 +161,27 @@ export async function GET() {
     // Sort transactions by timestamp descending (newest first) for display
     allTransactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    // Build chart data from completed transactions only
-    const completedTransactions: Array<{
-      timestamp: Date;
-      amount: number;
-      type: "deposit" | "withdrawal";
-    }> = [];
-
-    // Add completed deposits for chart
-    for (const deposit of tradingWallet.deposits) {
-      if (deposit.status === "COMPLETED" && deposit.confirmedAt) {
-        completedTransactions.push({
-          timestamp: deposit.confirmedAt,
-          amount: Number(deposit.amount) / 1e6,
-          type: "deposit",
-        });
-      }
-    }
-
-    // Add completed withdrawals for chart
-    for (const withdrawal of tradingWallet.withdrawals) {
-      if (withdrawal.status === "COMPLETED" && withdrawal.executedAt) {
-        completedTransactions.push({
-          timestamp: withdrawal.executedAt,
-          amount: Number(withdrawal.amount) / 1e6,
-          type: "withdrawal",
-        });
-      }
-    }
-
-    // Sort by timestamp ascending for chart
-    completedTransactions.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-    // Build history with running balance
+    // Build chart data - use cached transactions for instant load
     const history: HistoryPoint[] = [];
     let runningBalance = 0;
+    let usingCachedData = false;
+
+    // Get sync state and cached transactions (instant - from database)
+    const [syncState, cachedTransactions] = await Promise.all([
+      getSyncState(tradingWallet.id),
+      getCachedTransactions(tradingWallet.id),
+    ]);
+
+    // Check if sync is needed (>5 min old or never synced)
+    const isStale = isSyncStale(syncState?.lastSyncedAt ?? null);
+
+    // Trigger background sync if stale (non-blocking)
+    if (isStale && !syncState?.isSyncing) {
+      triggerBackgroundSync(tradingWallet.id, tradingWallet.address);
+    }
+
+    // Use cached data if available
+    usingCachedData = cachedTransactions.length > 0;
 
     // Add initial point at wallet creation
     history.push({
@@ -197,21 +190,84 @@ export async function GET() {
       type: "initial",
     });
 
-    // Add points for each completed transaction
-    for (const tx of completedTransactions) {
-      if (tx.type === "deposit") {
-        runningBalance += tx.amount;
-      } else {
-        runningBalance -= tx.amount;
-      }
-      // Ensure balance doesn't go negative due to rounding
-      runningBalance = Math.max(0, runningBalance);
+    if (usingCachedData) {
+      // Use cached data for accurate blockchain timestamps
+      // Filter to USDC transactions only for balance chart
+      const usdcTxs = filterUsdcTransactions(cachedTransactions);
 
-      history.push({
-        timestamp: tx.timestamp.toISOString(),
-        balance: runningBalance,
-        type: tx.type,
-      });
+      // Sort by timestamp ascending for chart
+      const sortedTxs = [...usdcTxs].sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      // Build running balance from Alchemy data
+      for (const tx of sortedTxs) {
+        if (tx.amount !== null && tx.amount > 0) {
+          if (tx.type === "deposit") {
+            runningBalance += tx.amount;
+          } else {
+            runningBalance -= tx.amount;
+          }
+          runningBalance = Math.max(0, runningBalance);
+
+          history.push({
+            timestamp: tx.timestamp, // Accurate blockchain timestamp
+            balance: runningBalance,
+            type: tx.type,
+          });
+        }
+      }
+    } else {
+      // Fallback: use database transactions
+      const completedTransactions: Array<{
+        timestamp: Date;
+        amount: number;
+        type: "deposit" | "withdrawal";
+      }> = [];
+
+      // Add completed deposits for chart
+      for (const deposit of tradingWallet.deposits) {
+        if (deposit.status === "COMPLETED" && deposit.confirmedAt) {
+          completedTransactions.push({
+            timestamp: deposit.confirmedAt,
+            amount: Number(deposit.amount) / 1e6,
+            type: "deposit",
+          });
+        }
+      }
+
+      // Add completed withdrawals for chart
+      for (const withdrawal of tradingWallet.withdrawals) {
+        if (withdrawal.status === "COMPLETED" && withdrawal.executedAt) {
+          completedTransactions.push({
+            timestamp: withdrawal.executedAt,
+            amount: Number(withdrawal.amount) / 1e6,
+            type: "withdrawal",
+          });
+        }
+      }
+
+      // Sort by timestamp ascending for chart
+      completedTransactions.sort(
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+      );
+
+      // Add points for each completed transaction
+      for (const tx of completedTransactions) {
+        if (tx.type === "deposit") {
+          runningBalance += tx.amount;
+        } else {
+          runningBalance -= tx.amount;
+        }
+        runningBalance = Math.max(0, runningBalance);
+
+        history.push({
+          timestamp: tx.timestamp.toISOString(),
+          balance: runningBalance,
+          type: tx.type,
+        });
+      }
     }
 
     // Get current on-chain balance and add as final point
@@ -236,7 +292,16 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ history, transactions: allTransactions });
+    return NextResponse.json({
+      history,
+      transactions: allTransactions,
+      syncState: {
+        lastSyncedAt: syncState?.lastSyncedAt?.toISOString() ?? null,
+        isSyncing: syncState?.isSyncing ?? false,
+        needsSync: isStale,
+        transactionCount: syncState?.transactionCount ?? 0,
+      },
+    });
   } catch (error) {
     console.error("[Trading Wallet] Portfolio history error:", error);
     return NextResponse.json(

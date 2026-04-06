@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface HistoryPoint {
   timestamp: string;
@@ -24,9 +24,17 @@ export interface Transaction {
   filledAvgPrice?: number;
 }
 
+interface SyncState {
+  lastSyncedAt: string | null;
+  isSyncing: boolean;
+  needsSync: boolean;
+  transactionCount: number;
+}
+
 interface PortfolioHistoryResponse {
   history: HistoryPoint[];
   transactions: Transaction[];
+  syncState?: SyncState;
 }
 
 async function fetchPortfolioHistory(): Promise<PortfolioHistoryResponse> {
@@ -41,6 +49,8 @@ async function fetchPortfolioHistory(): Promise<PortfolioHistoryResponse> {
 }
 
 export function usePortfolioHistory(tradingWalletAddress: string | undefined) {
+  const queryClient = useQueryClient();
+
   const {
     data,
     isLoading,
@@ -53,6 +63,33 @@ export function usePortfolioHistory(tradingWalletAddress: string | undefined) {
     staleTime: 60_000, // 60 seconds
   });
 
+  const isSyncing = data?.syncState?.isSyncing ?? false;
+  const needsSync = data?.syncState?.needsSync ?? false;
+
+  // Poll for updates while syncing
+  useEffect(() => {
+    if (!isSyncing || !tradingWalletAddress) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/trading-wallet/sync");
+        if (res.ok) {
+          const syncStatus = await res.json();
+          // If sync completed, refetch portfolio data
+          if (!syncStatus.isSyncing) {
+            queryClient.invalidateQueries({
+              queryKey: ["portfolio-history", tradingWalletAddress],
+            });
+          }
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [isSyncing, tradingWalletAddress, queryClient]);
+
   // Extract just the balance values for MiniChart
   const chartData = useMemo(() => {
     if (!data?.history || data.history.length === 0) {
@@ -61,6 +98,19 @@ export function usePortfolioHistory(tradingWalletAddress: string | undefined) {
     return data.history.map((point) => point.balance);
   }, [data?.history]);
 
+  // Trigger manual sync (e.g., after deposit/withdrawal)
+  const triggerSync = async () => {
+    try {
+      const res = await fetch("/api/trading-wallet/sync", { method: "POST" });
+      if (res.ok) {
+        // Refetch portfolio data after sync
+        await refetch();
+      }
+    } catch (error) {
+      console.error("Failed to trigger sync:", error);
+    }
+  };
+
   return {
     history: data?.history ?? [],
     transactions: data?.transactions ?? [],
@@ -68,5 +118,11 @@ export function usePortfolioHistory(tradingWalletAddress: string | undefined) {
     isLoading,
     error,
     refetch,
+    // Sync state
+    isSyncing,
+    needsSync,
+    lastSyncedAt: data?.syncState?.lastSyncedAt ?? null,
+    transactionCount: data?.syncState?.transactionCount ?? 0,
+    triggerSync,
   };
 }

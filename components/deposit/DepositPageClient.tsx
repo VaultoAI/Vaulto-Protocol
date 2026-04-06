@@ -261,7 +261,7 @@ export function DepositPageClient() {
   const isDepositing = depositStatus === "initiating" || depositStatus === "pending" || depositStatus === "confirming" || isInitiatingDeposit || isSending || isConfirmingTx;
 
   // Fetch portfolio history for chart data
-  const { chartData, history } = usePortfolioHistory(tradingWallet?.address);
+  const { chartData, history, isSyncing } = usePortfolioHistory(tradingWallet?.address);
 
   // Hover state for portfolio chart
   const [chartHover, setChartHover] = useState<MiniChartHoverData | null>(null);
@@ -538,7 +538,15 @@ export function DepositPageClient() {
 
       {/* Transactions Section */}
       <div className="pt-4 border-t border-border">
-        <h3 className="text-sm font-medium text-foreground mb-3 sm:mb-4">Transactions</h3>
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+          <h3 className="text-sm font-medium text-foreground">Transactions</h3>
+          {isSyncing && (
+            <span className="flex items-center gap-1 text-xs text-muted">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Syncing...
+            </span>
+          )}
+        </div>
         {transactions.length === 0 ? (
           <p className="text-sm text-muted">No transactions yet</p>
         ) : (

@@ -522,10 +522,12 @@ model TradingWallet {
   serverSignerId    String?
 
   // Relations
-  deposits          Deposit[]
-  withdrawals       Withdrawal[]
-  etfOrders         EtfOrder[]
-  etfPositions      EtfPosition[]
+  deposits           Deposit[]
+  withdrawals        Withdrawal[]
+  etfOrders          EtfOrder[]
+  etfPositions       EtfPosition[]
+  cachedTransactions CachedTransaction[]
+  syncState          WalletSyncState?
 
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -671,4 +673,44 @@ model EtfPosition {
   @@unique([tradingWalletId, symbol])
   @@index([tradingWalletId])
   @@index([symbol])
+}
+
+// ============================================
+// TRANSACTION CACHING (Performance Optimization)
+// ============================================
+
+model CachedTransaction {
+  id                  String        @id @default(cuid())
+  tradingWalletId     String
+  tradingWallet       TradingWallet @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  txHash              String
+  type                String        // "deposit" | "withdrawal"
+  asset               String        // "USDC" | "USDC.e" | "MATIC" | etc.
+  amount              Decimal       @db.Decimal(78, 0)
+  amountFormatted     Float         // Human-readable amount
+  fromAddress         String
+  toAddress           String
+  counterpartyAddress String
+  blockTimestamp      DateTime
+  chainId             Int           @default(137)
+  syncedAt            DateTime      @default(now())
+
+  @@unique([tradingWalletId, txHash, type])
+  @@index([tradingWalletId])
+  @@index([blockTimestamp])
+}
+
+model WalletSyncState {
+  id                String        @id @default(cuid())
+  tradingWalletId   String        @unique
+  tradingWallet     TradingWallet @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  lastSyncedAt      DateTime?
+  isSyncing         Boolean       @default(false)
+  syncError         String?
+  transactionCount  Int           @default(0)
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
