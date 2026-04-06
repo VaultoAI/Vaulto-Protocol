@@ -36,6 +36,7 @@ export default async function IndexPage({ params }: IndexPageProps) {
       companies={companies}
       priceData={priceData}
       history={history}
+      enableTrading={true}
     />
   );
 }

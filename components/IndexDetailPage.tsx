@@ -7,6 +7,8 @@ import { getIndexPrice, getIndexChange } from "@/lib/vaulto/indexes";
 import { HoldingsAvatars } from "@/components/HoldingsAvatars";
 import { IndexPriceChart, type IndexHoverData } from "@/components/IndexPriceChart";
 import { IndexHoldingsTable } from "@/components/IndexHoldingsTable";
+import { EtfTradeWidget } from "@/components/EtfTradeWidget";
+import { EtfPositionCard } from "@/components/EtfPositionCard";
 import { formatPrice } from "@/lib/vaulto/companyUtils";
 
 interface IndexDetailPageProps {
@@ -14,6 +16,8 @@ interface IndexDetailPageProps {
   companies: PrivateCompany[];
   priceData?: IndexPriceData;
   history: IndexHistoryPoint[];
+  /** Enable real ETF trading via Alpaca (default: false) */
+  enableTrading?: boolean;
 }
 
 /**
@@ -25,6 +29,7 @@ export function IndexDetailPage({
   companies,
   priceData,
   history,
+  enableTrading = false,
 }: IndexDetailPageProps) {
   // Use real price data if available, otherwise calculate from holdings
   const hasRealData = priceData?.price != null;
@@ -157,22 +162,32 @@ export function IndexDetailPage({
           </div>
         </div>
 
-        {/* Right side: Trade Widget (Coming Soon) */}
+        {/* Right side: Trade Widget + Position */}
         <div className="w-full lg:w-[340px] shrink-0">
-          <div className="lg:sticky lg:top-8">
-            <div className="relative">
-              {/* Coming Soon Overlay */}
-              <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
-                <div className="text-center px-4 md:px-6 py-3 md:py-4">
-                  <p className="text-black/70 dark:text-white/90 uppercase tracking-widest text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">Coming Soon</p>
-                  <p className="text-black dark:text-white text-base md:text-lg font-semibold">Index Trading</p>
+          <div className="lg:sticky lg:top-8 space-y-4">
+            {/* Trade Widget */}
+            {enableTrading ? (
+              <EtfTradeWidget index={index} />
+            ) : (
+              <div className="relative">
+                {/* Coming Soon Overlay */}
+                <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
+                  <div className="text-center px-4 md:px-6 py-3 md:py-4">
+                    <p className="text-black/70 dark:text-white/90 uppercase tracking-widest text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">Coming Soon</p>
+                    <p className="text-black dark:text-white text-base md:text-lg font-semibold">Index Trading</p>
+                  </div>
+                </div>
+                {/* Dimmed Widget placeholder */}
+                <div className="blur-[1px] opacity-70 pointer-events-none">
+                  <IndexTradeWidgetPlaceholder symbol={index.symbol} price={currentPrice} />
                 </div>
               </div>
-              {/* Dimmed Widget placeholder */}
-              <div className="blur-[1px] opacity-70 pointer-events-none">
-                <IndexTradeWidgetPlaceholder symbol={index.symbol} price={currentPrice} />
-              </div>
-            </div>
+            )}
+
+            {/* Position Card */}
+            {enableTrading && (
+              <EtfPositionCard symbol={index.symbol} />
+            )}
           </div>
         </div>
       </div>
