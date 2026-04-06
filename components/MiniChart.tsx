@@ -39,7 +39,7 @@ export function MiniChart({
     return <div style={{ width: "100%", height }} />;
   }
 
-  const padding = { top: 6, right: 2, bottom: 2, left: 2 };
+  const padding = { top: 12, right: 4, bottom: 24, left: 4 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
