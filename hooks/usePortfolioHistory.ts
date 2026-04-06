@@ -11,12 +11,17 @@ interface HistoryPoint {
 
 export interface Transaction {
   id: string;
-  type: "deposit" | "withdrawal";
+  type: "deposit" | "withdrawal" | "buy" | "sell";
   amount: number;
   status: string;
   txHash: string | null;
   timestamp: string;
   address: string;
+  // ETF order fields
+  symbol?: string;
+  qty?: number;
+  filledQty?: number;
+  filledAvgPrice?: number;
 }
 
 interface PortfolioHistoryResponse {

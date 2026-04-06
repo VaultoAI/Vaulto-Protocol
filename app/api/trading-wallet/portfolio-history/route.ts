@@ -11,12 +11,17 @@ interface HistoryPoint {
 
 interface Transaction {
   id: string;
-  type: "deposit" | "withdrawal";
+  type: "deposit" | "withdrawal" | "buy" | "sell";
   amount: number;
   status: string;
   txHash: string | null;
   timestamp: string;
   address: string; // fromAddress for deposits, toAddress for withdrawals
+  // ETF order fields
+  symbol?: string;
+  qty?: number;
+  filledQty?: number;
+  filledAvgPrice?: number;
 }
 
 export async function GET() {
@@ -60,6 +65,22 @@ export async function GET() {
               },
               orderBy: { createdAt: "desc" },
             },
+            etfOrders: {
+              select: {
+                id: true,
+                symbol: true,
+                side: true,
+                status: true,
+                notionalUsd: true,
+                qty: true,
+                filledQty: true,
+                filledAvgPrice: true,
+                filledAt: true,
+                createdAt: true,
+                alpacaOrderId: true,
+              },
+              orderBy: { createdAt: "desc" },
+            },
           },
         },
       },
@@ -100,6 +121,33 @@ export async function GET() {
         txHash: withdrawal.txHash,
         timestamp: (withdrawal.executedAt ?? withdrawal.createdAt).toISOString(),
         address: withdrawal.toAddress,
+      });
+    }
+
+    // Add all ETF orders
+    for (const order of tradingWallet.etfOrders) {
+      const filledQty = order.filledQty ? Number(order.filledQty) : 0;
+      const filledAvgPrice = order.filledAvgPrice ? Number(order.filledAvgPrice) : null;
+      const orderValue = filledQty > 0 && filledAvgPrice
+        ? filledQty * filledAvgPrice
+        : order.notionalUsd
+          ? Number(order.notionalUsd)
+          : order.qty && filledAvgPrice
+            ? Number(order.qty) * filledAvgPrice
+            : 0;
+
+      allTransactions.push({
+        id: order.id,
+        type: order.side === "BUY" ? "buy" : "sell",
+        amount: orderValue,
+        status: order.status,
+        txHash: null, // ETF orders don't have blockchain tx hash
+        timestamp: (order.filledAt ?? order.createdAt).toISOString(),
+        address: tradingWallet.address, // Use trading wallet address
+        symbol: order.symbol,
+        qty: order.qty ? Number(order.qty) : undefined,
+        filledQty: filledQty > 0 ? filledQty : undefined,
+        filledAvgPrice: filledAvgPrice ?? undefined,
       });
     }
 
