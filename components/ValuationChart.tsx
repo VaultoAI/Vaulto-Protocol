@@ -10,7 +10,7 @@ export interface HoverData {
   date: string;
 }
 
-type ChartType = "funding" | "market";
+type ChartType = "funding" | "market" | "live";
 
 interface ValuationChartProps {
   company: PrivateCompany;
@@ -18,6 +18,7 @@ interface ValuationChartProps {
   chartType?: ChartType;
   onChartTypeChange?: (type: ChartType) => void;
   hasMarketData?: boolean;
+  hasLiveData?: boolean;
 }
 
 type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
@@ -27,7 +28,7 @@ type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
  * Plots real postMoneyValuationUsd from funding history.
  * Green line on dark-transparent background with hover tooltip.
  */
-export function ValuationChart({ company, onHover, chartType, onChartTypeChange, hasMarketData }: ValuationChartProps) {
+export function ValuationChart({ company, onHover, chartType, onChartTypeChange, hasMarketData, hasLiveData }: ValuationChartProps) {
   const allHistory = useMemo(() => getValuationHistory(company), [company]);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -261,7 +262,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
             );
           })}
         </div>
-        {hasMarketData && onChartTypeChange && (
+        {(hasMarketData || hasLiveData) && onChartTypeChange && (
           <div className="flex items-center gap-1">
             <button
               onClick={() => onChartTypeChange("funding")}
@@ -273,16 +274,30 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
             >
               Funding
             </button>
-            <button
-              onClick={() => onChartTypeChange("market")}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                chartType === "market"
-                  ? "text-blue-500 bg-blue-500/10"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              Valuation
-            </button>
+            {hasMarketData && (
+              <button
+                onClick={() => onChartTypeChange("market")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  chartType === "market"
+                    ? "text-blue-500 bg-blue-500/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Valuation
+              </button>
+            )}
+            {hasLiveData && (
+              <button
+                onClick={() => onChartTypeChange("live")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  chartType === "live"
+                    ? "text-purple-500 bg-purple-500/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Live
+              </button>
+            )}
           </div>
         )}
       </div>

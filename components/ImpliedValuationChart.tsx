@@ -25,7 +25,7 @@ export interface ImpliedChartData {
   isPositive: boolean;
 }
 
-type ChartType = "funding" | "market";
+type ChartType = "funding" | "market" | "live";
 
 interface ImpliedValuationChartProps {
   companySlug: string;
@@ -36,6 +36,7 @@ interface ImpliedValuationChartProps {
   onDataChange?: (data: ImpliedChartData | null) => void;
   chartType?: ChartType;
   onChartTypeChange?: (type: ChartType) => void;
+  hasLiveData?: boolean;
 }
 
 // ============================================================================
@@ -120,6 +121,7 @@ export function ImpliedValuationChart({
   onDataChange,
   chartType,
   onChartTypeChange,
+  hasLiveData,
 }: ImpliedValuationChartProps) {
   const [data, setData] = useState<ImpliedValuationHistoryResponse | null>(initialData ?? null);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
@@ -414,6 +416,18 @@ export function ImpliedValuationChart({
               >
                 Valuation
               </button>
+              {hasLiveData && (
+                <button
+                  onClick={() => onChartTypeChange("live")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    chartType === "live"
+                      ? "text-purple-500 bg-purple-500/10"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Live
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -504,6 +518,18 @@ export function ImpliedValuationChart({
               >
                 Valuation
               </button>
+              {hasLiveData && (
+                <button
+                  onClick={() => onChartTypeChange("live")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    chartType === "live"
+                      ? "text-purple-500 bg-purple-500/10"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Live
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -632,6 +658,18 @@ export function ImpliedValuationChart({
             >
               Valuation
             </button>
+            {hasLiveData && (
+              <button
+                onClick={() => onChartTypeChange("live")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  chartType === "live"
+                    ? "text-purple-500 bg-purple-500/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Live
+              </button>
+            )}
           </div>
         )}
       </div>
