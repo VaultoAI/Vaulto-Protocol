@@ -77,7 +77,7 @@ export type TimeRange = "1D" | "1W" | "1M" | "3M" | "ALL";
 
 const IMPLIED_VALUATIONS_API_URL =
   process.env.NEXT_PUBLIC_IMPLIED_VALUATIONS_API_URL ||
-  process.env.NEXT_PUBLIC_IMPLIED_VALUATIONS_API_URL ||
+  process.env.NEXT_PUBLIC_VAULTO_API_URL ||
   "https://api.vaulto.ai";
 
 /**

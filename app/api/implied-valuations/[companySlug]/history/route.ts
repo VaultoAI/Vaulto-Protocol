@@ -44,7 +44,11 @@ export async function GET(
         errorText
       );
       return NextResponse.json(
-        { error: `Failed to fetch implied valuation history: ${res.status}` },
+        {
+          error: `Failed to fetch implied valuation history: ${res.status}`,
+          upstreamUrl: url,
+          upstreamError: errorText.slice(0, 500),
+        },
         { status: res.status }
       );
     }
@@ -59,6 +63,7 @@ export async function GET(
           err instanceof Error
             ? err.message
             : "Failed to fetch implied valuation history",
+        errorType: err instanceof Error ? err.name : "Unknown",
       },
       { status: 500 }
     );
