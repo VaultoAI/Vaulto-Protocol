@@ -5,15 +5,17 @@ import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
-import { usePortfolioHistory, Transaction } from "@/hooks/usePortfolioHistory";
+import { usePortfolioHistory } from "@/hooks/usePortfolioHistory";
+import { useOnChainTransactions, OnChainTransaction } from "@/hooks/useOnChainTransactions";
 import { useWalletNetWorth } from "@/hooks/useWalletNetWorth";
 import { useExternalUsdcBalance } from "@/hooks/useExternalUsdcBalance";
 import { useReferralStats } from "@/hooks/useReferralStats";
 import { useProfile } from "@/hooks/useProfile";
-import { MiniChart } from "@/components/MiniChart";
+import { MiniChart, MiniChartHoverData } from "@/components/MiniChart";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
+import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
 import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 
 // Lazy-load modal to reduce initial bundle
@@ -258,8 +260,14 @@ export function DepositPageClient() {
 
   const isDepositing = depositStatus === "initiating" || depositStatus === "pending" || depositStatus === "confirming" || isInitiatingDeposit || isSending || isConfirmingTx;
 
-  // Fetch real portfolio history and transactions
-  const { chartData, transactions } = usePortfolioHistory(tradingWallet?.address);
+  // Fetch portfolio history for chart data
+  const { chartData, history } = usePortfolioHistory(tradingWallet?.address);
+
+  // Hover state for portfolio chart
+  const [chartHover, setChartHover] = useState<MiniChartHoverData | null>(null);
+
+  // Fetch on-chain transactions (deposits/withdrawals) merged with ETF orders
+  const { transactions } = useOnChainTransactions(tradingWallet?.address);
 
   // Calculate if portfolio is positive (current balance >= initial)
   const isPositive = chartData.length >= 2
@@ -438,17 +446,28 @@ export function DepositPageClient() {
           {/* Portfolio Value - mobile inline */}
           <div className="text-right sm:hidden">
             <span className="text-2xl font-semibold tracking-tight text-foreground">
-              ${formattedBalance}
+              ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : formattedBalance}
             </span>
-            <p className="text-xs text-muted">Portfolio</p>
+            <p className="text-xs text-muted">
+              {chartHover
+                ? new Date(chartHover.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "Portfolio"}
+            </p>
           </div>
         </div>
 
         {/* Portfolio Value - desktop */}
         <div className="hidden border-l border-border pl-8 sm:block">
-          <span className="text-4xl font-semibold tracking-tight text-foreground">
-            ${formattedBalance}
-          </span>
+          <div className="flex items-baseline gap-3">
+            <span className="text-4xl font-semibold tracking-tight text-foreground">
+              ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : formattedBalance}
+            </span>
+            {chartHover && (
+              <span className="text-sm text-muted">
+                {new Date(chartHover.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-muted">Portfolio Value</p>
         </div>
 
@@ -502,21 +521,23 @@ export function DepositPageClient() {
       </div>
 
       {/* Chart Section */}
-      <div className="mt-6 -mx-5 border-t border-border pt-8 pb-16 px-5 sm:mt-8 sm:pt-10 sm:pb-20">
-        <div className="w-full py-4">
+      <div className="mt-6 -mx-5 border-t border-border pt-8 pb-0 px-5 sm:mt-8 sm:pt-10">
+        <div className="w-full">
           <MiniChart
             data={chartData}
+            history={history}
             width={800}
-            height={160}
+            height={200}
             isPositive={isPositive}
             strokeWidth={2}
             showGradient={true}
+            onHover={setChartHover}
           />
         </div>
       </div>
 
       {/* Transactions Section */}
-      <div className="mt-6 pt-6 border-t border-border">
+      <div className="pt-4 border-t border-border">
         <h3 className="text-sm font-medium text-foreground mb-3 sm:mb-4">Transactions</h3>
         {transactions.length === 0 ? (
           <p className="text-sm text-muted">No transactions yet</p>
@@ -556,8 +577,10 @@ export function DepositPageClient() {
               const getTypeLabel = () => {
                 if (isBuy) return `Buy ${tx.symbol}`;
                 if (isSell) return `Sell ${tx.symbol}`;
-                if (isDeposit) return "Deposit";
-                return "Withdrawal";
+                // Show asset name for deposits/withdrawals (e.g., "Deposit USDC", "Withdrawal MATIC")
+                const assetLabel = tx.asset ? ` ${tx.asset}` : "";
+                if (isDeposit) return `Deposit${assetLabel}`;
+                return `Withdrawal${assetLabel}`;
               };
 
               return (
@@ -566,19 +589,38 @@ export function DepositPageClient() {
                   className="flex items-center justify-between py-1.5 sm:py-2"
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3">
-                    <div
-                      className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${iconBgClass}`}
-                    >
-                      {isBuy ? (
-                        <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      ) : isSell ? (
-                        <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      ) : isDeposit ? (
-                        <ArrowDownLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      ) : (
-                        <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      )}
-                    </div>
+                    {/* Show asset logo for USDC/MATIC transactions, otherwise show icon */}
+                    {(tx.asset === "USDC" || tx.asset === "USDC.e") ? (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+                        <img
+                          src={getProxiedFaviconUrl("usdc.com")}
+                          alt="USDC"
+                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
+                        />
+                      </div>
+                    ) : tx.asset === "MATIC" ? (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+                        <img
+                          src={getProxiedFaviconUrl("polygon.technology")}
+                          alt="MATIC"
+                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${iconBgClass}`}
+                      >
+                        {isBuy ? (
+                          <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        ) : isSell ? (
+                          <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        ) : isDeposit ? (
+                          <ArrowDownLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        ) : (
+                          <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        )}
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs font-medium text-foreground sm:text-sm">
                         {getTypeLabel()}

@@ -1,14 +1,27 @@
 "use client";
 
-import { useId, useState, useEffect } from "react";
+import { useId, useState, useEffect, useRef } from "react";
+
+export interface MiniChartHoverData {
+  value: number;
+  timestamp: string;
+  index: number;
+}
+
+interface HistoryPoint {
+  timestamp: string;
+  balance: number;
+}
 
 interface MiniChartProps {
   data: number[];
+  history?: HistoryPoint[];
   width?: number;
   height?: number;
   isPositive: boolean;
   strokeWidth?: number;
   showGradient?: boolean;
+  onHover?: (data: MiniChartHoverData | null) => void;
 }
 
 /**
@@ -17,13 +30,17 @@ interface MiniChartProps {
  */
 export function MiniChart({
   data,
+  history,
   width = 280,
   height = 80,
   isPositive,
   strokeWidth = 1.5,
   showGradient = true,
+  onHover,
 }: MiniChartProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const reactId = useId();
   const gradientId = `chart-grad-${isPositive ? "g" : "r"}-${reactId.replace(/:/g, "")}`;
 
@@ -39,7 +56,7 @@ export function MiniChart({
     return <div style={{ width: "100%", height }} />;
   }
 
-  const padding = { top: 12, right: 4, bottom: 24, left: 4 };
+  const padding = { top: 8, right: 4, bottom: 4, left: 4 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
@@ -57,7 +74,7 @@ export function MiniChart({
   for (let i = 0; i < points.length - 1; i++) {
     const curr = points[i];
     const next = points[i + 1];
-    const tension = 0.3;
+    const tension = 0.1;
 
     // Control points for smooth curve
     const prev = points[Math.max(i - 1, 0)];
@@ -77,15 +94,51 @@ export function MiniChart({
   const color = isPositive ? "#3b82f6" : "#ef4444";
   const clipId = `chart-clip-${reactId.replace(/:/g, "")}`;
 
+  // Handle mouse hover
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current || points.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * width;
+
+    // Find closest point
+    let closest = 0;
+    let closestDist = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const dist = Math.abs(points[i].x - mouseX);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = i;
+      }
+    }
+    setHoverIndex(closest);
+    if (onHover && history && history[closest]) {
+      onHover({
+        value: data[closest],
+        timestamp: history[closest].timestamp,
+        index: closest,
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setHoverIndex(null);
+    onHover?.(null);
+  };
+
+  const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
+
   return (
     <svg
+      ref={svgRef}
       width="100%"
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="block"
+      className="block cursor-crosshair"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -120,6 +173,30 @@ export function MiniChart({
           fill="none"
         />
       </g>
+
+      {/* Hover vertical line + dot */}
+      {hoverPoint && (
+        <>
+          <line
+            x1={hoverPoint.x}
+            y1={padding.top}
+            x2={hoverPoint.x}
+            y2={height - padding.bottom}
+            stroke="var(--muted)"
+            strokeWidth={0.5}
+            strokeDasharray="4 2"
+            opacity={0.5}
+          />
+          <circle
+            cx={hoverPoint.x}
+            cy={hoverPoint.y}
+            r={4}
+            fill={color}
+            stroke="var(--background)"
+            strokeWidth={2}
+          />
+        </>
+      )}
     </svg>
   );
 }
