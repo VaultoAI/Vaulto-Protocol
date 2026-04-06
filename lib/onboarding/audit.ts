@@ -34,10 +34,17 @@ type AuditAction =
   | "TRADING_WALLET_CREATED"
   | "TRADING_WALLET_DEPOSIT_INITIATED"
   | "TRADING_WALLET_DEPOSIT_CONFIRMED"
+  | "TRADING_WALLET_DEPOSIT_DETECTED"
   | "TRADING_WALLET_WITHDRAWAL_REQUESTED"
   | "TRADING_WALLET_WITHDRAWAL_APPROVED"
   | "TRADING_WALLET_WITHDRAWAL_EXECUTED"
-  | "TRADING_WALLET_WITHDRAWAL_REJECTED";
+  | "TRADING_WALLET_WITHDRAWAL_REJECTED"
+  | "TRADING_WALLET_WITHDRAWAL_RECOVERED"
+  // ETF trading actions
+  | "ETF_ORDER_PLACED"
+  | "ETF_ORDER_FILLED"
+  | "ETF_ORDER_CANCELED"
+  | "ETF_ORDER_REJECTED";
 
 export interface AuditLogInput {
   userId: string;
@@ -452,6 +459,94 @@ export const auditHelpers = {
       userId,
       action: "USER_SUSPENDED",
       details: { reason, suspendedBy },
+    });
+  },
+
+  // ETF trading audit helpers
+  async etfOrderPlaced(
+    userId: string,
+    orderId: string,
+    details: {
+      symbol: string;
+      side: string;
+      type: string;
+      notionalUsd?: number;
+      qty?: number;
+      alpacaOrderId?: string;
+    },
+    ipAddress?: string
+  ): Promise<AuditLogEntry> {
+    return createAuditLog({
+      userId,
+      action: "ETF_ORDER_PLACED",
+      details,
+      ipAddress,
+      entityType: "EtfOrder",
+      entityId: orderId,
+    });
+  },
+
+  async etfOrderFilled(
+    userId: string,
+    orderId: string,
+    details: {
+      symbol: string;
+      side: string;
+      filledQty: number;
+      filledAvgPrice: number;
+      alpacaOrderId?: string;
+    },
+    ipAddress?: string
+  ): Promise<AuditLogEntry> {
+    return createAuditLog({
+      userId,
+      action: "ETF_ORDER_FILLED",
+      details,
+      ipAddress,
+      entityType: "EtfOrder",
+      entityId: orderId,
+    });
+  },
+
+  async etfOrderCanceled(
+    userId: string,
+    orderId: string,
+    details: {
+      symbol: string;
+      side: string;
+      reason?: string;
+      alpacaOrderId?: string;
+    },
+    ipAddress?: string
+  ): Promise<AuditLogEntry> {
+    return createAuditLog({
+      userId,
+      action: "ETF_ORDER_CANCELED",
+      details,
+      ipAddress,
+      entityType: "EtfOrder",
+      entityId: orderId,
+    });
+  },
+
+  async etfOrderRejected(
+    userId: string,
+    orderId: string,
+    details: {
+      symbol: string;
+      side: string;
+      reason: string;
+      alpacaOrderId?: string;
+    },
+    ipAddress?: string
+  ): Promise<AuditLogEntry> {
+    return createAuditLog({
+      userId,
+      action: "ETF_ORDER_REJECTED",
+      details,
+      ipAddress,
+      entityType: "EtfOrder",
+      entityId: orderId,
     });
   },
 };
