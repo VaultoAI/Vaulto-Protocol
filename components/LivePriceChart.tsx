@@ -131,7 +131,8 @@ export function LivePriceChart({
 
   // Determine overall trend
   const isPositive = history.length >= 2 ? history[history.length - 1].price >= history[0].price : true;
-  const color = isPositive ? "#22c55e" : "#ef4444";
+  // Price chart is always purple
+  const color = "#a855f7";
 
   // Handle mouse hover
   const handleMouseMove = useCallback(
@@ -184,7 +185,7 @@ export function LivePriceChart({
                 onClick={() => setActiveRange(range)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   activeRange === range
-                    ? "text-purple-500 bg-purple-500/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -198,7 +199,7 @@ export function LivePriceChart({
                 onClick={() => onChartTypeChange("funding")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "funding"
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -209,7 +210,7 @@ export function LivePriceChart({
                   onClick={() => onChartTypeChange("market")}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     chartType === "market"
-                      ? "text-blue-500 bg-blue-500/10"
+                      ? "text-accent bg-accent/10"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -220,7 +221,7 @@ export function LivePriceChart({
                 onClick={() => onChartTypeChange("live")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "live"
-                    ? "text-purple-500 bg-purple-500/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -251,7 +252,7 @@ export function LivePriceChart({
                 onClick={() => setActiveRange(range)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   activeRange === range
-                    ? "text-purple-500 bg-purple-500/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -265,7 +266,7 @@ export function LivePriceChart({
                 onClick={() => onChartTypeChange("funding")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "funding"
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -276,7 +277,7 @@ export function LivePriceChart({
                   onClick={() => onChartTypeChange("market")}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     chartType === "market"
-                      ? "text-blue-500 bg-blue-500/10"
+                      ? "text-accent bg-accent/10"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -287,7 +288,7 @@ export function LivePriceChart({
                 onClick={() => onChartTypeChange("live")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "live"
-                    ? "text-purple-500 bg-purple-500/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -373,7 +374,7 @@ export function LivePriceChart({
               onClick={() => setActiveRange(range)}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 activeRange === range
-                  ? "text-purple-500 bg-purple-500/10"
+                  ? "text-accent bg-accent/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -387,7 +388,7 @@ export function LivePriceChart({
               onClick={() => onChartTypeChange("funding")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 chartType === "funding"
-                  ? "text-green bg-green/10"
+                  ? "text-accent bg-accent/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -398,22 +399,22 @@ export function LivePriceChart({
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "market"
-                    ? "text-blue-500 bg-blue-500/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Valuation
+                IPO
               </button>
             )}
             <button
               onClick={() => onChartTypeChange("live")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 chartType === "live"
-                  ? "text-purple-500 bg-purple-500/10"
+                  ? "text-accent bg-accent/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
-              Live
+              Price
             </button>
           </div>
         )}

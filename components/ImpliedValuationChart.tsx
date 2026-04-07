@@ -315,8 +315,8 @@ export function ImpliedValuationChart({
 
   // Determine overall trend
   const isPositive = history.length >= 2 ? history[history.length - 1].value >= history[0].value : true;
-  // Use green for IPO/market implied chart
-  const color = isPositive ? "#22c55e" : "#ef4444";
+  // IPO chart is always green
+  const color = "#22c55e";
 
   // Handle mouse hover
   const handleMouseMove = useCallback(
@@ -400,7 +400,7 @@ export function ImpliedValuationChart({
                 onClick={() => onChartTypeChange("funding")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "funding"
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -410,7 +410,7 @@ export function ImpliedValuationChart({
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "market"
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -421,7 +421,7 @@ export function ImpliedValuationChart({
                   onClick={() => onChartTypeChange("live")}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     chartType === "live"
-                      ? "text-purple-500 bg-purple-500/10"
+                      ? "text-accent bg-accent/10"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -484,7 +484,7 @@ export function ImpliedValuationChart({
                   onClick={() => handleRangeChange(range)}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     isSelected
-                      ? "text-green bg-green/10"
+                      ? "text-accent bg-accent/10"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -493,7 +493,7 @@ export function ImpliedValuationChart({
               );
             })}
             {loading && (
-              <div className="ml-2 w-4 h-4 border-2 border-green border-t-transparent rounded-full animate-spin" />
+              <div className="ml-2 w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             )}
           </div>
           {onChartTypeChange && (
@@ -502,7 +502,7 @@ export function ImpliedValuationChart({
                 onClick={() => onChartTypeChange("funding")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "funding"
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -512,7 +512,7 @@ export function ImpliedValuationChart({
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "market"
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -523,7 +523,7 @@ export function ImpliedValuationChart({
                   onClick={() => onChartTypeChange("live")}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     chartType === "live"
-                      ? "text-purple-500 bg-purple-500/10"
+                      ? "text-accent bg-accent/10"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -625,7 +625,7 @@ export function ImpliedValuationChart({
                 onClick={() => handleRangeChange(range)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   isSelected
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -634,7 +634,7 @@ export function ImpliedValuationChart({
             );
           })}
           {loading && (
-            <div className="ml-2 w-4 h-4 border-2 border-green border-t-transparent rounded-full animate-spin" />
+            <div className="ml-2 w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           )}
         </div>
         {onChartTypeChange && (
@@ -643,7 +643,7 @@ export function ImpliedValuationChart({
               onClick={() => onChartTypeChange("funding")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 chartType === "funding"
-                  ? "text-green bg-green/10"
+                  ? "text-accent bg-accent/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -653,22 +653,22 @@ export function ImpliedValuationChart({
               onClick={() => onChartTypeChange("market")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 chartType === "market"
-                  ? "text-green bg-green/10"
+                  ? "text-accent bg-accent/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
-              Valuation
+              IPO
             </button>
             {hasLiveData && (
               <button
                 onClick={() => onChartTypeChange("live")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "live"
-                    ? "text-purple-500 bg-purple-500/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Live
+                Price
               </button>
             )}
           </div>
