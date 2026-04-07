@@ -131,8 +131,13 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
   // When in live view, show live prestock token price
   const displayedValuation = (() => {
     if (chartType === "live") {
-      // For live view, we don't show valuation (token price is shown instead)
-      return currentValuation;
+      // For live view, scale database valuation proportionally with price
+      const dbValuation = company.valuationUsd;
+      const baseLivePrice = liveChartData?.endValue;
+      if (liveHoverData && baseLivePrice && baseLivePrice > 0) {
+        return dbValuation * (liveHoverData.price / baseLivePrice);
+      }
+      return dbValuation;
     }
     if (chartType === "market") {
       if (impliedHoverData) return impliedHoverData.valuation;
@@ -241,12 +246,10 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
             {formatPrice(displayedPrice)}
           </p>
 
-          {/* Valuation - show funding valuation for non-live views only */}
-          {chartType !== "live" && (
-            <p className="text-lg text-muted font-medium transition-all duration-150 ease-out">
-              {formatValuation(displayedValuation)} valuation
-            </p>
-          )}
+          {/* Valuation - scales with hover for all chart types */}
+          <p className="text-lg text-muted font-medium transition-all duration-150 ease-out">
+            {formatValuation(displayedValuation)} valuation
+          </p>
 
           {/* Change indicator */}
           <div className="flex items-center gap-2 mt-1 mb-6">
