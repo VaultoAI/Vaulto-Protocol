@@ -270,7 +270,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
               onClick={() => onChartTypeChange("funding")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 chartType === "funding"
-                  ? "text-blue-500 bg-blue-500/10"
+                  ? "text-accent bg-accent/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -281,7 +281,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "market"
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -293,7 +293,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
                 onClick={() => onChartTypeChange("live")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "live"
-                    ? "text-purple-500 bg-purple-500/10"
+                    ? "text-accent bg-accent/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >

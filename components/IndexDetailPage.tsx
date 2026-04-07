@@ -80,9 +80,14 @@ export function IndexDetailPage({
               size={32}
             />
             <h1 className="text-2xl font-semibold text-foreground">{index.symbol}</h1>
-            <span className="inline-flex items-center rounded-md bg-badge-bg px-2.5 py-1 text-xs font-medium text-badge-text">
+            <a
+              href={index.issuer === "Robinhood" ? "https://robinhood.com" : "https://fundrise.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded-md bg-badge-bg px-2.5 py-1 text-xs font-medium text-badge-text hover:bg-badge-bg/80 transition-colors"
+            >
               {index.issuer}
-            </span>
+            </a>
           </div>
 
           {/* Full name */}

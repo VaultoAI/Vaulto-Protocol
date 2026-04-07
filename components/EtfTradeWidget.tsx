@@ -218,17 +218,17 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
   const isMarketClosed = quote && !quote.marketStatus.isOpen;
 
   return (
-    <div className="w-full rounded-xl border border-border bg-card-bg">
-      {/* Market closed banner */}
+    <>
+      {/* Market closed indicator - above widget */}
       {isMarketClosed && (
-        <div className="px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20">
-          <p className="text-xs text-yellow-600 dark:text-yellow-400 text-center">
-            Market closed. Opens {formatNextOpen(quote.marketStatus.nextOpen)}
+        <div className="w-full bg-yellow-500/10 border border-yellow-500/20 rounded-t-xl px-3 py-1.5 -mb-px">
+          <p className="text-[11px] text-yellow-600 dark:text-yellow-400 text-center font-medium">
+            Market closed · Opens {formatNextOpen(quote.marketStatus.nextOpen)}
           </p>
         </div>
       )}
-
-      {/* Header tabs */}
+      <div className={`w-full rounded-xl border border-border bg-card-bg ${isMarketClosed ? 'rounded-t-none' : ''}`}>
+        {/* Header tabs */}
       <div className="flex border-b border-border">
         <button
           onClick={() => setActiveTab("BUY")}
@@ -613,5 +613,6 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
         </div>
       )}
     </div>
+    </>
   );
 }

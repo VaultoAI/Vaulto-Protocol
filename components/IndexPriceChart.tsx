@@ -95,11 +95,8 @@ export function IndexPriceChart({ history, onHover }: IndexPriceChartProps) {
     return `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${height} L ${points[0].x.toFixed(2)} ${height} Z`;
   }, [linePath, points, height]);
 
-  // Determine overall trend
-  const isPositive = filteredHistory.length >= 2
-    ? filteredHistory[filteredHistory.length - 1].price >= filteredHistory[0].price
-    : true;
-  const color = isPositive ? "#22c55e" : "#ef4444";
+  // Use consistent blue color for index charts
+  const color = "#3b82f6";
 
   // Handle mouse hover
   const handleMouseMove = useCallback(

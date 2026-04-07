@@ -45,9 +45,9 @@ export function AssetCard({ company }: AssetCardProps) {
       <div className="group relative rounded-xl border border-border bg-card-bg p-5 transition-all duration-200 hover:shadow-md hover:border-border/80 cursor-pointer">
         {/* Tradable indicator */}
         {isTradable && (
-          <div className="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-black text-[10px] font-medium text-white dark:bg-white dark:text-black">
-            Tradable
-          </div>
+          <span className="absolute top-3 right-3 inline-flex items-center rounded-md bg-badge-bg px-2 py-0.5 text-[11px] font-medium text-badge-text">
+            LIVE
+          </span>
         )}
 
         {/* Header: Logo + Ticker + Name */}
