@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import type { IndexHistoryPoint } from "@/lib/vaulto/indexes";
+import { useChartInteraction } from "@/hooks/useChartInteraction";
 
 export interface IndexHoverData {
   price: number;
@@ -27,7 +28,6 @@ const RANGE_LIMITS: Record<TimeRange, number> = {
  */
 export function IndexPriceChart({ history, onHover }: IndexPriceChartProps) {
   const [activeRange, setActiveRange] = useState<TimeRange>("1M");
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Filter history based on active range
@@ -98,33 +98,17 @@ export function IndexPriceChart({ history, onHover }: IndexPriceChartProps) {
   // Use consistent blue color for index charts
   const color = "#3b82f6";
 
-  // Handle mouse hover
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      if (!svgRef.current || points.length === 0) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      const mouseX = ((e.clientX - rect.left) / rect.width) * width;
-
-      // Find closest point
-      let closest = 0;
-      let closestDist = Infinity;
-      for (let i = 0; i < points.length; i++) {
-        const dist = Math.abs(points[i].x - mouseX);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = i;
-        }
-      }
-      setHoverIndex(closest);
-      onHover?.({ price: points[closest].price, date: points[closest].date });
-    },
-    [points, width, onHover]
-  );
-
-  const handleMouseLeave = useCallback(() => {
-    setHoverIndex(null);
-    onHover?.(null);
-  }, [onHover]);
+  // Unified mouse/touch interaction
+  const { hoverIndex, handlers } = useChartInteraction({
+    svgRef,
+    points,
+    width,
+    onHover,
+    mapPointToHoverData: (point) => ({
+      price: point.price,
+      date: point.date,
+    }),
+  });
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
@@ -151,8 +135,8 @@ export function IndexPriceChart({ history, onHover }: IndexPriceChartProps) {
           preserveAspectRatio="none"
           fill="none"
           className="block cursor-crosshair"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          style={{ touchAction: "none" }}
+          {...handlers}
         >
           <defs>
             <linearGradient id="index-chart-gradient" x1="0" y1="0" x2="0" y2="1">

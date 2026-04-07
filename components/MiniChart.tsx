@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState, useEffect, useRef } from "react";
+import { useId, useState, useEffect, useRef, useCallback } from "react";
+import { useChartInteraction } from "@/hooks/useChartInteraction";
 
 export interface MiniChartHoverData {
   value: number;
@@ -39,7 +40,6 @@ export function MiniChart({
   onHover,
 }: MiniChartProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const reactId = useId();
   const gradientId = `chart-grad-${isPositive ? "g" : "r"}-${reactId.replace(/:/g, "")}`;
@@ -67,6 +67,9 @@ export function MiniChart({
   const points = data.map((value, i) => ({
     x: padding.left + (i / (data.length - 1)) * innerWidth,
     y: padding.top + innerHeight - ((value - min) / range) * innerHeight,
+    value,
+    timestamp: history?.[i]?.timestamp ?? "",
+    index: i,
   }));
 
   // Build smooth cubic bezier path
@@ -94,36 +97,31 @@ export function MiniChart({
   const color = isPositive ? "#3b82f6" : "#ef4444";
   const clipId = `chart-clip-${reactId.replace(/:/g, "")}`;
 
-  // Handle mouse hover
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!svgRef.current || points.length === 0) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const mouseX = ((e.clientX - rect.left) / rect.width) * width;
-
-    // Find closest point
-    let closest = 0;
-    let closestDist = Infinity;
-    for (let i = 0; i < points.length; i++) {
-      const dist = Math.abs(points[i].x - mouseX);
-      if (dist < closestDist) {
-        closestDist = dist;
-        closest = i;
+  // Wrap onHover to handle missing history
+  const wrappedOnHover = useCallback(
+    (hoverData: MiniChartHoverData | null) => {
+      if (!onHover) return;
+      if (hoverData && history && history[hoverData.index]) {
+        onHover(hoverData);
+      } else {
+        onHover(null);
       }
-    }
-    setHoverIndex(closest);
-    if (onHover && history && history[closest]) {
-      onHover({
-        value: data[closest],
-        timestamp: history[closest].timestamp,
-        index: closest,
-      });
-    }
-  };
+    },
+    [onHover, history]
+  );
 
-  const handleMouseLeave = () => {
-    setHoverIndex(null);
-    onHover?.(null);
-  };
+  // Unified mouse/touch interaction
+  const { hoverIndex, handlers } = useChartInteraction({
+    svgRef,
+    points,
+    width,
+    onHover: wrappedOnHover,
+    mapPointToHoverData: (point) => ({
+      value: point.value,
+      timestamp: point.timestamp,
+      index: point.index,
+    }),
+  });
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
@@ -137,8 +135,8 @@ export function MiniChart({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="block cursor-crosshair"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      style={{ touchAction: "none" }}
+      {...handlers}
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
