@@ -3,10 +3,12 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   usePrestockHistory,
+  usePrestockPrice,
   formatPrestockPrice,
   type PrestockTimeRange,
   type PrestockPricePoint,
 } from "@/hooks/usePrestockPrice";
+import { formatValuation } from "@/lib/vaulto/companies";
 
 export interface LiveHoverData {
   price: number;
@@ -20,6 +22,7 @@ export interface LiveChartData {
   changePercent: number;
   isPositive: boolean;
   range: PrestockTimeRange;
+  marketCap: number | null;
 }
 
 type ChartType = "funding" | "market" | "live";
@@ -58,6 +61,10 @@ export function LivePriceChart({
     error,
   } = usePrestockHistory(tokenAddress, { range: activeRange });
 
+  // Fetch current price data (includes marketCap)
+  const { data: priceData } = usePrestockPrice(tokenAddress);
+  const marketCap = priceData?.data?.marketCap ?? null;
+
   const history = historyResponse?.data?.history ?? [];
   const currentPrice = historyResponse?.data?.currentPrice ?? null;
 
@@ -76,11 +83,12 @@ export function LivePriceChart({
         changePercent,
         isPositive: changeAmount >= 0,
         range: activeRange,
+        marketCap,
       });
     } else {
       onDataChange?.(null);
     }
-  }, [history, activeRange, onDataChange]);
+  }, [history, activeRange, onDataChange, marketCap]);
 
   const width = 900;
   const height = 340;

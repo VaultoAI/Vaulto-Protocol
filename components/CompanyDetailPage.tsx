@@ -172,6 +172,16 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
     return hoverData?.date;
   })();
 
+  // Calculate scaled market cap for live view (scales with price)
+  const displayedMarketCap = (() => {
+    if (chartType !== "live" || !liveChartData?.marketCap) return null;
+    const baseMarketCap = liveChartData.marketCap;
+    const basePrice = liveChartData.endValue;
+    if (!basePrice || basePrice === 0) return baseMarketCap;
+    // Scale market cap proportionally to price
+    return baseMarketCap * (displayedPrice / basePrice);
+  })();
+
   // Get change data based on chart type
   const displayedChange = (() => {
     if (chartType === "live" && liveChartData) {
@@ -231,15 +241,10 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
             {formatPrice(displayedPrice)}
           </p>
 
-          {/* Valuation - hide for live view since we show token price */}
+          {/* Valuation - show funding valuation for non-live views only */}
           {chartType !== "live" && (
             <p className="text-lg text-muted font-medium transition-all duration-150 ease-out">
               {formatValuation(displayedValuation)} valuation
-            </p>
-          )}
-          {chartType === "live" && (
-            <p className="text-lg text-muted font-medium transition-all duration-150 ease-out">
-              Prestock Token Price
             </p>
           )}
 

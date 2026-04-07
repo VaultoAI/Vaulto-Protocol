@@ -17,6 +17,7 @@ export interface PrestockPriceResponse {
     price: number;
     priceChange24h: number;
     timestamp: number;
+    marketCap?: number | null;
   };
 }
 
