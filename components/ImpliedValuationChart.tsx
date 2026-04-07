@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   type ImpliedValuationHistoryResponse,
   type ImpliedValuationHistoryPoint,
@@ -9,6 +9,7 @@ import {
   formatProbability,
   formatVolume,
 } from "@/lib/polymarket/implied-valuations";
+import { useChartInteraction } from "@/hooks/useChartInteraction";
 
 export interface ImpliedHoverData {
   valuation: number;
@@ -127,7 +128,6 @@ export function ImpliedValuationChart({
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [hasUserChangedRange, setHasUserChangedRange] = useState(false);
   const [hasAutoFallback, setHasAutoFallback] = useState(false);
   // Store the full market age from initial ALL load to keep range buttons stable
@@ -318,37 +318,18 @@ export function ImpliedValuationChart({
   // IPO chart is always green
   const color = "#22c55e";
 
-  // Handle mouse hover
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      if (!svgRef.current || points.length === 0) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      const mouseX = ((e.clientX - rect.left) / rect.width) * width;
-
-      // Find closest point
-      let closest = 0;
-      let closestDist = Infinity;
-      for (let i = 0; i < points.length; i++) {
-        const dist = Math.abs(points[i].x - mouseX);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = i;
-        }
-      }
-      setHoverIndex(closest);
-      onHover?.({
-        valuation: points[closest].value,
-        timestamp: points[closest].timestamp,
-        noIpoProbability: points[closest].noIpoProbability,
-      });
-    },
-    [points, width, onHover]
-  );
-
-  const handleMouseLeave = useCallback(() => {
-    setHoverIndex(null);
-    onHover?.(null);
-  }, [onHover]);
+  // Unified mouse/touch interaction
+  const { hoverIndex, handlers } = useChartInteraction({
+    svgRef,
+    points,
+    width,
+    onHover,
+    mapPointToHoverData: (point) => ({
+      valuation: point.value,
+      timestamp: point.timestamp,
+      noIpoProbability: point.noIpoProbability,
+    }),
+  });
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
@@ -549,8 +530,8 @@ export function ImpliedValuationChart({
           preserveAspectRatio="none"
           fill="none"
           className="block cursor-crosshair"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          style={{ touchAction: "none" }}
+          {...handlers}
         >
           <defs>
             <linearGradient id="implied-chart-gradient" x1="0" y1="0" x2="0" y2="1">

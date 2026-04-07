@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { formatValuation } from "@/lib/vaulto/companies";
 import { getValuationHistory } from "@/lib/vaulto/companyUtils";
+import { useChartInteraction } from "@/hooks/useChartInteraction";
 
 export interface HoverData {
   valuation: number;
@@ -31,7 +32,6 @@ type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
 export function ValuationChart({ company, onHover, chartType, onChartTypeChange, hasMarketData, hasLiveData }: ValuationChartProps) {
   const allHistory = useMemo(() => getValuationHistory(company), [company]);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Current valuation from history (ensures consistency with line chart's last point)
@@ -124,33 +124,17 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
   // Funding chart is always blue
   const color = "#3b82f6";
 
-  // Handle mouse hover
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      if (!svgRef.current || points.length === 0) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      const mouseX = ((e.clientX - rect.left) / rect.width) * width;
-
-      // Find closest point
-      let closest = 0;
-      let closestDist = Infinity;
-      for (let i = 0; i < points.length; i++) {
-        const dist = Math.abs(points[i].x - mouseX);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = i;
-        }
-      }
-      setHoverIndex(closest);
-      onHover?.({ valuation: points[closest].value, date: points[closest].date });
-    },
-    [points, width, onHover]
-  );
-
-  const handleMouseLeave = useCallback(() => {
-    setHoverIndex(null);
-    onHover?.(null);
-  }, [onHover]);
+  // Unified mouse/touch interaction
+  const { hoverIndex, handlers } = useChartInteraction({
+    svgRef,
+    points,
+    width,
+    onHover,
+    mapPointToHoverData: (point) => ({
+      valuation: point.value,
+      date: point.date,
+    }),
+  });
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
@@ -177,8 +161,8 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
           preserveAspectRatio="none"
           fill="none"
           className="block cursor-crosshair"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          style={{ touchAction: "none" }}
+          {...handlers}
         >
           <defs>
             <linearGradient id="chart-detail-gradient" x1="0" y1="0" x2="0" y2="1">

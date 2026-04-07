@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   usePrestockHistory,
   usePrestockPrice,
@@ -9,6 +9,7 @@ import {
   type PrestockPricePoint,
 } from "@/hooks/usePrestockPrice";
 import { formatValuation } from "@/lib/vaulto/companies";
+import { useChartInteraction } from "@/hooks/useChartInteraction";
 
 export interface LiveHoverData {
   price: number;
@@ -51,7 +52,6 @@ export function LivePriceChart({
   hasMarketData,
 }: LivePriceChartProps) {
   const [activeRange, setActiveRange] = useState<PrestockTimeRange>("1D");
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Fetch price history
@@ -142,33 +142,17 @@ export function LivePriceChart({
   // Price chart is always purple
   const color = "#a855f7";
 
-  // Handle mouse hover
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      if (!svgRef.current || points.length === 0) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      const mouseX = ((e.clientX - rect.left) / rect.width) * width;
-
-      // Find closest point
-      let closest = 0;
-      let closestDist = Infinity;
-      for (let i = 0; i < points.length; i++) {
-        const dist = Math.abs(points[i].x - mouseX);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = i;
-        }
-      }
-      setHoverIndex(closest);
-      onHover?.({ price: points[closest].value, timestamp: points[closest].timestamp });
-    },
-    [points, width, onHover]
-  );
-
-  const handleMouseLeave = useCallback(() => {
-    setHoverIndex(null);
-    onHover?.(null);
-  }, [onHover]);
+  // Unified mouse/touch interaction
+  const { hoverIndex, handlers } = useChartInteraction({
+    svgRef,
+    points,
+    width,
+    onHover,
+    mapPointToHoverData: (point) => ({
+      price: point.value,
+      timestamp: point.timestamp,
+    }),
+  });
 
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
@@ -321,8 +305,8 @@ export function LivePriceChart({
           preserveAspectRatio="none"
           fill="none"
           className="block cursor-crosshair"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          style={{ touchAction: "none" }}
+          {...handlers}
         >
           <defs>
             <linearGradient id="live-chart-gradient" x1="0" y1="0" x2="0" y2="1">
