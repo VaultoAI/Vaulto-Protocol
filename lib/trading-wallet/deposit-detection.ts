@@ -23,7 +23,7 @@ const TRANSFER_EVENT = parseAbiItem(
 // Free tier RPCs (drpc.org) have strict block range limits
 // Use 10,000 blocks (~5.5 hours) as default to catch delayed fiat on-ramp deposits
 const DEFAULT_BLOCK_RANGE = BigInt(10000);
-const MAX_BLOCKS_PER_QUERY = BigInt(2000); // Conservative limit for free tier RPCs
+const MAX_BLOCKS_PER_QUERY = BigInt(500); // Very conservative limit for free tier RPCs
 
 export interface DetectedTransfer {
   txHash: `0x${string}`;
@@ -80,15 +80,22 @@ export async function queryUsdcTransfers(
   } else {
     // Chunk the query into smaller ranges
     let chunkStart = fromBlock;
+    let chunkIndex = 0;
     while (chunkStart < toBlock) {
       const chunkEnd = chunkStart + MAX_BLOCKS_PER_QUERY > toBlock
         ? toBlock
         : chunkStart + MAX_BLOCKS_PER_QUERY;
 
+      // Add delay between chunks to avoid rate limiting (skip first chunk)
+      if (chunkIndex > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       const results = await queryBlockRange(usdcAddress, toAddress, chunkStart, chunkEnd);
       transfers.push(...results);
 
       chunkStart = chunkEnd + BigInt(1);
+      chunkIndex++;
     }
   }
 
@@ -96,54 +103,69 @@ export async function queryUsdcTransfers(
 }
 
 /**
- * Query a single block range for Transfer events
+ * Query a single block range for Transfer events with retry logic
  */
 async function queryBlockRange(
   usdcAddress: string,
   toAddress: `0x${string}`,
   fromBlock: bigint,
-  toBlock: bigint
+  toBlock: bigint,
+  retries = 3
 ): Promise<DetectedTransfer[]> {
-  try {
-    const logs = await polygonClient.getLogs({
-      address: usdcAddress as `0x${string}`,
-      event: TRANSFER_EVENT,
-      args: {
-        to: toAddress,
-      },
-      fromBlock,
-      toBlock,
-    });
+  let lastError: unknown;
 
-    const transfers: DetectedTransfer[] = [];
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      // Add exponential backoff delay on retries
+      if (attempt > 0) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
 
-    for (const log of logs) {
-      if (!log.transactionHash) continue;
-
-      const fromAddr = log.args.from;
-      const toAddr = log.args.to;
-      const value = log.args.value;
-
-      if (!fromAddr || !toAddr || value === undefined) continue;
-
-      // Format amount for display (USDC has 6 decimals)
-      const amountFormatted = (Number(value) / Math.pow(10, USDC_DECIMALS)).toFixed(2);
-
-      transfers.push({
-        txHash: log.transactionHash,
-        fromAddress: fromAddr,
-        toAddress: toAddr,
-        amount: value,
-        amountFormatted,
-        blockNumber: log.blockNumber,
+      const logs = await polygonClient.getLogs({
+        address: usdcAddress as `0x${string}`,
+        event: TRANSFER_EVENT,
+        args: {
+          to: toAddress,
+        },
+        fromBlock,
+        toBlock,
       });
-    }
 
-    return transfers;
-  } catch (error) {
-    console.error("[Deposit Detection] Failed to query block range:", fromBlock, "-", toBlock, error);
-    throw error;
+      const transfers: DetectedTransfer[] = [];
+
+      for (const log of logs) {
+        if (!log.transactionHash) continue;
+
+        const fromAddr = log.args.from;
+        const toAddr = log.args.to;
+        const value = log.args.value;
+
+        if (!fromAddr || !toAddr || value === undefined) continue;
+
+        // Format amount for display (USDC has 6 decimals)
+        const amountFormatted = (Number(value) / Math.pow(10, USDC_DECIMALS)).toFixed(2);
+
+        transfers.push({
+          txHash: log.transactionHash,
+          fromAddress: fromAddr,
+          toAddress: toAddr,
+          amount: value,
+          amountFormatted,
+          blockNumber: log.blockNumber,
+        });
+      }
+
+      return transfers;
+    } catch (error) {
+      lastError = error;
+      console.warn(`[Deposit Detection] Query attempt ${attempt + 1}/${retries} failed for blocks ${fromBlock}-${toBlock}`);
+    }
   }
+
+  console.error("[Deposit Detection] All retries failed for block range:", fromBlock, "-", toBlock, lastError);
+  // Return empty array instead of throwing to allow other chunks to succeed
+  return [];
 }
 
 /**

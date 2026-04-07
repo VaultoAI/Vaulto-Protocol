@@ -315,8 +315,8 @@ export function ImpliedValuationChart({
 
   // Determine overall trend
   const isPositive = history.length >= 2 ? history[history.length - 1].value >= history[0].value : true;
-  // Use blue for market implied (distinguishes from funding history green)
-  const color = isPositive ? "#3b82f6" : "#ef4444";
+  // Use green for IPO/market implied chart
+  const color = isPositive ? "#22c55e" : "#ef4444";
 
   // Handle mouse hover
   const handleMouseMove = useCallback(
@@ -370,7 +370,7 @@ export function ImpliedValuationChart({
     return (
       <div className="w-full h-[340px] flex items-center justify-center rounded-lg bg-muted/10">
         <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-green border-t-transparent rounded-full animate-spin" />
           <p className="text-muted text-sm">Loading market data...</p>
         </div>
       </div>
@@ -410,11 +410,11 @@ export function ImpliedValuationChart({
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "market"
-                    ? "text-blue-500 bg-blue-500/10"
+                    ? "text-green bg-green/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Valuation
+                IPO
               </button>
               {hasLiveData && (
                 <button
@@ -425,7 +425,7 @@ export function ImpliedValuationChart({
                       : "text-muted hover:text-foreground"
                   }`}
                 >
-                  Live
+                  Price
                 </button>
               )}
             </div>
@@ -474,8 +474,8 @@ export function ImpliedValuationChart({
         </div>
 
         {/* Time range selector - always show so users can switch */}
-        <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+          <div className="flex items-center gap-1 flex-wrap">
             {timeRanges.map((range) => {
               const isSelected = activeRange === range;
               return (
@@ -484,7 +484,7 @@ export function ImpliedValuationChart({
                   onClick={() => handleRangeChange(range)}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     isSelected
-                      ? "text-blue-500 bg-blue-500/10"
+                      ? "text-green bg-green/10"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -493,7 +493,7 @@ export function ImpliedValuationChart({
               );
             })}
             {loading && (
-              <div className="ml-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="ml-2 w-4 h-4 border-2 border-green border-t-transparent rounded-full animate-spin" />
             )}
           </div>
           {onChartTypeChange && (
@@ -512,11 +512,11 @@ export function ImpliedValuationChart({
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "market"
-                    ? "text-blue-500 bg-blue-500/10"
+                    ? "text-green bg-green/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Valuation
+                IPO
               </button>
               {hasLiveData && (
                 <button
@@ -527,7 +527,7 @@ export function ImpliedValuationChart({
                       : "text-muted hover:text-foreground"
                   }`}
                 >
-                  Live
+                  Price
                 </button>
               )}
             </div>
@@ -572,6 +572,7 @@ export function ImpliedValuationChart({
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
+            vectorEffect="non-scaling-stroke"
           />
 
           {/* Hover vertical line + dot */}
@@ -614,8 +615,8 @@ export function ImpliedValuationChart({
       </div>
 
       {/* Time range selector */}
-      <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+        <div className="flex items-center gap-1 flex-wrap">
           {timeRanges.map((range) => {
             const isSelected = activeRange === range;
             return (
@@ -624,7 +625,7 @@ export function ImpliedValuationChart({
                 onClick={() => handleRangeChange(range)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   isSelected
-                    ? "text-blue-500 bg-blue-500/10"
+                    ? "text-green bg-green/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -633,7 +634,7 @@ export function ImpliedValuationChart({
             );
           })}
           {loading && (
-            <div className="ml-2 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="ml-2 w-4 h-4 border-2 border-green border-t-transparent rounded-full animate-spin" />
           )}
         </div>
         {onChartTypeChange && (
@@ -652,7 +653,7 @@ export function ImpliedValuationChart({
               onClick={() => onChartTypeChange("market")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 chartType === "market"
-                  ? "text-blue-500 bg-blue-500/10"
+                  ? "text-green bg-green/10"
                   : "text-muted hover:text-foreground"
               }`}
             >

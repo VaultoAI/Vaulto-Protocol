@@ -171,6 +171,7 @@ export function MiniChart({
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
+          vectorEffect="non-scaling-stroke"
         />
       </g>
 

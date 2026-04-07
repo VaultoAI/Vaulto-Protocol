@@ -19,24 +19,9 @@ export function EtfPositionCard({ symbol }: EtfPositionCardProps) {
 
   const position = getPositionForSymbol(symbol);
 
-  // Don't show anything if not authenticated or no position
-  if (!authenticated) {
-    return null;
-  }
-
-  if (isLoadingPositions) {
-    return (
-      <div className="w-full rounded-xl border border-border bg-card-bg p-4">
-        <div className="animate-pulse space-y-3">
-          <div className="h-4 w-24 bg-foreground/10 rounded" />
-          <div className="h-6 w-32 bg-foreground/10 rounded" />
-          <div className="h-3 w-20 bg-foreground/10 rounded" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!position || position.qty <= 0) {
+  // Don't show anything if not authenticated, still loading, or no position
+  // Only render when we have confirmed position data from DB
+  if (!authenticated || isLoadingPositions || !position || position.qty <= 0) {
     return null;
   }
 

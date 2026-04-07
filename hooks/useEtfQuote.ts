@@ -20,7 +20,7 @@ export interface EtfQuoteData {
 }
 
 async function fetchQuote(symbol: string): Promise<EtfQuoteData> {
-  const res = await fetch(`/api/alpaca/quote?symbol=${symbol}`);
+  const res = await fetch(`/api/etf/quote?symbol=${symbol}`);
 
   if (!res.ok) {
     const error = await res.json();

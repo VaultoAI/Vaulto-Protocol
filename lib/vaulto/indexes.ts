@@ -41,7 +41,7 @@ export const VAULTO_INDEXES: VaultoIndex[] = [
     id: "rvi",
     symbol: "RVI",
     name: "Robinhood Venture Index",
-    description: "A diversified index of high-growth private companies curated by Robinhood.",
+    description: "RVI, or Robinhood Ventures Fund I, is a newly organized, non-diversified listed closed-end fund managed by Robinhood Ventures that aims to give everyday investors exposure to a concentrated portfolio of private 'frontier' companies operating at the leading edge of their industries. The fund targets high-growth, illiquid private firms such as Airwallex, Boom, Databricks, Mercor, Oura, Ramp, Revolut, and potentially Stripe after its IPO, and its structure means investors face limited disclosure, valuation uncertainty, the possibility of capital calls, and the risk that shares may trade at a discount or premium to net asset value.",
     issuer: "Robinhood",
     holdings: [
       { companyName: "Databricks", weight: 0.2324 },
@@ -58,7 +58,7 @@ export const VAULTO_INDEXES: VaultoIndex[] = [
     id: "vcx",
     symbol: "VCX",
     name: "Fundrise Venture Capital Index",
-    description: "A concentrated portfolio of leading AI and technology private companies.",
+    description: "VCX, the Fundrise Innovation Fund, is a NYSE-listed public venture capital vehicle designed to provide long-term growth through a broadly diversified portfolio of both private and public technology companies across multiple stages, from early to late. Managed by Fundrise, it focuses on major secular themes such as artificial intelligence and machine learning, data infrastructure, and vertical and horizontal software, and holds marquee companies including OpenAI, Anthropic, Databricks, SpaceX, Anduril, and Ramp, with the explicit goal of democratizing access to venture-style returns for retail investors.",
     issuer: "Fundrise",
     holdings: [
       { companyName: "Anthropic", weight: 0.207 },

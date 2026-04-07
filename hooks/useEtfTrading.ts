@@ -66,7 +66,7 @@ export interface PlaceOrderResponse {
 // ============================================
 
 async function fetchPositions(): Promise<EtfPositionsResponse> {
-  const res = await fetch("/api/alpaca/positions");
+  const res = await fetch("/api/etf/positions");
 
   if (!res.ok) {
     const error = await res.json();
@@ -77,7 +77,7 @@ async function fetchPositions(): Promise<EtfPositionsResponse> {
 }
 
 async function placeOrder(params: PlaceOrderParams): Promise<PlaceOrderResponse> {
-  const res = await fetch("/api/alpaca/order", {
+  const res = await fetch("/api/etf/order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
@@ -93,7 +93,7 @@ async function placeOrder(params: PlaceOrderParams): Promise<PlaceOrderResponse>
 }
 
 async function fetchOrder(orderId: string): Promise<EtfOrder> {
-  const res = await fetch(`/api/alpaca/order/${orderId}`);
+  const res = await fetch(`/api/etf/order/${orderId}`);
 
   if (!res.ok) {
     const error = await res.json();
@@ -104,7 +104,7 @@ async function fetchOrder(orderId: string): Promise<EtfOrder> {
 }
 
 async function cancelOrder(orderId: string): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/alpaca/order/${orderId}`, {
+  const res = await fetch(`/api/etf/order/${orderId}`, {
     method: "DELETE",
   });
 

@@ -260,8 +260,6 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                   {displayedChange.isPositive ? "+" : "-"}
                   {chartType === "market"
                     ? `$${Math.abs(displayedChange.amount).toFixed(1)}B`
-                    : chartType === "live"
-                    ? `$${Math.abs(displayedChange.amount).toFixed(4)}`
                     : `$${Math.abs(displayedChange.amount).toFixed(2)}`
                   }
                   {" "}({displayedChange.isPositive ? "+" : "-"}{Math.abs(displayedChange.percent).toFixed(2)}%)
@@ -315,8 +313,8 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
         </div>
 
-        {/* Right side: Trade Widget (Coming Soon) */}
-        <div className="w-full lg:w-[340px] shrink-0">
+        {/* Right side: Trade Widget (Coming Soon) - hidden on mobile */}
+        <div className="hidden lg:block w-full lg:w-[340px] shrink-0">
           <div className="lg:sticky lg:top-8">
             <div className="relative">
               {/* Coming Soon Overlay */}
@@ -331,7 +329,7 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                 <TradeWidget company={company} />
               </div>
             </div>
-            {/* Trade on Jupiter button */}
+            {/* Trade on Jupiter button - desktop */}
             {JUPITER_LINKS[company.name] && (
               <a
                 href={JUPITER_LINKS[company.name]}
@@ -349,6 +347,25 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
             )}
           </div>
         </div>
+
+        {/* Mobile-only Trade on Jupiter button */}
+        {JUPITER_LINKS[company.name] && (
+          <div className="lg:hidden w-full -mt-4">
+            <a
+              href={JUPITER_LINKS[company.name]}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-black text-white shadow-sm ring-1 ring-black/10 hover:bg-gray-800 dark:bg-white dark:text-black dark:ring-white/20 dark:hover:bg-gray-100 text-lg font-bold rounded-xl transition-colors"
+            >
+              Trade Now
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

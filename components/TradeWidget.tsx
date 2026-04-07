@@ -42,7 +42,7 @@ export function TradeWidget({ company }: TradeWidgetProps) {
           onClick={() => setActiveTab("buy")}
           className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
             activeTab === "buy"
-              ? "text-green border-b-2 border-green"
+              ? "text-accent border-b-2 border-accent"
               : "text-muted hover:text-foreground"
           }`}
         >
@@ -68,7 +68,7 @@ export function TradeWidget({ company }: TradeWidgetProps) {
             <select
               value={orderType}
               onChange={(e) => setOrderType(e.target.value)}
-              className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-green/30"
+              className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent/30"
             >
               <option>Market</option>
               <option>Limit</option>
@@ -92,7 +92,7 @@ export function TradeWidget({ company }: TradeWidgetProps) {
             <select
               value={buyIn}
               onChange={(e) => setBuyIn(e.target.value)}
-              className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-green/30"
+              className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent/30"
             >
               <option>Dollars</option>
               <option>Shares</option>
@@ -115,7 +115,7 @@ export function TradeWidget({ company }: TradeWidgetProps) {
                 setAmount(val);
               }}
               placeholder="$0.00"
-              className="w-[120px] text-right bg-badge-bg border border-border rounded-lg px-3 py-1.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-green/30"
+              className="w-[120px] text-right bg-badge-bg border border-border rounded-lg px-3 py-1.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent/30"
             />
           </div>
         </div>
@@ -158,7 +158,7 @@ export function TradeWidget({ company }: TradeWidgetProps) {
           <button
             className={`w-full py-3 rounded-full text-sm font-bold transition-all ${
               activeTab === "buy"
-                ? "bg-green text-white hover:bg-green/90"
+                ? "bg-accent text-white hover:bg-accent/90"
                 : "bg-red text-white hover:bg-red/90"
             } ${numericAmount === 0 || (activeTab === "buy" && estimatedTotal > parseFloat(balance)) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             disabled={numericAmount === 0 || (activeTab === "buy" && estimatedTotal > parseFloat(balance))}

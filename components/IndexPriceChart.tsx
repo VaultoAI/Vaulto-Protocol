@@ -177,6 +177,7 @@ export function IndexPriceChart({ history, onHover }: IndexPriceChartProps) {
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
+            vectorEffect="non-scaling-stroke"
           />
 
           {/* Hover vertical line + dot */}
@@ -227,7 +228,7 @@ export function IndexPriceChart({ history, onHover }: IndexPriceChartProps) {
               onClick={() => setActiveRange(range)}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 isSelected
-                  ? "text-green bg-green/10"
+                  ? "text-accent bg-accent/10"
                   : "text-muted hover:text-foreground"
               }`}
             >

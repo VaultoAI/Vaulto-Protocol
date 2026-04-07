@@ -17,6 +17,7 @@
   --red: #dc2626;
   --chart-green: #16a34a;
   --chart-red: #ef4444;
+  --accent: 37 99 235;
 }
 
 .dark {
@@ -32,6 +33,7 @@
   --red: #ef4444;
   --chart-green: #22c55e;
   --chart-red: #ef4444;
+  --accent: 59 130 246;
 }
 
 body {

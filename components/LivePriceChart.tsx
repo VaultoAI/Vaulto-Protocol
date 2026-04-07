@@ -176,8 +176,8 @@ export function LivePriceChart({
           </div>
         </div>
         {/* Time range selector skeleton */}
-        <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+          <div className="flex items-center gap-1 flex-wrap">
             {timeRanges.map((range) => (
               <button
                 key={range}
@@ -213,7 +213,7 @@ export function LivePriceChart({
                       : "text-muted hover:text-foreground"
                   }`}
                 >
-                  Valuation
+                  IPO
                 </button>
               )}
               <button
@@ -224,7 +224,7 @@ export function LivePriceChart({
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Live
+                Price
               </button>
             </div>
           )}
@@ -243,8 +243,8 @@ export function LivePriceChart({
           </p>
         </div>
         {/* Time range selector */}
-        <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+          <div className="flex items-center gap-1 flex-wrap">
             {timeRanges.map((range) => (
               <button
                 key={range}
@@ -280,7 +280,7 @@ export function LivePriceChart({
                       : "text-muted hover:text-foreground"
                   }`}
                 >
-                  Valuation
+                  IPO
                 </button>
               )}
               <button
@@ -291,7 +291,7 @@ export function LivePriceChart({
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Live
+                Price
               </button>
             </div>
           )}
@@ -335,6 +335,7 @@ export function LivePriceChart({
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
+            vectorEffect="non-scaling-stroke"
           />
 
           {/* Hover vertical line + dot */}
@@ -364,8 +365,8 @@ export function LivePriceChart({
       </div>
 
       {/* Time range selector */}
-      <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+        <div className="flex items-center gap-1 flex-wrap">
           {timeRanges.map((range) => (
             <button
               key={range}

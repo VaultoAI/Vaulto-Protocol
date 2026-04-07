@@ -121,7 +121,8 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
 
   // Determine overall trend
   const isPositive = history.length >= 2 ? history[history.length - 1].valuation >= history[0].valuation : true;
-  const color = isPositive ? "#22c55e" : "#ef4444";
+  // Funding chart is always blue
+  const color = "#3b82f6";
 
   // Handle mouse hover
   const handleMouseMove = useCallback(
@@ -199,6 +200,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
+            vectorEffect="non-scaling-stroke"
           />
 
           {/* Hover vertical line + dot */}
@@ -240,8 +242,8 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
       </div>
 
       {/* Time range selector */}
-      <div className="flex items-center justify-between mt-3 border-t border-border pt-3">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+        <div className="flex items-center gap-1 flex-wrap">
           {timeRanges.map((range) => {
             const isSelected = activeRange === range;
             const isEffective = effectiveRange === range;
@@ -251,7 +253,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
                 onClick={() => setActiveRange(range)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   isSelected && isEffective
-                    ? "text-green bg-green/10"
+                    ? "text-accent bg-accent/10"
                     : isSelected && !isEffective
                     ? "text-muted bg-muted/10"
                     : "text-muted hover:text-foreground"
@@ -268,7 +270,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
               onClick={() => onChartTypeChange("funding")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 chartType === "funding"
-                  ? "text-green bg-green/10"
+                  ? "text-blue-500 bg-blue-500/10"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -279,11 +281,11 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   chartType === "market"
-                    ? "text-blue-500 bg-blue-500/10"
+                    ? "text-green bg-green/10"
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Valuation
+                IPO
               </button>
             )}
             {hasLiveData && (
@@ -295,7 +297,7 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
                     : "text-muted hover:text-foreground"
                 }`}
               >
-                Live
+                Price
               </button>
             )}
           </div>

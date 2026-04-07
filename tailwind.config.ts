@@ -21,6 +21,7 @@ const config: Config = {
         red: "var(--red)",
         "chart-green": "var(--chart-green)",
         "chart-red": "var(--chart-red)",
+        accent: "rgb(var(--accent) / <alpha-value>)",
       },
       fontFamily: {
         sans: ['"Inter"', "system-ui", "sans-serif"],

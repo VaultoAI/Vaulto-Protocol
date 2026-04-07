@@ -37,7 +37,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
               {isLong && (
                 <button
                   onClick={() => setShowFullDesc(!showFullDesc)}
-                  className="ml-1 text-green font-medium hover:underline"
+                  className="ml-1 text-accent font-medium hover:underline"
                 >
                   {showFullDesc ? "Show less" : "Show more"}
                 </button>
@@ -182,7 +182,7 @@ function InfoItem({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-green hover:underline truncate block"
+          className="text-sm font-medium text-accent hover:underline truncate block"
         >
           {value}
         </a>

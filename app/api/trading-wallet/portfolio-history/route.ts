@@ -7,7 +7,10 @@ import {
   getCachedTransactions,
   getSyncState,
   triggerBackgroundSync,
+  triggerBackgroundPortfolioSync,
   isSyncStale,
+  isBalanceStale,
+  getCachedPortfolioHistory,
 } from "@/lib/trading-wallet/transaction-sync";
 
 interface HistoryPoint {
@@ -161,27 +164,59 @@ export async function GET() {
     // Sort transactions by timestamp descending (newest first) for display
     allTransactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    // Build chart data - use cached transactions for instant load
-    const history: HistoryPoint[] = [];
-    let runningBalance = 0;
-    let usingCachedData = false;
+    // Get sync state (instant - from database)
+    const syncState = await getSyncState(tradingWallet.id);
 
-    // Get sync state and cached transactions (instant - from database)
-    const [syncState, cachedTransactions] = await Promise.all([
-      getSyncState(tradingWallet.id),
-      getCachedTransactions(tradingWallet.id),
-    ]);
+    // Check if transaction sync is needed (>5 min old or never synced)
+    const transactionsStale = isSyncStale(syncState?.lastSyncedAt ?? null);
+    // Check if balance cache is stale (>1 min old)
+    const balanceStale = isBalanceStale(syncState?.balanceSyncedAt ?? null);
 
-    // Check if sync is needed (>5 min old or never synced)
-    const isStale = isSyncStale(syncState?.lastSyncedAt ?? null);
+    // Try to get cached portfolio data first (instant - no RPC call)
+    const cachedPortfolio = await getCachedPortfolioHistory(tradingWallet.id);
 
-    // Trigger background sync if stale (non-blocking)
-    if (isStale && !syncState?.isSyncing) {
-      triggerBackgroundSync(tradingWallet.id, tradingWallet.address);
+    // If we have cached portfolio data and balance is fresh, return immediately
+    if (cachedPortfolio && !balanceStale) {
+      // Trigger background refresh if transaction cache is stale
+      if (transactionsStale && !syncState?.isSyncing) {
+        triggerBackgroundSync(tradingWallet.id, tradingWallet.address, {
+          walletCreatedAt: tradingWallet.createdAt,
+          chainId: tradingWallet.chainId,
+          syncPortfolio: true,
+        });
+      }
+
+      return NextResponse.json({
+        history: cachedPortfolio.history,
+        transactions: allTransactions,
+        syncState: {
+          lastSyncedAt: syncState?.lastSyncedAt?.toISOString() ?? null,
+          balanceSyncedAt: syncState?.balanceSyncedAt?.toISOString() ?? null,
+          isSyncing: syncState?.isSyncing ?? false,
+          needsSync: transactionsStale,
+          transactionCount: syncState?.transactionCount ?? 0,
+          fromCache: true,
+        },
+      });
     }
 
-    // Use cached data if available
-    usingCachedData = cachedTransactions.length > 0;
+    // No cache or stale balance - need to compute history
+    // First, get cached transactions
+    const cachedTransactions = await getCachedTransactions(tradingWallet.id);
+
+    // Build chart data
+    const history: HistoryPoint[] = [];
+    let runningBalance = 0;
+    const usingCachedData = cachedTransactions.length > 0;
+
+    // Trigger background sync if transactions are stale (non-blocking)
+    if (transactionsStale && !syncState?.isSyncing) {
+      triggerBackgroundSync(tradingWallet.id, tradingWallet.address, {
+        walletCreatedAt: tradingWallet.createdAt,
+        chainId: tradingWallet.chainId,
+        syncPortfolio: true,
+      });
+    }
 
     // Add initial point at wallet creation
     history.push({
@@ -271,35 +306,39 @@ export async function GET() {
     }
 
     // Get current on-chain balance and add as final point
+    let currentBalance = runningBalance;
     if (tradingWallet.status === "ACTIVE") {
       const balanceBigInt = await getUsdcBalance(
         tradingWallet.address as `0x${string}`,
         tradingWallet.chainId
       );
-      const currentBalance = parseFloat(formatUsdcAmount(balanceBigInt));
-
-      history.push({
-        timestamp: new Date().toISOString(),
-        balance: currentBalance,
-        type: "current",
-      });
-    } else {
-      // Wallet not active, add current point with calculated balance
-      history.push({
-        timestamp: new Date().toISOString(),
-        balance: runningBalance,
-        type: "current",
-      });
+      currentBalance = parseFloat(formatUsdcAmount(balanceBigInt));
     }
+
+    history.push({
+      timestamp: new Date().toISOString(),
+      balance: currentBalance,
+      type: "current",
+    });
+
+    // Cache the computed history in background (non-blocking)
+    triggerBackgroundPortfolioSync(
+      tradingWallet.id,
+      tradingWallet.address,
+      tradingWallet.createdAt,
+      tradingWallet.chainId
+    );
 
     return NextResponse.json({
       history,
       transactions: allTransactions,
       syncState: {
         lastSyncedAt: syncState?.lastSyncedAt?.toISOString() ?? null,
+        balanceSyncedAt: new Date().toISOString(),
         isSyncing: syncState?.isSyncing ?? false,
-        needsSync: isStale,
+        needsSync: transactionsStale,
         transactionCount: syncState?.transactionCount ?? 0,
+        fromCache: false,
       },
     });
   } catch (error) {

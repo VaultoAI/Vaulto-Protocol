@@ -29,6 +29,10 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   databricks: "databricks.com",
   discord: "discord.com",
   bytedance: "tiktok.com", // bytedance.com favicon broken, use TikTok (their flagship product)
+  // Crypto
+  usdc: "usdc.com",
+  matic: "polygon.technology",
+  polygon: "polygon.technology",
   // Fintech
   canva: "canva.com",
   klarna: "klarna.com",

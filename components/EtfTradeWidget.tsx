@@ -234,7 +234,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
           onClick={() => setActiveTab("BUY")}
           className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
             activeTab === "BUY"
-              ? "text-green border-b-2 border-green"
+              ? "text-accent border-b-2 border-accent"
               : "text-muted hover:text-foreground"
           }`}
         >
@@ -260,7 +260,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
             <select
               value={orderType}
               onChange={(e) => handleOrderTypeChange(e.target.value as OrderType)}
-              className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-green/30"
+              className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent/30"
             >
               <option value="MARKET">Market</option>
               <option value="LIMIT">Limit</option>
@@ -291,7 +291,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
                   setLimitPrice(val);
                 }}
                 placeholder="0.00"
-                className="w-[120px] text-right bg-badge-bg border border-border rounded-lg pl-6 pr-3 py-1.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-green/30"
+                className="w-[120px] text-right bg-badge-bg border border-border rounded-lg pl-6 pr-3 py-1.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent/30"
               />
             </div>
           </div>
@@ -342,7 +342,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
               <select
                 value={inputMode}
                 onChange={(e) => setInputMode(e.target.value as InputMode)}
-                className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-green/30"
+                className="appearance-none bg-badge-bg border border-border rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent/30"
               >
                 <option value="Dollars">Dollars</option>
                 <option value="Shares">Shares</option>
@@ -381,7 +381,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
               placeholder={inputMode === "Dollars" ? "0.00" : "0"}
               className={`w-[120px] text-right bg-badge-bg border border-border rounded-lg ${
                 inputMode === "Dollars" ? "pl-6" : "pl-3"
-              } pr-3 py-1.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-green/30`}
+              } pr-3 py-1.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent/30`}
             />
           </div>
         </div>
@@ -465,7 +465,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
             onClick={handleReviewOrder}
             className={`w-full py-3 rounded-full text-sm font-bold transition-all ${
               activeTab === "BUY"
-                ? "bg-green text-white hover:bg-green/90"
+                ? "bg-accent text-white hover:bg-accent/90"
                 : "bg-red text-white hover:bg-red/90"
             } ${!canSubmit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             disabled={!canSubmit}
@@ -539,7 +539,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted">Side</span>
-                    <span className={`font-medium ${pendingOrder.side === "BUY" ? "text-green" : "text-red"}`}>
+                    <span className={`font-medium ${pendingOrder.side === "BUY" ? "text-accent" : "text-red"}`}>
                       {pendingOrder.side}
                     </span>
                   </div>
@@ -600,7 +600,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
                     disabled={isPlacingOrder}
                     className={`flex-1 py-2.5 rounded-full text-sm font-semibold text-white transition-all ${
                       pendingOrder.side === "BUY"
-                        ? "bg-green hover:bg-green/90"
+                        ? "bg-accent hover:bg-accent/90"
                         : "bg-red hover:bg-red/90"
                     } ${isPlacingOrder ? "opacity-50 cursor-wait" : ""}`}
                   >
