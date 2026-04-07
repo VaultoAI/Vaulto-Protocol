@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { placeEtfOrder } from "@/lib/vaulto-api/etf";
 
-const VAULTO_API_KEY = process.env.VAULTO_API_KEY || "";
+const VAULTO_API_TOKEN = process.env.VAULTO_API_TOKEN || "";
 
 /**
  * POST /api/etf/order
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!VAULTO_API_KEY) {
+    if (!VAULTO_API_TOKEN) {
       return NextResponse.json(
         { error: "API not configured" },
         { status: 500 }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         qty,
         limitPrice,
       },
-      VAULTO_API_KEY,
+      VAULTO_API_TOKEN,
       user.id
     );
 

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { fetchEtfPositions } from "@/lib/vaulto-api/etf";
 
-const VAULTO_API_KEY = process.env.VAULTO_API_KEY || "";
+const VAULTO_API_TOKEN = process.env.VAULTO_API_TOKEN || "";
 
 /**
  * GET /api/etf/positions
@@ -31,14 +31,14 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!VAULTO_API_KEY) {
+    if (!VAULTO_API_TOKEN) {
       return NextResponse.json(
         { error: "API not configured" },
         { status: 500 }
       );
     }
 
-    const positions = await fetchEtfPositions(VAULTO_API_KEY, user.id);
+    const positions = await fetchEtfPositions(VAULTO_API_TOKEN, user.id);
     return NextResponse.json(positions);
   } catch (error) {
     console.error("[ETF Positions] Error:", error);

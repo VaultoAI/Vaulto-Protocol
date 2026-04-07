@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { fetchEtfOrder, cancelEtfOrder } from "@/lib/vaulto-api/etf";
 
-const VAULTO_API_KEY = process.env.VAULTO_API_KEY || "";
+const VAULTO_API_TOKEN = process.env.VAULTO_API_TOKEN || "";
 
 /**
  * GET /api/etf/order/:orderId
@@ -36,14 +36,14 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!VAULTO_API_KEY) {
+    if (!VAULTO_API_TOKEN) {
       return NextResponse.json(
         { error: "API not configured" },
         { status: 500 }
       );
     }
 
-    const order = await fetchEtfOrder(orderId, VAULTO_API_KEY, user.id);
+    const order = await fetchEtfOrder(orderId, VAULTO_API_TOKEN, user.id);
     return NextResponse.json(order);
   } catch (error) {
     console.error("[ETF Order] Get error:", error);
@@ -85,14 +85,14 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!VAULTO_API_KEY) {
+    if (!VAULTO_API_TOKEN) {
       return NextResponse.json(
         { error: "API not configured" },
         { status: 500 }
       );
     }
 
-    const result = await cancelEtfOrder(orderId, VAULTO_API_KEY, user.id);
+    const result = await cancelEtfOrder(orderId, VAULTO_API_TOKEN, user.id);
     return NextResponse.json(result);
   } catch (error) {
     console.error("[ETF Order] Cancel error:", error);
