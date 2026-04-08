@@ -89,6 +89,7 @@ export function AssetCard({ company }: AssetCardProps) {
               height={90}
               isPositive={isPositive}
               strokeWidth={1.5}
+              disableTouch
             />
           ) : (
             <div className="h-[90px] flex items-center justify-center">

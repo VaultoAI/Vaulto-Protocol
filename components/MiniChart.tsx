@@ -23,6 +23,8 @@ interface MiniChartProps {
   strokeWidth?: number;
   showGradient?: boolean;
   onHover?: (data: MiniChartHoverData | null) => void;
+  /** Disable touch interactions for mobile scroll performance */
+  disableTouch?: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export function MiniChart({
   strokeWidth = 1.5,
   showGradient = true,
   onHover,
+  disableTouch = false,
 }: MiniChartProps) {
   const [isMounted, setIsMounted] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -119,6 +122,7 @@ export function MiniChart({
       timestamp: point.timestamp,
       index: point.index,
     }),
+    disableTouch,
   });
 
   // Early returns after all hooks
@@ -140,7 +144,7 @@ export function MiniChart({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="block cursor-crosshair"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: disableTouch ? "auto" : "none" }}
       {...handlers}
     >
       <defs>

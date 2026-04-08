@@ -16,6 +16,8 @@ interface UseChartInteractionOptions<T> {
   onHover?: (data: T | null) => void;
   /** Maps a point to the data structure expected by onHover */
   mapPointToHoverData: (point: ChartPoint, index: number) => T;
+  /** Disable touch interactions (useful for mobile scroll performance) */
+  disableTouch?: boolean;
 }
 
 interface ChartInteractionHandlers {
@@ -63,6 +65,7 @@ export function useChartInteraction<T>({
   width,
   onHover,
   mapPointToHoverData,
+  disableTouch = false,
 }: UseChartInteractionOptions<T>): UseChartInteractionResult {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
@@ -109,6 +112,9 @@ export function useChartInteraction<T>({
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
+      // Skip touch events if disabled
+      if (disableTouch && e.pointerType === "touch") return;
+
       // Only track one pointer at a time
       if (activePointerIdRef.current !== null) return;
 
@@ -122,11 +128,14 @@ export function useChartInteraction<T>({
       const index = findClosestPoint(e.clientX);
       updateHover(index);
     },
-    [findClosestPoint, updateHover]
+    [findClosestPoint, updateHover, disableTouch]
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
+      // Skip touch events if disabled
+      if (disableTouch && e.pointerType === "touch") return;
+
       // For mouse: always track hover (no pointer capture needed)
       // For touch: only track if we have an active pointer (started with pointerdown)
       if (e.pointerType === "mouse" || activePointerIdRef.current === e.pointerId) {
@@ -134,7 +143,7 @@ export function useChartInteraction<T>({
         updateHover(index);
       }
     },
-    [findClosestPoint, updateHover]
+    [findClosestPoint, updateHover, disableTouch]
   );
 
   const onPointerUp = useCallback(
