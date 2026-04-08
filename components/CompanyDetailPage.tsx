@@ -36,6 +36,8 @@ import Link from "next/link";
 
 interface CompanyDetailPageProps {
   company: PrivateCompany;
+  prefetchedImpliedData?: ImpliedValuationHistoryResponse | null;
+  prefetchedTotalVolume?: number | null;
 }
 
 // Jupiter swap links for tradable companies
@@ -55,7 +57,11 @@ const JUPITER_LINKS: Record<string, string> = {
  */
 type ChartType = "funding" | "market" | "live";
 
-export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
+export function CompanyDetailPage({
+  company,
+  prefetchedImpliedData,
+  prefetchedTotalVolume,
+}: CompanyDetailPageProps) {
   const symbol = getSyntheticSymbol(company.name);
   const basePrice = getCurrentPrice(company);
   const { changeAmount, changePercent, isPositive } = getDailyChange(company);
@@ -70,7 +76,9 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
 
   // Chart type toggle
   const [chartType, setChartType] = useState<ChartType>("funding");
-  const [impliedData, setImpliedData] = useState<ImpliedValuationHistoryResponse | null>(null);
+  const [impliedData, setImpliedData] = useState<ImpliedValuationHistoryResponse | null>(
+    prefetchedImpliedData ?? null
+  );
   const [impliedDataLoading, setImpliedDataLoading] = useState(false);
   const [impliedChartData, setImpliedChartData] = useState<ImpliedChartData | null>(null);
 
@@ -294,6 +302,7 @@ export function CompanyDetailPage({ company }: CompanyDetailPageProps) {
                 companySlug={impliedValuationSlug || ""}
                 companyName={company.name}
                 initialData={impliedData}
+                initialTotalVolume={prefetchedTotalVolume}
                 onHover={handleImpliedChartHover}
                 onDataChange={handleImpliedDataChange}
                 chartType={chartType}

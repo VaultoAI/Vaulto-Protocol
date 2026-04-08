@@ -206,3 +206,11 @@ export async function getDemoTokens(): Promise<DemoToken[]> {
     .filter((c) => c.valuationUsd > 0) // Only include companies with valuation
     .map(privateCompanyToDemoToken);
 }
+
+/** Get a single private company by its URL slug. */
+export async function getPrivateCompanyBySlug(
+  slug: string
+): Promise<PrivateCompany | null> {
+  const companies = await getPrivateCompanies(); // Uses cached data
+  return companies.find((c) => getCompanySlug(c.name) === slug) ?? null;
+}

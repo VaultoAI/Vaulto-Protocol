@@ -32,6 +32,7 @@ interface ImpliedValuationChartProps {
   companySlug: string;
   companyName: string;
   initialData?: ImpliedValuationHistoryResponse | null;
+  initialTotalVolume?: number | null;
   onHover?: (data: ImpliedHoverData | null) => void;
   onRangeChange?: (range: TimeRange) => void;
   onDataChange?: (data: ImpliedChartData | null) => void;
@@ -117,6 +118,7 @@ export function ImpliedValuationChart({
   companySlug,
   companyName,
   initialData,
+  initialTotalVolume,
   onHover,
   onRangeChange,
   onDataChange,
@@ -132,12 +134,15 @@ export function ImpliedValuationChart({
   const [hasAutoFallback, setHasAutoFallback] = useState(false);
   // Store the full market age from initial ALL load to keep range buttons stable
   const [fullMarketAgeHours, setFullMarketAgeHours] = useState<number | null>(null);
-  // Total volume from current valuation endpoint
-  const [totalVolume, setTotalVolume] = useState<number | null>(null);
+  // Total volume from current valuation endpoint (prefetched or fetched)
+  const [totalVolume, setTotalVolume] = useState<number | null>(initialTotalVolume ?? null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Fetch current valuation to get totalVolume
+  // Fetch current valuation to get totalVolume (only if not prefetched)
   useEffect(() => {
+    // Skip fetch if we already have an initial value
+    if (initialTotalVolume != null) return;
+
     async function fetchCurrentValuation() {
       try {
         const res = await fetch(`/api/implied-valuations/${companySlug}`);
@@ -153,7 +158,7 @@ export function ImpliedValuationChart({
     }
 
     fetchCurrentValuation();
-  }, [companySlug]);
+  }, [companySlug, initialTotalVolume]);
 
   // Fetch data when range changes
   useEffect(() => {

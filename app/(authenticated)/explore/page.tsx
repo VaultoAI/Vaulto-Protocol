@@ -3,7 +3,7 @@ import { getNewlyAddedCompanies } from "@/lib/vaulto/companies.server";
 import { ExplorePageClient } from "@/components/ExplorePageClient";
 import { VAULTO_INDEXES, getIndexPrices } from "@/lib/vaulto/indexes";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // ISR: revalidate every 60 seconds
 
 /**
  * Explore page - displays available private company stocks.

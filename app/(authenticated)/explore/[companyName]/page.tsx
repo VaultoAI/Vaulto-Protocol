@@ -1,8 +1,15 @@
-import { getPrivateCompanies, getCompanySlug } from "@/lib/vaulto/companies";
+import { getPrivateCompanyBySlug } from "@/lib/vaulto/companies";
 import { CompanyDetailPage } from "@/components/CompanyDetailPage";
 import { notFound } from "next/navigation";
+import {
+  hasImpliedValuationData,
+  getImpliedValuationSlug,
+  getImpliedValuationHistory,
+  getImpliedValuation,
+  type ImpliedValuationHistoryResponse,
+} from "@/lib/polymarket/implied-valuations";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // ISR: revalidate every 60 seconds
 
 interface CompanyPageProps {
   params: Promise<{ companyName: string }>;
@@ -14,12 +21,35 @@ interface CompanyPageProps {
  */
 export default async function CompanyPage({ params }: CompanyPageProps) {
   const { companyName } = await params;
-  const companies = await getPrivateCompanies();
-  const company = companies.find((c) => getCompanySlug(c.name) === companyName);
+  const company = await getPrivateCompanyBySlug(companyName);
 
   if (!company) {
     notFound();
   }
 
-  return <CompanyDetailPage company={company} />;
+  // Prefetch implied valuation data if available
+  let prefetchedImpliedData: ImpliedValuationHistoryResponse | null = null;
+  let prefetchedTotalVolume: number | null = null;
+
+  if (hasImpliedValuationData(company.name)) {
+    const slug = getImpliedValuationSlug(company.name);
+    if (slug) {
+      // Fetch history and current valuation in parallel
+      const [historyData, currentData] = await Promise.all([
+        getImpliedValuationHistory(slug, "ALL"),
+        getImpliedValuation(slug),
+      ]);
+
+      prefetchedImpliedData = historyData;
+      prefetchedTotalVolume = currentData?.totalVolume ?? null;
+    }
+  }
+
+  return (
+    <CompanyDetailPage
+      company={company}
+      prefetchedImpliedData={prefetchedImpliedData}
+      prefetchedTotalVolume={prefetchedTotalVolume}
+    />
+  );
 }
