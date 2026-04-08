@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useEffect, useRef, useCallback } from "react";
+import { useId, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useChartInteraction } from "@/hooks/useChartInteraction";
 
 export interface MiniChartHoverData {
@@ -42,62 +42,60 @@ export function MiniChart({
   const [isMounted, setIsMounted] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const reactId = useId();
-  const gradientId = `chart-grad-${isPositive ? "g" : "r"}-${reactId.replace(/:/g, "")}`;
 
   // Only render after mount to avoid hydration mismatch with useId
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  if (!data || data.length < 2) return null;
+  // Compute chart data - all hooks must be called before any early returns
+  const chartData = useMemo(() => {
+    if (!data || data.length < 2) return null;
 
-  // Return placeholder during SSR to avoid hydration mismatch
-  if (!isMounted) {
-    return <div style={{ width: "100%", height }} />;
-  }
+    const padding = { top: 8, right: 4, bottom: 4, left: 4 };
+    const innerWidth = width - padding.left - padding.right;
+    const innerHeight = height - padding.top - padding.bottom;
 
-  const padding = { top: 8, right: 4, bottom: 4, left: 4 };
-  const innerWidth = width - padding.left - padding.right;
-  const innerHeight = height - padding.top - padding.bottom;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
 
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
+    const points = data.map((value, i) => ({
+      x: padding.left + (i / (data.length - 1)) * innerWidth,
+      y: padding.top + innerHeight - ((value - min) / range) * innerHeight,
+      value,
+      timestamp: history?.[i]?.timestamp ?? "",
+      index: i,
+    }));
 
-  const points = data.map((value, i) => ({
-    x: padding.left + (i / (data.length - 1)) * innerWidth,
-    y: padding.top + innerHeight - ((value - min) / range) * innerHeight,
-    value,
-    timestamp: history?.[i]?.timestamp ?? "",
-    index: i,
-  }));
+    // Build smooth cubic bezier path
+    let linePath = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const curr = points[i];
+      const next = points[i + 1];
+      const tension = 0.1;
 
-  // Build smooth cubic bezier path
-  let linePath = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const curr = points[i];
-    const next = points[i + 1];
-    const tension = 0.1;
+      const prev = points[Math.max(i - 1, 0)];
+      const afterNext = points[Math.min(i + 2, points.length - 1)];
 
-    // Control points for smooth curve
-    const prev = points[Math.max(i - 1, 0)];
-    const afterNext = points[Math.min(i + 2, points.length - 1)];
+      const cp1x = curr.x + (next.x - prev.x) * tension;
+      const cp1y = curr.y + (next.y - prev.y) * tension;
+      const cp2x = next.x - (afterNext.x - curr.x) * tension;
+      const cp2y = next.y - (afterNext.y - curr.y) * tension;
 
-    const cp1x = curr.x + (next.x - prev.x) * tension;
-    const cp1y = curr.y + (next.y - prev.y) * tension;
-    const cp2x = next.x - (afterNext.x - curr.x) * tension;
-    const cp2y = next.y - (afterNext.y - curr.y) * tension;
+      linePath += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
+    }
 
-    linePath += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
-  }
+    const gradientPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${height} L ${points[0].x.toFixed(2)} ${height} Z`;
 
-  // Build gradient fill path
-  const gradientPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${height} L ${points[0].x.toFixed(2)} ${height} Z`;
+    return { points, linePath, gradientPath, padding };
+  }, [data, history, width, height]);
 
-  const color = isPositive ? "#3b82f6" : "#ef4444";
+  const gradientId = `chart-grad-${isPositive ? "g" : "r"}-${reactId.replace(/:/g, "")}`;
   const clipId = `chart-clip-${reactId.replace(/:/g, "")}`;
+  const color = isPositive ? "#3b82f6" : "#ef4444";
 
-  // Wrap onHover to handle missing history
+  // Wrap onHover to handle missing history - must be called before early returns
   const wrappedOnHover = useCallback(
     (hoverData: MiniChartHoverData | null) => {
       if (!onHover) return;
@@ -110,10 +108,10 @@ export function MiniChart({
     [onHover, history]
   );
 
-  // Unified mouse/touch interaction
+  // Unified mouse/touch interaction - must be called before early returns
   const { hoverIndex, handlers } = useChartInteraction({
     svgRef,
-    points,
+    points: chartData?.points ?? [],
     width,
     onHover: wrappedOnHover,
     mapPointToHoverData: (point) => ({
@@ -123,6 +121,13 @@ export function MiniChart({
     }),
   });
 
+  // Early returns after all hooks
+  if (!chartData) return null;
+  if (!isMounted) {
+    return <div style={{ width: "100%", height }} />;
+  }
+
+  const { points, linePath, gradientPath, padding } = chartData;
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
   return (

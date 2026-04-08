@@ -53,8 +53,8 @@ export interface PrivateCompanyMetrics {
 }
 
 const VAULTO_API_URL = process.env.NEXT_PUBLIC_VAULTO_API_URL
-  ? `${process.env.NEXT_PUBLIC_VAULTO_API_URL}/api/private-companies`
-  : "https://api.vaulto.ai/api/private-companies";
+  ? `${process.env.NEXT_PUBLIC_VAULTO_API_URL}/api/private-companies?limit=1000`
+  : "https://api.vaulto.ai/api/private-companies?limit=1000";
 
 /**
  * TEMPORARY OVERRIDE: Fix TML $50B round display issues.
