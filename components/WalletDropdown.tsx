@@ -211,7 +211,7 @@ export function WalletDropdown() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="fixed inset-x-0 top-16 z-50 max-h-[calc(85vh-4rem)] overflow-y-auto border-t border-gray-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 sm:rounded-xl sm:border-t-0 sm:ring-1 sm:ring-black/10 dark:sm:ring-white/10">
+        <div className="fixed inset-x-0 top-16 z-50 max-h-[calc(85vh-4rem)] overflow-y-auto border-t border-gray-200 bg-background shadow-xl dark:border-zinc-700 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 sm:rounded-xl sm:border-t-0 sm:ring-1 sm:ring-black/10 dark:sm:ring-white/10">
           {/* Wallet Info Header */}
           <div className="border-b border-gray-100 px-4 py-4 dark:border-zinc-800 sm:py-3">
             <div className="flex items-center gap-3 sm:gap-2">
