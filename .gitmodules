@@ -1,0 +1,6 @@
+[submodule "POL_SOL_BRIDGE/packages/contracts/lib/openzeppelin-contracts"]
+	path = POL_SOL_BRIDGE/packages/contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "POL_SOL_BRIDGE/packages/contracts/lib/forge-std"]
+	path = POL_SOL_BRIDGE/packages/contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
