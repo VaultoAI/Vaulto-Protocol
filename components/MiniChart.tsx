@@ -25,6 +25,8 @@ interface MiniChartProps {
   onHover?: (data: MiniChartHoverData | null) => void;
   /** Disable touch interactions for mobile scroll performance */
   disableTouch?: boolean;
+  /** Disable all hover interactions (mouse and touch) */
+  disableHover?: boolean;
 }
 
 /**
@@ -41,6 +43,7 @@ export function MiniChart({
   showGradient = true,
   onHover,
   disableTouch = false,
+  disableHover = false,
 }: MiniChartProps) {
   const [isMounted, setIsMounted] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -55,7 +58,7 @@ export function MiniChart({
   const chartData = useMemo(() => {
     if (!data || data.length < 2) return null;
 
-    const padding = { top: 8, right: 4, bottom: 4, left: 4 };
+    const padding = { top: 8, right: 0, bottom: 4, left: 4 };
     const innerWidth = width - padding.left - padding.right;
     const innerHeight = height - padding.top - padding.bottom;
 
@@ -132,7 +135,7 @@ export function MiniChart({
   }
 
   const { points, linePath, gradientPath, padding } = chartData;
-  const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
+  const hoverPoint = !disableHover && hoverIndex !== null ? points[hoverIndex] : null;
 
   return (
     <svg
@@ -143,9 +146,9 @@ export function MiniChart({
       preserveAspectRatio="none"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="block cursor-crosshair"
-      style={{ touchAction: disableTouch ? "auto" : "none" }}
-      {...handlers}
+      className={`block ${disableHover ? "cursor-default" : "cursor-crosshair"}`}
+      style={{ touchAction: disableTouch || disableHover ? "auto" : "none" }}
+      {...(disableHover ? {} : handlers)}
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
