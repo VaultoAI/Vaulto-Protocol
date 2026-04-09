@@ -40,3 +40,6 @@ coverage/
 
 # Local Netlify folder
 .netlify
+
+# POL_SOL_BRIDGE (separate project)
+POL_SOL_BRIDGE/
