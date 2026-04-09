@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
@@ -11,37 +11,12 @@ import { privyConfig, smartWalletConfig } from "@/lib/privy";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  // Sync Privy theme with app theme to prevent backdrop blur flickering
-  useEffect(() => {
-    const updateTheme = () => {
-      const isDark = document.documentElement.classList.contains("dark");
-      setTheme(isDark ? "dark" : "light");
-    };
-
-    updateTheme(); // Initial check
-
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Create dynamic config with synced theme
-  const dynamicConfig = {
-    ...privyConfig,
-    appearance: { ...privyConfig.appearance, theme },
-  };
 
   return (
     <SessionProvider>
       <PrivyProvider
         appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
-        config={dynamicConfig}
+        config={privyConfig}
       >
         <SmartWalletsProvider config={smartWalletConfig}>
           <QueryClientProvider client={queryClient}>

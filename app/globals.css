@@ -239,19 +239,3 @@ body {
     transform: none;
   }
 }
-
-/* Privy modal backdrop stability - prevents flickering */
-[data-privy-dialog],
-#privy-modal-content,
-#privy-iframe-container {
-  isolation: isolate;
-  will-change: opacity;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-}
-
-/* Ensure backdrop-filter stability */
-[data-privy-dialog] > div,
-#privy-modal-content > div {
-  backface-visibility: hidden;
-}
