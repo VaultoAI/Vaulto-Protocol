@@ -100,11 +100,38 @@ function getHeaders(apiKey: string, userId?: string): Record<string, string> {
   return headers;
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
-  const data = await response.json();
+async function handleResponse<T>(response: Response, url: string): Promise<T> {
+  let data: unknown;
+  const contentType = response.headers.get('content-type');
+
+  try {
+    if (contentType?.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      console.error(`[Vaulto API] Non-JSON response from ${url}:`, {
+        status: response.status,
+        contentType,
+        body: text.slice(0, 500),
+      });
+      throw new Error(`Unexpected response format: ${response.status} ${contentType}`);
+    }
+  } catch (parseError) {
+    if (parseError instanceof Error && parseError.message.startsWith('Unexpected response')) {
+      throw parseError;
+    }
+    console.error(`[Vaulto API] Failed to parse response from ${url}:`, parseError);
+    throw new Error(`Failed to parse API response: ${response.status}`);
+  }
 
   if (!response.ok) {
-    const errorMsg = data.error || data.message || `Request failed: ${response.status}`;
+    const errorData = data as { error?: string; message?: string };
+    const errorMsg = errorData?.error || errorData?.message || `Request failed: ${response.status}`;
+    console.error(`[Vaulto API] Error response from ${url}:`, {
+      status: response.status,
+      error: errorMsg,
+      data,
+    });
     throw new Error(errorMsg);
   }
 
@@ -121,12 +148,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function fetchEtfQuote(symbol: string, apiKey: string): Promise<QuoteResponse> {
   const url = `${getBaseUrl()}/api/etf/quote?symbol=${encodeURIComponent(symbol)}`;
 
+  console.log(`[Vaulto API] Fetching quote: ${url}`);
   const response = await fetch(url, {
     method: 'GET',
     headers: getHeaders(apiKey),
   });
 
-  return handleResponse<QuoteResponse>(response);
+  return handleResponse<QuoteResponse>(response, url);
 }
 
 /**
@@ -139,13 +167,14 @@ export async function placeEtfOrder(
 ): Promise<PlaceOrderResponse> {
   const url = `${getBaseUrl()}/api/etf/order`;
 
+  console.log(`[Vaulto API] Placing order: ${url}`);
   const response = await fetch(url, {
     method: 'POST',
     headers: getHeaders(apiKey, userId),
     body: JSON.stringify(params),
   });
 
-  return handleResponse<PlaceOrderResponse>(response);
+  return handleResponse<PlaceOrderResponse>(response, url);
 }
 
 /**
@@ -157,12 +186,13 @@ export async function fetchEtfPositions(
 ): Promise<PositionsResponse> {
   const url = `${getBaseUrl()}/api/etf/positions`;
 
+  console.log(`[Vaulto API] Fetching positions: ${url}`);
   const response = await fetch(url, {
     method: 'GET',
     headers: getHeaders(apiKey, userId),
   });
 
-  return handleResponse<PositionsResponse>(response);
+  return handleResponse<PositionsResponse>(response, url);
 }
 
 /**
@@ -175,12 +205,13 @@ export async function fetchEtfOrder(
 ): Promise<EtfOrder> {
   const url = `${getBaseUrl()}/api/etf/order/${encodeURIComponent(orderId)}`;
 
+  console.log(`[Vaulto API] Fetching order: ${url}`);
   const response = await fetch(url, {
     method: 'GET',
     headers: getHeaders(apiKey, userId),
   });
 
-  return handleResponse<EtfOrder>(response);
+  return handleResponse<EtfOrder>(response, url);
 }
 
 /**
@@ -193,10 +224,11 @@ export async function cancelEtfOrder(
 ): Promise<{ success: boolean }> {
   const url = `${getBaseUrl()}/api/etf/order/${encodeURIComponent(orderId)}`;
 
+  console.log(`[Vaulto API] Cancelling order: ${url}`);
   const response = await fetch(url, {
     method: 'DELETE',
     headers: getHeaders(apiKey, userId),
   });
 
-  return handleResponse<{ success: boolean }>(response);
+  return handleResponse<{ success: boolean }>(response, url);
 }
