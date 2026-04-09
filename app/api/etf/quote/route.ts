@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchEtfQuote } from "@/lib/vaulto-api/etf";
-
-const VAULTO_API_TOKEN = process.env.VAULTO_API_TOKEN || "";
+import {
+  isVaultoApiConfigured,
+  getVaultoApiToken,
+  getVaultoApiConfigError,
+  getVaultoApiDebugInfo,
+} from "@/lib/vaulto-api/config";
 
 /**
  * GET /api/etf/quote?symbol=RVI
@@ -19,14 +23,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!VAULTO_API_TOKEN) {
+    // Check Vaulto API configuration
+    if (!isVaultoApiConfigured()) {
+      const errorMsg = getVaultoApiConfigError();
+      console.error("[ETF Quote] Config error:", errorMsg, getVaultoApiDebugInfo());
       return NextResponse.json(
-        { error: "API not configured" },
-        { status: 500 }
+        {
+          error: "Service temporarily unavailable",
+          ...(process.env.NODE_ENV === "development" && { details: errorMsg }),
+        },
+        { status: 503 }
       );
     }
 
-    const quote = await fetchEtfQuote(symbol, VAULTO_API_TOKEN);
+    const quote = await fetchEtfQuote(symbol, getVaultoApiToken());
     return NextResponse.json(quote);
   } catch (error) {
     console.error("[ETF Quote] Error:", error);

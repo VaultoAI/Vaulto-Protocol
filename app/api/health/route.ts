@@ -5,6 +5,10 @@ import {
   getDatabaseUrlDebugInfo,
   prisma,
 } from "@/lib/prisma";
+import {
+  isVaultoApiConfigured,
+  getVaultoApiDebugInfo,
+} from "@/lib/vaulto-api/config";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +72,18 @@ export async function GET() {
         : "Prisma client not initialized",
     };
   }
+
+  // Check Vaulto API configuration
+  const vaultoDebug = getVaultoApiDebugInfo();
+  checks.vaultoApi = {
+    configured: isVaultoApiConfigured(),
+    tokenConfigured: vaultoDebug.tokenConfigured
+      ? `configured (${vaultoDebug.tokenLength} chars)`
+      : "NOT CONFIGURED",
+    urlConfigured: vaultoDebug.urlConfigured
+      ? `configured via ${vaultoDebug.urlSource} (${vaultoDebug.urlLength} chars)`
+      : "NOT CONFIGURED",
+  };
 
   // Determine overall status
   const isHealthy =

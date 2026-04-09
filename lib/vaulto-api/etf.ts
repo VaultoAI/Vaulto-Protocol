@@ -4,7 +4,7 @@
  * Client for interacting with the Vaulto-API ETF trading endpoints.
  */
 
-const VAULTO_API_URL = process.env.VAULTO_API_URL || process.env.NEXT_PUBLIC_VAULTO_API_URL;
+import { getVaultoApiUrl } from "./config";
 
 // ============================================
 // TYPES
@@ -86,10 +86,7 @@ export interface PositionsResponse {
 // ============================================
 
 function getBaseUrl(): string {
-  if (!VAULTO_API_URL) {
-    throw new Error('VAULTO_API_URL not configured');
-  }
-  return VAULTO_API_URL;
+  return getVaultoApiUrl();
 }
 
 function getHeaders(apiKey: string, userId?: string): Record<string, string> {

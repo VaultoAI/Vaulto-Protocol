@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { placeEtfOrder } from "@/lib/vaulto-api/etf";
-
-const VAULTO_API_TOKEN = process.env.VAULTO_API_TOKEN || "";
+import {
+  isVaultoApiConfigured,
+  getVaultoApiToken,
+  getVaultoApiConfigError,
+  getVaultoApiDebugInfo,
+} from "@/lib/vaulto-api/config";
 
 /**
  * POST /api/etf/order
@@ -40,10 +44,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!VAULTO_API_TOKEN) {
+    // Check Vaulto API configuration
+    if (!isVaultoApiConfigured()) {
+      const errorMsg = getVaultoApiConfigError();
+      console.error("[ETF Order] Config error:", errorMsg, getVaultoApiDebugInfo());
       return NextResponse.json(
-        { error: "API not configured" },
-        { status: 500 }
+        {
+          error: "Service temporarily unavailable",
+          ...(process.env.NODE_ENV === "development" && { details: errorMsg }),
+        },
+        { status: 503 }
       );
     }
 
@@ -62,7 +72,7 @@ export async function POST(request: NextRequest) {
         qty,
         limitPrice,
       },
-      VAULTO_API_TOKEN,
+      getVaultoApiToken(),
       user.id
     );
 

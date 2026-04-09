@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { fetchEtfOrder, cancelEtfOrder } from "@/lib/vaulto-api/etf";
-
-const VAULTO_API_TOKEN = process.env.VAULTO_API_TOKEN || "";
+import {
+  isVaultoApiConfigured,
+  getVaultoApiToken,
+  getVaultoApiConfigError,
+  getVaultoApiDebugInfo,
+} from "@/lib/vaulto-api/config";
 
 /**
  * GET /api/etf/order/:orderId
@@ -36,14 +40,20 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!VAULTO_API_TOKEN) {
+    // Check Vaulto API configuration
+    if (!isVaultoApiConfigured()) {
+      const errorMsg = getVaultoApiConfigError();
+      console.error("[ETF Order] Config error:", errorMsg, getVaultoApiDebugInfo());
       return NextResponse.json(
-        { error: "API not configured" },
-        { status: 500 }
+        {
+          error: "Service temporarily unavailable",
+          ...(process.env.NODE_ENV === "development" && { details: errorMsg }),
+        },
+        { status: 503 }
       );
     }
 
-    const order = await fetchEtfOrder(orderId, VAULTO_API_TOKEN, user.id);
+    const order = await fetchEtfOrder(orderId, getVaultoApiToken(), user.id);
     return NextResponse.json(order);
   } catch (error) {
     console.error("[ETF Order] Get error:", error);
@@ -85,14 +95,20 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!VAULTO_API_TOKEN) {
+    // Check Vaulto API configuration
+    if (!isVaultoApiConfigured()) {
+      const errorMsg = getVaultoApiConfigError();
+      console.error("[ETF Order] Config error:", errorMsg, getVaultoApiDebugInfo());
       return NextResponse.json(
-        { error: "API not configured" },
-        { status: 500 }
+        {
+          error: "Service temporarily unavailable",
+          ...(process.env.NODE_ENV === "development" && { details: errorMsg }),
+        },
+        { status: 503 }
       );
     }
 
-    const result = await cancelEtfOrder(orderId, VAULTO_API_TOKEN, user.id);
+    const result = await cancelEtfOrder(orderId, getVaultoApiToken(), user.id);
     return NextResponse.json(result);
   } catch (error) {
     console.error("[ETF Order] Cancel error:", error);

@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { fetchEtfPositions } from "@/lib/vaulto-api/etf";
-
-const VAULTO_API_TOKEN = process.env.VAULTO_API_TOKEN || "";
+import {
+  isVaultoApiConfigured,
+  getVaultoApiToken,
+  getVaultoApiConfigError,
+  getVaultoApiDebugInfo,
+} from "@/lib/vaulto-api/config";
 
 /**
  * GET /api/etf/positions
@@ -31,14 +35,20 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!VAULTO_API_TOKEN) {
+    // Check Vaulto API configuration
+    if (!isVaultoApiConfigured()) {
+      const errorMsg = getVaultoApiConfigError();
+      console.error("[ETF Positions] Config error:", errorMsg, getVaultoApiDebugInfo());
       return NextResponse.json(
-        { error: "API not configured" },
-        { status: 500 }
+        {
+          error: "Service temporarily unavailable",
+          ...(process.env.NODE_ENV === "development" && { details: errorMsg }),
+        },
+        { status: 503 }
       );
     }
 
-    const positions = await fetchEtfPositions(VAULTO_API_TOKEN, user.id);
+    const positions = await fetchEtfPositions(getVaultoApiToken(), user.id);
     return NextResponse.json(positions);
   } catch (error) {
     console.error("[ETF Positions] Error:", error);
