@@ -8,7 +8,7 @@ export const privyConfig: PrivyClientConfig = {
     showWalletLoginFirst: false,
   },
   loginMethodsAndOrder: {
-    primary: ["google", "wallet"],
+    primary: ["google", "metamask", "phantom"],
     overflow: ["email"],
   },
   embeddedWallets: {
