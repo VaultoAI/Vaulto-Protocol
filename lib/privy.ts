@@ -6,6 +6,7 @@ export const privyConfig: PrivyClientConfig = {
     theme: "light",
     accentColor: "#0a0a0a",
     showWalletLoginFirst: false,
+    landingHeader: " ",
   },
   loginMethodsAndOrder: {
     primary: ["google", "metamask", "phantom"],
