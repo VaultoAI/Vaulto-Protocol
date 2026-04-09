@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --vaulto-primary: #6366f1;
+  --vaulto-secondary: #8b5cf6;
+  --vaulto-accent: #22d3ee;
+  --vaulto-background: #0f0f23;
+  --vaulto-surface: #1a1a2e;
+  --vaulto-border: #2a2a4a;
+}
+
+body {
+  background: var(--vaulto-background);
+  color: white;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--vaulto-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vaulto-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vaulto-primary);
+}
+
+/* Wormhole Connect customizations */
+.wormhole-connect {
+  --wh-font-family: inherit;
+  --wh-bg: var(--vaulto-surface);
+  --wh-bg-default: var(--vaulto-background);
+  --wh-text-color: white;
+  --wh-primary: var(--vaulto-primary);
+  --wh-success: #22c55e;
+  --wh-error: #ef4444;
+  --wh-warning: #f59e0b;
+}

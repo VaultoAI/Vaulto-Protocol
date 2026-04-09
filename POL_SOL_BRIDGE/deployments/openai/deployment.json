@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/wormhole-foundation/native-token-transfers/main/cli/src/schema/deployment.json",
+  "version": "1.0.0",
+  "token": {
+    "name": "Vaulted Prestock OpenAI",
+    "symbol": "vOPENAI",
+    "decimals": 8
+  },
+  "chains": {
+    "Solana": {
+      "mode": "locking",
+      "token": "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "manager": null,
+      "transceiver": null,
+      "quoter": null
+    },
+    "Polygon": {
+      "mode": "burning",
+      "token": null,
+      "manager": null,
+      "transceiver": null,
+      "quoter": null
+    }
+  },
+  "limits": {
+    "outbound": {
+      "Solana": {
+        "limit": "100000.00000000",
+        "rateLimitDuration": 86400
+      },
+      "Polygon": {
+        "limit": "100000.00000000",
+        "rateLimitDuration": 86400
+      }
+    },
+    "inbound": {
+      "Solana": {
+        "Polygon": {
+          "limit": "100000.00000000",
+          "rateLimitDuration": 86400
+        }
+      },
+      "Polygon": {
+        "Solana": {
+          "limit": "100000.00000000",
+          "rateLimitDuration": 86400
+        }
+      }
+    }
+  }
+}

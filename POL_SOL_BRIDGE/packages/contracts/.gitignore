@@ -1,0 +1,16 @@
+# Compiler files
+cache/
+out/
+
+# Dependencies
+lib/
+
+# Environment
+.env
+
+# Broadcast files
+broadcast/
+
+# Coverage
+lcov.info
+coverage/

@@ -1,0 +1,22 @@
+{
+  "name": "@vaulto/prestock-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PreStock Token Bridge - Wormhole NTT (Solana ↔ Polygon)",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "deploy:contracts": "pnpm --filter @vaulto/bridge-contracts run deploy",
+    "verify-supply": "pnpm --filter @vaulto/bridge-sdk run verify-supply"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -161,8 +161,8 @@ export function WalletDropdown() {
         type="button"
         className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-black shadow-sm ring-1 ring-black/10 transition hover:bg-gray-50 active:bg-gray-100 dark:bg-white dark:text-black dark:ring-white/20 dark:hover:bg-gray-100 sm:px-4 sm:py-2.5"
       >
-        <span className="hidden sm:inline">Connect Wallet</span>
-        <span className="sm:hidden">Connect</span>
+        <span className="hidden sm:inline">Sign In</span>
+        <span className="sm:hidden">Sign In</span>
       </button>
     );
   }
