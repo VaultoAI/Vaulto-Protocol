@@ -218,10 +218,10 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
   const isMarketClosed = quote && !quote.marketStatus.isOpen;
 
   return (
-    <>
+    <div>
       {/* Market closed indicator - above widget */}
       {isMarketClosed && (
-        <div className="w-full bg-yellow-500/10 border border-yellow-500/20 rounded-t-xl px-3 py-1.5 -mb-px">
+        <div className="w-full bg-yellow-500/10 border-x border-t border-yellow-500/20 rounded-t-xl px-3 py-1.5">
           <p className="text-[11px] text-yellow-600 dark:text-yellow-400 text-center font-medium">
             Market closed · Opens {formatNextOpen(quote.marketStatus.nextOpen)}
           </p>
@@ -297,26 +297,29 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
           </div>
         )}
 
-        {/* Market info */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted">
-            {activeTab === "BUY" ? "Ask price" : "Bid price"}
-          </span>
-          <span className="text-xs text-muted">
-            {isLoadingQuote ? (
-              "Loading..."
-            ) : quoteError ? (
-              "Error loading quote"
-            ) : quote ? (
-              (() => {
-                const price = activeTab === "BUY" ? quote.askPrice : quote.bidPrice;
-                return price > 0 ? formatPrice(price) : "Unavailable";
-              })()
-            ) : (
-              "--"
-            )}
-          </span>
-        </div>
+        {/* Market info - hide when market closed and price unavailable */}
+        {(() => {
+          const price = activeTab === "BUY" ? quote?.askPrice : quote?.bidPrice;
+          const showPrice = !isMarketClosed || (price && price > 0);
+          return showPrice ? (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted">
+                {activeTab === "BUY" ? "Ask price" : "Bid price"}
+              </span>
+              <span className="text-xs text-muted">
+                {isLoadingQuote ? (
+                  "Loading..."
+                ) : quoteError ? (
+                  "Error loading quote"
+                ) : quote ? (
+                  price && price > 0 ? formatPrice(price) : "Unavailable"
+                ) : (
+                  "--"
+                )}
+              </span>
+            </div>
+          ) : null;
+        })()}
 
         {/* Bid/Ask spread */}
         {quote && quote.askPrice > 0 && quote.bidPrice > 0 && (
@@ -386,13 +389,6 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
           </div>
         </div>
 
-        {/* Non-fractionable shares notice */}
-        {!isFractionable && quote && (
-          <div className="text-xs text-muted text-center">
-            {symbol} requires whole shares only
-          </div>
-        )}
-
         {/* Position info for sell tab */}
         {activeTab === "SELL" && position && (
           <div className="flex items-center justify-between text-xs">
@@ -400,13 +396,6 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
             <span className="text-muted">
               {isFractionable ? position.qty.toFixed(4) : Math.floor(position.qty)} shares (~{formatPrice(position.marketValue || 0)})
             </span>
-          </div>
-        )}
-
-        {/* No position warning for sell tab */}
-        {activeTab === "SELL" && !position && !isLoadingPositions && (
-          <div className="text-xs text-red text-center py-2">
-            You don't have any {symbol} shares to sell
           </div>
         )}
 
@@ -483,7 +472,7 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
               ? "Loading position..."
               : position
               ? `${isFractionable ? position.qty.toFixed(4) : Math.floor(position.qty)} ${symbol} shares available`
-              : `No ${symbol} position`}
+              : `You don't have any ${symbol} shares to sell`}
           </span>
         </div>
       </div>
@@ -613,6 +602,6 @@ export function EtfTradeWidget({ index }: EtfTradeWidgetProps) {
         </div>
       )}
     </div>
-    </>
+    </div>
   );
 }
