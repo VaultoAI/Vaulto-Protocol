@@ -107,79 +107,98 @@ export function WaitlistScreen() {
       />
 
       {/* Content */}
-      <div className="animate-fade-in-up relative z-10 flex flex-col items-center px-6 text-center">
-        {/* Logo */}
-        <div className="animate-scale-in mb-8">
-          {mounted && (
-            <Image
-              src={isDark ? "/vaulto-logo-dark.png" : "/vaulto-logo-light.png"}
-              alt="Vaulto"
-              width={180}
-              height={48}
-              priority
-              className="h-12 w-auto"
-            />
-          )}
+      <div className="animate-fade-in-up relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto w-full px-6">
+        {/* Left: Text content */}
+        <div className="text-center lg:text-left">
+          {/* Logo */}
+          <div className="animate-scale-in mb-8 flex justify-center lg:justify-start">
+            {mounted && (
+              <Image
+                src={isDark ? "/vaulto-logo-dark.png" : "/vaulto-logo-light.png"}
+                alt="Vaulto"
+                width={180}
+                height={48}
+                priority
+                className="h-12 w-auto"
+              />
+            )}
+          </div>
+
+          {/* Tagline */}
+          <h1 className="animate-fade-in-up animation-delay-200 mb-1 text-4xl font-light tracking-tight text-[var(--foreground)] sm:text-5xl md:text-6xl">
+            The Future of
+          </h1>
+          <h1 className="animate-fade-in-up animation-delay-300 mb-12 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
+            Private Investing
+          </h1>
+
+          {/* When embedded: email form (Google blocks OAuth). Otherwise: Google link in new tab. */}
+          <div className="flex justify-center lg:justify-start">
+            {isEmbedded ? (
+              <form
+                onSubmit={handleEmailSignup}
+                className="animate-fade-in-up animation-delay-500 flex w-full max-w-sm flex-col gap-3"
+              >
+                <input
+                  type="text"
+                  placeholder="First name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  autoComplete="given-name"
+                  className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
+                />
+                {error && (
+                  <p className="text-left text-sm text-red-500" role="alert">
+                    {error}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="group relative flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--background)] px-5 py-2.5 text-sm text-[var(--foreground)] transition-all duration-300 hover:border-[var(--foreground)]/20 hover:shadow-lg hover:shadow-purple-500/10 disabled:opacity-60"
+                >
+                  <span className="font-medium">Sign up with email</span>
+                  <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-cyan-500/0 opacity-0 blur-xl transition-opacity duration-300 group-hover:from-blue-500/20 group-hover:via-purple-500/20 group-hover:to-cyan-500/20 group-hover:opacity-100" />
+                </button>
+              </form>
+            ) : (
+              <GoogleSignInButton />
+            )}
+          </div>
+
+          {/* Subtle hint text */}
+          <p className="animate-fade-in-up animation-delay-600 mt-6 text-sm text-[var(--muted)]">
+            Join the waitlist for early access
+          </p>
+
+          {/* Subtle animated line */}
+          <div className="animate-fade-in-up animation-delay-600 mt-6 h-px w-32 overflow-hidden bg-[var(--border)] mx-auto lg:mx-0">
+            <div className="animate-shimmer h-full w-full bg-gradient-to-r from-transparent via-[var(--foreground)] to-transparent opacity-50" />
+          </div>
         </div>
 
-        {/* Tagline */}
-        <h1 className="animate-fade-in-up animation-delay-200 mb-1 text-4xl font-light tracking-tight text-[var(--foreground)] sm:text-5xl md:text-6xl">
-          The Future of
-        </h1>
-        <h1 className="animate-fade-in-up animation-delay-300 mb-12 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
-          Private Investing
-        </h1>
-
-        {/* When embedded: email form (Google blocks OAuth). Otherwise: Google link in new tab. */}
-        {isEmbedded ? (
-          <form
-            onSubmit={handleEmailSignup}
-            className="animate-fade-in-up animation-delay-500 flex w-full max-w-sm flex-col gap-3"
-          >
-            <input
-              type="text"
-              placeholder="First name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              autoComplete="given-name"
-              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
+        {/* Right: Demo image */}
+        <div className="hidden lg:block animate-fade-in-up animation-delay-400">
+          {mounted && (
+            <Image
+              src={isDark ? "/demo-dark.png" : "/demo-light.png"}
+              alt="Vaulto Platform"
+              width={1000}
+              height={840}
+              priority
+              className="rounded-xl shadow-2xl"
             />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
-            />
-            {error && (
-              <p className="text-left text-sm text-red-500" role="alert">
-                {error}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="group relative flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--background)] px-5 py-2.5 text-sm text-[var(--foreground)] transition-all duration-300 hover:border-[var(--foreground)]/20 hover:shadow-lg hover:shadow-purple-500/10 disabled:opacity-60"
-            >
-              <span className="font-medium">Sign up with email</span>
-              <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-cyan-500/0 opacity-0 blur-xl transition-opacity duration-300 group-hover:from-blue-500/20 group-hover:via-purple-500/20 group-hover:to-cyan-500/20 group-hover:opacity-100" />
-            </button>
-          </form>
-        ) : (
-          <GoogleSignInButton />
-        )}
-
-        {/* Subtle hint text */}
-        <p className="animate-fade-in-up animation-delay-600 mt-6 text-sm text-[var(--muted)]">
-          Join the waitlist for early access
-        </p>
-
-        {/* Subtle animated line */}
-        <div className="animate-fade-in-up animation-delay-600 mt-6 h-px w-32 overflow-hidden bg-[var(--border)]">
-          <div className="animate-shimmer h-full w-full bg-gradient-to-r from-transparent via-[var(--foreground)] to-transparent opacity-50" />
+          )}
         </div>
       </div>
 
