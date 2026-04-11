@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { WaitlistScreen } from "@/components/WaitlistScreen";
+import { LandingPage } from "@/components/LandingPage";
 
 export default async function Home() {
   // In development, skip auth and go straight to the app
@@ -18,5 +18,5 @@ export default async function Home() {
     redirect("/waitlist-success");
   }
 
-  return <WaitlistScreen />;
+  return <LandingPage />;
 }
