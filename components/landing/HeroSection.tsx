@@ -74,50 +74,67 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
       />
 
       {/* Content */}
-      <div className="animate-fade-in-up relative z-10 flex flex-col items-center text-center">
-        {/* Logo */}
-        <div className="animate-scale-in mb-8">
-          {mounted && (
-            <Image
-              src={isDark ? "/vaulto-logo-dark.png" : "/vaulto-logo-light.png"}
-              alt="Vaulto"
-              width={180}
-              height={48}
-              priority
-              className="h-12 w-auto"
-            />
-          )}
+      <div className="animate-fade-in-up relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto w-full">
+        {/* Left: Text content */}
+        <div className="text-center lg:text-left">
+          {/* Logo */}
+          <div className="animate-scale-in mb-8 flex justify-center lg:justify-start">
+            {mounted && (
+              <Image
+                src={isDark ? "/vaulto-logo-dark.png" : "/vaulto-logo-light.png"}
+                alt="Vaulto"
+                width={180}
+                height={48}
+                priority
+                className="h-12 w-auto"
+              />
+            )}
+          </div>
+
+          {/* Tagline */}
+          <h1 className="animate-fade-in-up animation-delay-200 mb-1 text-4xl font-light tracking-tight text-[var(--foreground)] sm:text-5xl md:text-6xl">
+            Trade Private Companies
+          </h1>
+          <h1 className="animate-fade-in-up animation-delay-300 mb-6 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
+            Before They Go Public
+          </h1>
+
+          {/* Subtitle */}
+          <p className="animate-fade-in-up animation-delay-400 mb-10 max-w-xl text-lg text-[var(--muted)] mx-auto lg:mx-0">
+            Access synthetic pre-IPO tokens of unicorn companies. Trade SpaceX,
+            Anthropic, OpenAI, and more with real-time pricing.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="animate-fade-in-up animation-delay-500 flex flex-col gap-4 sm:flex-row justify-center lg:justify-start">
+            <button
+              onClick={onJoinWaitlist}
+              className="group relative rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 px-8 py-3 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25"
+            >
+              Join Waitlist
+              <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-50" />
+            </button>
+            <button
+              onClick={scrollToFeatures}
+              className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-8 py-3 text-sm font-medium text-[var(--foreground)] transition-all duration-300 hover:border-[var(--foreground)]/20 hover:shadow-lg"
+            >
+              Learn More
+            </button>
+          </div>
         </div>
 
-        {/* Tagline */}
-        <h1 className="animate-fade-in-up animation-delay-200 mb-1 text-4xl font-light tracking-tight text-[var(--foreground)] sm:text-5xl md:text-6xl">
-          Trade Private Companies
-        </h1>
-        <h1 className="animate-fade-in-up animation-delay-300 mb-6 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
-          Before They Go Public
-        </h1>
-
-        {/* Subtitle */}
-        <p className="animate-fade-in-up animation-delay-400 mb-10 max-w-xl text-lg text-[var(--muted)]">
-          Access synthetic pre-IPO tokens of unicorn companies. Trade SpaceX,
-          Anthropic, OpenAI, and more with real-time pricing.
-        </p>
-
-        {/* CTA Buttons */}
-        <div className="animate-fade-in-up animation-delay-500 flex flex-col gap-4 sm:flex-row">
-          <button
-            onClick={onJoinWaitlist}
-            className="group relative rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 px-8 py-3 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25"
-          >
-            Join Waitlist
-            <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-50" />
-          </button>
-          <button
-            onClick={scrollToFeatures}
-            className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-8 py-3 text-sm font-medium text-[var(--foreground)] transition-all duration-300 hover:border-[var(--foreground)]/20 hover:shadow-lg"
-          >
-            Learn More
-          </button>
+        {/* Right: Demo image */}
+        <div className="hidden lg:block animate-fade-in-up animation-delay-400">
+          {mounted && (
+            <Image
+              src={isDark ? "/demo-dark.png" : "/demo-light.png"}
+              alt="Vaulto Platform"
+              width={1000}
+              height={840}
+              priority
+              className="rounded-xl shadow-2xl"
+            />
+          )}
         </div>
       </div>
 
