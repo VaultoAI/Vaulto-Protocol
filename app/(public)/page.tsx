@@ -3,11 +3,6 @@ import { redirect } from "next/navigation";
 import { LandingPage } from "@/components/LandingPage";
 
 export default async function Home() {
-  // In development, skip auth and go straight to the app
-  if (process.env.NODE_ENV === "development") {
-    redirect("/explore");
-  }
-
   const session = await auth();
 
   // Redirect authenticated users to waitlist success page
