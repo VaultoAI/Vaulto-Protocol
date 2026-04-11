@@ -26,6 +26,19 @@ export function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Force light mode on the landing page
+  useEffect(() => {
+    const wasDark = document.documentElement.classList.contains("dark");
+    document.documentElement.classList.remove("dark");
+
+    return () => {
+      // Restore dark mode on unmount if it was previously set
+      if (wasDark) {
+        document.documentElement.classList.add("dark");
+      }
+    };
+  }, []);
+
   useEffect(() => {
     setIsEmbedded(isEmbeddedBrowser());
   }, []);
@@ -128,7 +141,7 @@ export function LandingPage() {
         badge="Price Oracle AMM"
         headline="Institutional-Grade Liquidity"
         subheadline="Uniswap V3-powered automated market maker designed for capital efficiency and deep liquidity."
-        theme="purple"
+        theme="blue"
         reversed
         features={[
           {
@@ -191,7 +204,7 @@ export function LandingPage() {
       <section className="relative py-24">
         <div className="absolute inset-0 overflow-hidden">
           <div className="animate-gradient-shift absolute -inset-[100%] opacity-20">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-cyan-500/20 blur-3xl" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-400/20 to-cyan-500/20 blur-3xl" />
           </div>
         </div>
 
@@ -205,10 +218,10 @@ export function LandingPage() {
           </p>
           <button
             onClick={openWaitlistModal}
-            className="group relative rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 px-8 py-3 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25"
+            className="group relative rounded-lg bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 px-8 py-3 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25"
           >
             Join Waitlist
-            <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-50" />
+            <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-50" />
           </button>
         </div>
       </section>
@@ -275,7 +288,7 @@ export function LandingPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="group relative flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25 disabled:opacity-60"
+                  className="group relative flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-60"
                 >
                   {submitting ? "Signing up..." : "Sign up with email"}
                 </button>

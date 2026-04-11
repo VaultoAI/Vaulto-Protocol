@@ -12,7 +12,7 @@ interface FeatureSectionProps {
     description: string;
   }[];
   visual: ReactNode;
-  theme: "blue" | "purple" | "cyan";
+  theme: "blue" | "cyan";
   reversed?: boolean;
   link?: { text: string; href: string };
 }
@@ -23,12 +23,6 @@ const themeColors = {
     accent: "from-blue-500 to-blue-600",
     glow: "from-blue-500/10 to-blue-600/5",
     bullet: "bg-blue-500",
-  },
-  purple: {
-    badge: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-    accent: "from-purple-500 to-purple-600",
-    glow: "from-purple-500/10 to-purple-600/5",
-    bullet: "bg-purple-500",
   },
   cyan: {
     badge: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
@@ -114,12 +108,7 @@ export function FeatureSection({
                 rel="noopener noreferrer"
                 className={`mt-8 inline-flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80`}
                 style={{
-                  color:
-                    theme === "blue"
-                      ? "#3b82f6"
-                      : theme === "purple"
-                        ? "#a855f7"
-                        : "#06b6d4",
+                  color: theme === "blue" ? "#3b82f6" : "#06b6d4",
                 }}
               >
                 {link.text}
@@ -145,13 +134,7 @@ export function FeatureSection({
             className={`relative ${reversed ? "lg:col-start-1" : ""}`}
           >
             <div className="relative">
-              {/* Decorative border */}
-              <div
-                className={`absolute -inset-4 rounded-2xl bg-gradient-to-br ${colors.accent} opacity-10 blur-xl`}
-              />
-              <div className="relative rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-2xl">
-                {visual}
-              </div>
+              {visual}
             </div>
           </div>
         </div>

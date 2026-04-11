@@ -1,29 +1,7 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 export function LandingFooter() {
-  const [mounted, setMounted] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const checkDark = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    };
-    checkDark();
-
-    const observer = new MutationObserver(checkDark);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   const currentYear = new Date().getFullYear();
 
   return (
@@ -32,15 +10,13 @@ export function LandingFooter() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">
-            {mounted && (
-              <Image
-                src={isDark ? "/vaulto-logo-dark.png" : "/vaulto-logo-light.png"}
-                alt="Vaulto"
-                width={120}
-                height={32}
-                className="mb-4 h-8 w-auto"
-              />
-            )}
+            <Image
+              src="/vaulto-logo-light.png"
+              alt="Vaulto"
+              width={120}
+              height={32}
+              className="mb-4 h-8 w-auto"
+            />
             <p className="text-sm text-[var(--muted)]">
               The future of private company investing.
             </p>
@@ -53,28 +29,34 @@ export function LandingFooter() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link
-                  href="/explore"
+                <a
+                  href="https://search.vaulto.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
                 >
-                  Explore
-                </Link>
+                  Search
+                </a>
               </li>
               <li>
-                <Link
-                  href="/swap"
+                <a
+                  href="https://swap.vaulto.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
                 >
-                  Trade
-                </Link>
+                  Swap
+                </a>
               </li>
               <li>
-                <Link
-                  href="/bridge"
+                <a
+                  href="https://ramp.vaulto.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
                 >
-                  Bridge
-                </Link>
+                  Ramp
+                </a>
               </li>
             </ul>
           </div>
@@ -87,7 +69,7 @@ export function LandingFooter() {
             <ul className="space-y-2">
               <li>
                 <a
-                  href="https://github.com/VaultoAI/price-oracle-amm"
+                  href="https://github.com/vaultoai"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
@@ -97,7 +79,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="https://docs.vaulto.io"
+                  href="https://api.vaulto.ai/docs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
@@ -115,20 +97,24 @@ export function LandingFooter() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link
-                  href="/privacy"
+                <a
+                  href="https://legal.vaulto.ai/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
                 >
                   Privacy Policy
-                </Link>
+                </a>
               </li>
               <li>
-                <Link
-                  href="/terms"
+                <a
+                  href="https://legal.vaulto.ai/terms-of-service"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
                 >
                   Terms of Service
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
