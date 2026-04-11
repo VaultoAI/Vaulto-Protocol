@@ -179,6 +179,20 @@ body {
   will-change: transform, opacity;
 }
 
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+
 .animate-scale-in {
   animation: scale-in 0.6s ease-out forwards;
   will-change: transform, opacity;
