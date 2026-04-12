@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchEtfQuote } from "@/lib/vaulto-api/etf";
-import {
-  isVaultoApiConfigured,
-  getVaultoApiToken,
-  getVaultoApiConfigError,
-  getVaultoApiDebugInfo,
-} from "@/lib/vaulto-api/config";
+import { getQuote } from "@/lib/alpaca/client";
+import { isValidEtfSymbol, isEtfFractionable } from "@/lib/alpaca/constants";
+import type { EtfSymbol } from "@/lib/alpaca/constants";
 
 /**
  * GET /api/etf/quote?symbol=RVI
  *
- * Proxy to Vaulto-API for ETF quotes.
+ * Vaulto API route — fetches real-time ETF quotes via Alpaca.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,21 +19,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check Vaulto API configuration
-    if (!isVaultoApiConfigured()) {
-      const errorMsg = getVaultoApiConfigError();
-      console.error("[ETF Quote] Config error:", errorMsg, getVaultoApiDebugInfo());
+    if (!isValidEtfSymbol(symbol)) {
       return NextResponse.json(
-        {
-          error: "Service temporarily unavailable",
-          ...(process.env.NODE_ENV === "development" && { details: errorMsg }),
-        },
-        { status: 503 }
+        { error: `Invalid ETF symbol: ${symbol}` },
+        { status: 400 }
       );
     }
 
-    const quote = await fetchEtfQuote(symbol, getVaultoApiToken());
-    return NextResponse.json(quote);
+    const quote = await getQuote(symbol.toUpperCase() as EtfSymbol);
+
+    return NextResponse.json({
+      symbol: quote.symbol,
+      askPrice: quote.askPrice,
+      bidPrice: quote.bidPrice,
+      midPrice: quote.midPrice,
+      spread: quote.spread,
+      spreadPercent: quote.spreadPercent,
+      fractionable: isEtfFractionable(symbol),
+      marketStatus: quote.marketStatus,
+      timestamp: quote.timestamp,
+    });
   } catch (error) {
     console.error("[ETF Quote] Error:", error);
     return NextResponse.json(

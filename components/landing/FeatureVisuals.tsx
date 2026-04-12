@@ -1,0 +1,290 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { CompanyLogo } from "@/components/CompanyLogo";
+
+// =============================================================================
+// TOKEN TICKER - Shows animated token prices with actual company logos
+// =============================================================================
+
+const mockTokens = [
+  { symbol: "vSPACEX", companyName: "SpaceX", price: 142.5, change: 3.2 },
+  { symbol: "vANTHROPIC", companyName: "Anthropic", price: 89.75, change: 5.8 },
+  { symbol: "vOPENAI", companyName: "OpenAI", price: 215.0, change: -2.8 },
+  { symbol: "vANDURIL", companyName: "Anduril", price: 67.25, change: 2.1 },
+  { symbol: "vPOLYMARKET", companyName: "Polymarket", price: 48.9, change: 8.5 },
+  { symbol: "vKALSHI", companyName: "Kalshi", price: 23.4, change: 1.2 },
+];
+
+export function TokenTicker() {
+  const [prices, setPrices] = useState(mockTokens);
+  const [pulseIndex, setPulseIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * prices.length);
+      setPulseIndex(randomIndex);
+
+      setPrices((prev) =>
+        prev.map((token, i) => {
+          if (i === randomIndex) {
+            const changeAmount = (Math.random() - 0.5) * 2;
+            return {
+              ...token,
+              price: Math.max(1, token.price + changeAmount),
+              change: token.change + (Math.random() - 0.5) * 0.5,
+            };
+          }
+          return token;
+        })
+      );
+
+      setTimeout(() => setPulseIndex(null), 500);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [prices.length]);
+
+  return (
+    <div className="rounded-xl bg-gradient-to-br from-[var(--foreground)]/[0.02] to-transparent">
+      <div className="mb-2 flex items-center justify-between text-xs text-[var(--muted)] px-3 sm:px-4 pt-3 sm:pt-4">
+        <span>Token</span>
+        <div className="flex gap-4 sm:gap-6 md:gap-8">
+          <span>Price</span>
+          <span className="w-12 sm:w-16 text-right">24h</span>
+        </div>
+      </div>
+      {prices.map((token, index) => (
+        <div
+          key={token.symbol}
+          className={`flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 transition-all duration-300 ${
+            index !== prices.length - 1 ? "border-b border-[var(--border)]/50" : "pb-4"
+          } ${pulseIndex === index ? "bg-blue-500/5" : ""}`}
+        >
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <CompanyLogo name={token.companyName} size={24} className="sm:w-8 sm:h-8 flex-shrink-0" />
+            <span className="font-medium text-[var(--foreground)] truncate text-sm sm:text-base">
+              {token.symbol}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 sm:gap-6 md:gap-8">
+            <span
+              className={`font-mono font-semibold text-[var(--foreground)] transition-all text-sm sm:text-base ${
+                pulseIndex === index ? "scale-105" : ""
+              }`}
+            >
+              ${token.price.toFixed(2)}
+            </span>
+            <span
+              className={`w-12 sm:w-16 text-right font-mono font-medium text-xs sm:text-sm ${
+                token.change >= 0 ? "text-emerald-500" : "text-[#ef4444]"
+              }`}
+            >
+              {token.change >= 0 ? "+" : ""}
+              {token.change.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// =============================================================================
+// CODE BLOCK - Shows AMM contract interface
+// =============================================================================
+
+const codeSnippet = `interface IPriceOracleAMM {
+  // Get current token price from oracle
+  function getPrice(
+    address token
+  ) external view returns (uint256);
+
+  // Swap tokens with oracle-adjusted pricing
+  function swap(
+    address tokenIn,
+    address tokenOut,
+    uint256 amountIn,
+    uint256 minAmountOut
+  ) external returns (uint256 amountOut);
+
+  // Add concentrated liquidity
+  function addLiquidity(
+    address token,
+    uint256 amount,
+    int24 tickLower,
+    int24 tickUpper
+  ) external returns (uint256 liquidity);
+}`;
+
+export function CodeBlock() {
+  return (
+    <div className="overflow-hidden rounded-lg bg-[#0d1117] font-mono text-xs sm:text-sm max-w-full">
+      {/* Window controls - Mac style */}
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-gray-800 px-3 sm:px-4 py-2.5 sm:py-3">
+        <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#FF5F56]" />
+        <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#FFBD2E]" />
+        <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#27C93F]" />
+        <span className="ml-2 sm:ml-3 text-[10px] sm:text-xs text-gray-500 truncate">IPriceOracleAMM.sol</span>
+      </div>
+
+      {/* Code content */}
+      <pre className="overflow-x-auto p-3 sm:p-4 text-[10px] sm:text-xs leading-relaxed">
+        <code>
+          {codeSnippet.split("\n").map((line, i) => (
+            <div key={i} className="flex">
+              <span className="mr-2 sm:mr-4 inline-block w-4 sm:w-6 select-none text-right text-gray-600">
+                {i + 1}
+              </span>
+              <span>
+                {highlightSolidity(line)}
+              </span>
+            </div>
+          ))}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
+function highlightSolidity(line: string) {
+  // Simple syntax highlighting
+  return line
+    .split(/(\b(?:interface|function|external|view|returns|address|uint256|int24)\b|\/\/.*$)/g)
+    .map((part, i) => {
+      if (/^(interface|function|external|view|returns)$/.test(part)) {
+        return (
+          <span key={i} className="text-blue-400">
+            {part}
+          </span>
+        );
+      }
+      if (/^(address|uint256|int24)$/.test(part)) {
+        return (
+          <span key={i} className="text-cyan-400">
+            {part}
+          </span>
+        );
+      }
+      if (part.startsWith("//")) {
+        return (
+          <span key={i} className="text-gray-500">
+            {part}
+          </span>
+        );
+      }
+      return (
+        <span key={i} className="text-gray-300">
+          {part}
+        </span>
+      );
+    });
+}
+
+// =============================================================================
+// CHAIN DIAGRAM - Shows cross-chain bridge flow with real company logos
+// =============================================================================
+
+const bridgeTokens = [
+  { symbol: "vSPACEX", companyName: "SpaceX" },
+  { symbol: "vANTHROPIC", companyName: "Anthropic" },
+  { symbol: "vOPENAI", companyName: "OpenAI" },
+  { symbol: "vANDURIL", companyName: "Anduril" },
+  { symbol: "vKALSHI", companyName: "Kalshi" },
+  { symbol: "vPOLYMARKET", companyName: "Polymarket" },
+];
+
+export function ChainDiagram() {
+  const [activeToken, setActiveToken] = useState(0);
+  // Animation phase: 0 = at Solana, 1 = moving to Polygon, 2 = at Polygon, 3 = moving to Solana
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhase((prev) => {
+        const next = (prev + 1) % 4;
+        // Change token when starting a new journey (phases 1 and 3)
+        if (next === 1 || next === 3) {
+          setActiveToken((t) => (t + 1) % bridgeTokens.length);
+        }
+        return next;
+      });
+    }, 2500); // 2.5 seconds per phase for smooth pacing
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate left position as percentage (0% = at Solana, 100% - token width = at Polygon)
+  const getLeftPosition = () => {
+    switch (phase) {
+      case 0: return 0; // At Solana
+      case 1: return 100; // Moving to Polygon
+      case 2: return 100; // At Polygon
+      case 3: return 0; // Moving back to Solana
+      default: return 0;
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-4 sm:gap-6 md:gap-8 py-2 sm:py-4">
+      {/* Chain icons */}
+      <div className="flex w-full items-center justify-between">
+        {/* Solana */}
+        <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+          <div className={`flex h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 items-center justify-center rounded-2xl bg-black shadow-lg transition-all duration-500 ${phase === 0 || phase === 3 ? "ring-2 ring-cyan-500/50 scale-105" : ""}`}>
+            <svg viewBox="0 0 397.7 311.7" className="h-5 w-5 sm:h-7 sm:w-7 md:h-9 md:w-9" fill="none">
+              <linearGradient id="solana-grad-1" x1="360.879" y1="351.455" x2="141.213" y2="-69.294" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 -1 0 314)">
+                <stop offset="0" stopColor="#00FFA3"/>
+                <stop offset="1" stopColor="#DC1FFF"/>
+              </linearGradient>
+              <linearGradient id="solana-grad-2" x1="264.829" y1="401.601" x2="45.163" y2="-19.148" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 -1 0 314)">
+                <stop offset="0" stopColor="#00FFA3"/>
+                <stop offset="1" stopColor="#DC1FFF"/>
+              </linearGradient>
+              <linearGradient id="solana-grad-3" x1="312.548" y1="376.688" x2="92.882" y2="-44.061" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 -1 0 314)">
+                <stop offset="0" stopColor="#00FFA3"/>
+                <stop offset="1" stopColor="#DC1FFF"/>
+              </linearGradient>
+              <path fill="url(#solana-grad-1)" d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/>
+              <path fill="url(#solana-grad-2)" d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/>
+              <path fill="url(#solana-grad-3)" d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/>
+            </svg>
+          </div>
+          <span className="text-xs sm:text-sm font-medium text-[var(--foreground)]">Solana</span>
+        </div>
+
+        {/* Bridge arrow */}
+        <div className="relative flex flex-1 items-center justify-center px-2 sm:px-4">
+          <div className="h-0.5 w-full bg-gradient-to-r from-[#9945FF] via-cyan-500 to-[#8247E5]" />
+
+          {/* Animated token with real logo - uses percentage-based left positioning */}
+          <div
+            className="absolute flex h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-[var(--card-bg)] shadow-lg ring-2 ring-cyan-500/50"
+            style={{
+              left: `calc(${getLeftPosition()}% - ${getLeftPosition() === 100 ? '24px' : '0px'})`,
+              transition: 'left 2s ease-in-out',
+            }}
+          >
+            <CompanyLogo name={bridgeTokens[activeToken].companyName} size={20} className="sm:w-6 sm:h-6 md:w-8 md:h-8" />
+          </div>
+
+          {/* Bridge logo in center */}
+          <div className={`absolute flex h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 items-center justify-center rounded-full border-2 border-cyan-500/30 bg-[var(--card-bg)] overflow-hidden transition-all duration-300 ${phase === 1 || phase === 3 ? "scale-110 border-cyan-500/60" : ""}`}>
+            <img src="/bridge-logo.png" alt="Bridge" className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 object-contain" />
+          </div>
+        </div>
+
+        {/* Polygon */}
+        <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+          <div className={`flex h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 items-center justify-center rounded-2xl bg-[#8247E5] shadow-lg transition-all duration-500 ${phase === 1 || phase === 2 ? "ring-2 ring-cyan-500/50 scale-105" : ""}`}>
+            <svg viewBox="0 0 38.4 33.5" className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" fill="white">
+              <path d="M29 10.2c-.7-.4-1.6-.4-2.4 0L21 13.5l-3.8 2.1-5.5 3.3c-.7.4-1.6.4-2.4 0l-4.3-2.6c-.7-.4-1.2-1.2-1.2-2.1V10c0-.8.4-1.6 1.2-2.1l4.3-2.5c.7-.4 1.6-.4 2.4 0l4.3 2.6c.7.4 1.2 1.2 1.2 2.1v3.3l3.8-2.2V8c0-.8-.4-1.6-1.2-2.1l-8-4.7c-.7-.4-1.6-.4-2.4 0L1.2 5.9C.4 6.3 0 7.1 0 7.9v9.4c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l5.5-3.2 3.8-2.2 5.5-3.2c.7-.4 1.6-.4 2.4 0l4.3 2.5c.7.4 1.2 1.2 1.2 2.1v4.2c0 .8-.4 1.6-1.2 2.1l-4.3 2.5c-.7.4-1.6.4-2.4 0l-4.3-2.5c-.7-.4-1.2-1.2-1.2-2.1V21l-3.8 2.2v3.3c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l8.1-4.7c.7-.4 1.2-1.2 1.2-2.1V17c0-.8-.4-1.6-1.2-2.1L29 10.2z"/>
+            </svg>
+          </div>
+          <span className="text-xs sm:text-sm font-medium text-[var(--foreground)]">Polygon</span>
+        </div>
+      </div>
+
+    </div>
+  );
+}
