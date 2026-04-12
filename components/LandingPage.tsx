@@ -4,8 +4,8 @@ import { HeroSection } from "./landing/HeroSection";
 import { FeatureSection } from "./landing/FeatureSection";
 import { TokenTicker, CodeBlock, ChainDiagram } from "./landing/FeatureVisuals";
 import { LandingFooter } from "./landing/LandingFooter";
-import { GoogleSignInButton } from "./GoogleSignInButton";
-import { useState, useEffect, useCallback } from "react";
+import { signInWithGoogle } from "@/app/actions/auth";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // User-agent patterns for in-app / embedded browsers (Google blocks OAuth in these)
 const EMBEDDED_BROWSER_PATTERNS =
@@ -25,19 +25,7 @@ export function LandingPage() {
   const [firstName, setFirstName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  // Force light mode on the landing page
-  useEffect(() => {
-    const wasDark = document.documentElement.classList.contains("dark");
-    document.documentElement.classList.remove("dark");
-
-    return () => {
-      // Restore dark mode on unmount if it was previously set
-      if (wasDark) {
-        document.documentElement.classList.add("dark");
-      }
-    };
-  }, []);
+  const googleFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     setIsEmbedded(isEmbeddedBrowser());
@@ -86,9 +74,15 @@ export function LandingPage() {
     [email, firstName]
   );
 
-  const openWaitlistModal = () => {
-    setShowWaitlistModal(true);
-    setError(null);
+  const handleJoinWaitlist = () => {
+    if (isEmbedded) {
+      // Show email form modal for embedded browsers (Google OAuth doesn't work there)
+      setShowWaitlistModal(true);
+      setError(null);
+    } else {
+      // Directly trigger Google sign-in for normal browsers
+      googleFormRef.current?.requestSubmit();
+    }
   };
 
   const closeWaitlistModal = () => {
@@ -99,40 +93,39 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="landing-page-light min-h-screen bg-[var(--background)]">
+      {/* Hidden form for Google sign-in */}
+      <form ref={googleFormRef} action={signInWithGoogle} className="hidden" />
+
       {/* Hero Section */}
-      <HeroSection onJoinWaitlist={openWaitlistModal} />
+      <HeroSection onJoinWaitlist={handleJoinWaitlist} />
 
       {/* Feature Section 1: Pre-IPO Synthetic Tokens */}
       <FeatureSection
         id="features"
         badge="Synthetic Tokens"
         headline="Trade Tomorrow's Giants Today"
-        subheadline="Access synthetic tokens of unicorn companies before their IPO. Real-time pricing derived from prediction market data."
+        subheadline="Trade unicorns before they go public."
         theme="blue"
         features={[
           {
-            title: "Polymarket-derived pricing",
-            description: "Prices reflect prediction market odds",
+            title: "Prediction Market Pricing",
+            description: "Prices derived from real-time Polymarket odds for transparent valuations",
+            highlight: true,
           },
           {
-            title: "Real-time valuations",
-            description: "Continuously updated company valuations",
+            title: "Trade From $1",
+            description: "Own fractional shares of SpaceX, Anthropic, and other unicorns",
+            highlight: true,
           },
-          {
-            title: "Major private companies",
-            description: "Trade SpaceX, Anthropic, OpenAI, and more",
-          },
-          {
-            title: "24/7 trading",
-            description: "No market hours restrictions",
-          },
-          {
-            title: "Fractional ownership",
-            description: "Start trading with as little as $1",
-          },
+          { title: "24/7 trading" },
+          { title: "No accreditation required" },
         ]}
         visual={<TokenTicker />}
+        actionButton={{
+          text: "Join Waitlist",
+          onClick: handleJoinWaitlist,
+        }}
       />
 
       {/* Feature Section 2: Price Oracle AMM */}
@@ -140,30 +133,22 @@ export function LandingPage() {
         id="amm"
         badge="Price Oracle AMM"
         headline="Institutional-Grade Liquidity"
-        subheadline="Uniswap V3-powered automated market maker designed for capital efficiency and deep liquidity."
+        subheadline="Deep liquidity. Minimal slippage."
         theme="blue"
         reversed
         features={[
           {
-            title: "Concentrated liquidity",
-            description: "Capital-efficient position management",
+            title: "Concentrated Liquidity",
+            description: "Uniswap V3-style efficiency for tighter spreads and less slippage",
+            highlight: true,
           },
           {
-            title: "Deep liquidity pools",
-            description: "Minimize slippage on large trades",
+            title: "MEV Protection",
+            description: "Safeguards against sandwich attacks and front-running",
+            highlight: true,
           },
-          {
-            title: "Transparent on-chain pricing",
-            description: "All trades execute on-chain",
-          },
-          {
-            title: "Open-source contracts",
-            description: "Audited smart contracts you can verify",
-          },
-          {
-            title: "MEV-resistant execution",
-            description: "Protected from front-running attacks",
-          },
+          { title: "On-chain transparency" },
+          { title: "Audited contracts" },
         ]}
         visual={<CodeBlock />}
         link={{
@@ -177,27 +162,26 @@ export function LandingPage() {
         id="bridge"
         badge="Cross-Chain Bridge"
         headline="One Token, Multiple Chains"
-        subheadline="Wormhole NTT bridge for seamless cross-chain transfers between Solana and Polygon."
+        subheadline="Seamless cross-chain transfers."
         theme="cyan"
         features={[
           {
-            title: "Instant transfers",
-            description: "Move tokens between Solana and Polygon",
+            title: "Solana + Polygon",
+            description: "Move your tokens seamlessly between chains in seconds with our Wormhole NTT integration",
+            highlight: true,
           },
           {
-            title: "7 supported tokens",
-            description: "vSPACEX, vANTHROPIC, vOPENAI, and more",
+            title: "Enterprise Security",
+            description: "Built on Wormhole infrastructure with rate limiting and secure lock/mint mechanics",
+            highlight: true,
           },
-          {
-            title: "Secure lock/mint mechanics",
-            description: "Built-in rate limiting for safety",
-          },
-          {
-            title: "Enterprise-grade security",
-            description: "Powered by Wormhole infrastructure",
-          },
+          { title: "7 tokens supported" },
         ]}
         visual={<ChainDiagram />}
+        link={{
+          text: "Wormhole NTT Docs",
+          href: "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/",
+        }}
       />
 
       {/* CTA Section */}
@@ -217,7 +201,7 @@ export function LandingPage() {
             tokens.
           </p>
           <button
-            onClick={openWaitlistModal}
+            onClick={handleJoinWaitlist}
             className="group relative rounded-lg bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 px-8 py-3 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25"
           >
             Join Waitlist
@@ -231,8 +215,8 @@ export function LandingPage() {
 
       {/* Waitlist Modal */}
       {showWaitlistModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm">
+          <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-xl border border-[var(--border)] bg-[var(--background)] p-5 sm:p-6 max-h-[85vh] overflow-y-auto shadow-2xl">
             {/* Close button */}
             <button
               onClick={closeWaitlistModal}
@@ -260,44 +244,38 @@ export function LandingPage() {
               Get early access to trade synthetic pre-IPO tokens.
             </p>
 
-            {isEmbedded ? (
-              <form onSubmit={handleEmailSignup} className="flex flex-col gap-3">
-                <input
-                  type="text"
-                  placeholder="First name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  autoComplete="given-name"
-                  className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
-                />
-                {error && (
-                  <p className="text-left text-sm text-red-500" role="alert">
-                    {error}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="group relative flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-60"
-                >
-                  {submitting ? "Signing up..." : "Sign up with email"}
-                </button>
-              </form>
-            ) : (
-              <div className="flex justify-center">
-                <GoogleSignInButton />
-              </div>
-            )}
+            <form onSubmit={handleEmailSignup} className="flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                autoComplete="given-name"
+                className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-3 sm:py-2.5 text-base sm:text-sm min-h-[48px] text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-3 sm:py-2.5 text-base sm:text-sm min-h-[48px] text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors focus:border-[var(--foreground)]/30 focus:outline-none"
+              />
+              {error && (
+                <p className="text-left text-sm text-red-500" role="alert">
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="group relative flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 px-5 py-3 sm:py-2.5 min-h-[48px] text-sm font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-60"
+              >
+                {submitting ? "Signing up..." : "Sign up with email"}
+              </button>
+            </form>
           </div>
         </div>
       )}
