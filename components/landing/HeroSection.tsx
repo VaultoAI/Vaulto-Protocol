@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { CompanyMarquee } from "@/components/landing/CompanyMarquee";
 
 interface HeroSectionProps {
@@ -9,25 +8,6 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
-  const [mounted, setMounted] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const checkDark = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    };
-    checkDark();
-
-    const observer = new MutationObserver(checkDark);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   const scrollToFeatures = () => {
     document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -64,16 +44,14 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
         <div className="text-center lg:text-left pt-8 sm:pt-4 lg:pt-0">
           {/* Logo */}
           <div className="animate-scale-in mb-8 flex justify-center lg:justify-start">
-            {mounted && (
-              <Image
-                src={isDark ? "/vaulto-logo-dark.png" : "/vaulto-logo-light.png"}
-                alt="Vaulto"
-                width={180}
-                height={48}
-                priority
-                className="h-12 w-auto"
-              />
-            )}
+            <Image
+              src="/vaulto-logo-light.png"
+              alt="Vaulto"
+              width={180}
+              height={48}
+              priority
+              className="h-12 w-auto"
+            />
           </div>
 
           {/* Tagline */}
@@ -110,16 +88,14 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
 
         {/* Right: Demo image - Desktop only */}
         <div className="hidden lg:block animate-fade-in-up animation-delay-400 relative -ml-12">
-          {mounted && (
-            <Image
-              src={isDark ? "/demo-dark.png" : "/demo-light.png"}
-              alt="Vaulto Platform"
-              width={1400}
-              height={1176}
-              priority
-              className="w-[130%] max-w-none"
-            />
-          )}
+          <Image
+            src="/demo-light.png"
+            alt="Vaulto Platform"
+            width={1400}
+            height={1176}
+            priority
+            className="w-[130%] max-w-none"
+          />
         </div>
       </div>
 
