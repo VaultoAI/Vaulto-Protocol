@@ -27,6 +27,23 @@ export function LandingPage() {
   const [submitting, setSubmitting] = useState(false);
   const googleFormRef = useRef<HTMLFormElement>(null);
 
+  // Force light mode - remove dark class and prevent it from being added
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.remove("dark");
+
+    // Observe and remove dark class if anything tries to add it
+    const observer = new MutationObserver(() => {
+      if (html.classList.contains("dark")) {
+        html.classList.remove("dark");
+      }
+    });
+
+    observer.observe(html, { attributes: true, attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     setIsEmbedded(isEmbeddedBrowser());
   }, []);
