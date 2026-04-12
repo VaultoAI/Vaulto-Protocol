@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
-import { fetchEtfPositions } from "@/lib/vaulto-api/etf";
-import {
-  isVaultoApiConfigured,
-  getVaultoApiToken,
-  getVaultoApiConfigError,
-  getVaultoApiDebugInfo,
-} from "@/lib/vaulto-api/config";
+import { getPositions } from "@/lib/alpaca/client";
 
 /**
  * GET /api/etf/positions
  *
- * Proxy to Vaulto-API for fetching user's ETF positions.
+ * Vaulto API route — fetches user's ETF positions via Alpaca.
  */
 export async function GET() {
   try {
@@ -35,21 +29,36 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check Vaulto API configuration
-    if (!isVaultoApiConfigured()) {
-      const errorMsg = getVaultoApiConfigError();
-      console.error("[ETF Positions] Config error:", errorMsg, getVaultoApiDebugInfo());
-      return NextResponse.json(
-        {
-          error: "Service temporarily unavailable",
-          ...(process.env.NODE_ENV === "development" && { details: errorMsg }),
-        },
-        { status: 503 }
-      );
+    // Fetch positions from Alpaca
+    const alpacaPositions = await getPositions();
+
+    // Map to frontend EtfPosition shape
+    const positions = alpacaPositions.map((p) => ({
+      id: `${p.symbol}-position`,
+      symbol: p.symbol,
+      qty: p.qty,
+      avgEntryPrice: p.avgEntryPrice,
+      currentPrice: p.currentPrice,
+      costBasis: p.costBasis,
+      marketValue: p.marketValue,
+      unrealizedPl: p.unrealizedPl,
+      unrealizedPlPercent: p.unrealizedPlPercent,
+      lastSyncedAt: new Date().toISOString(),
+    }));
+
+    // Calculate totals
+    const totals = {
+      costBasis: positions.reduce((sum, p) => sum + p.costBasis, 0),
+      marketValue: positions.reduce((sum, p) => sum + p.marketValue, 0),
+      unrealizedPl: positions.reduce((sum, p) => sum + p.unrealizedPl, 0),
+      unrealizedPlPercent: 0,
+    };
+
+    if (totals.costBasis > 0) {
+      totals.unrealizedPlPercent = (totals.unrealizedPl / totals.costBasis) * 100;
     }
 
-    const positions = await fetchEtfPositions(getVaultoApiToken(), user.id);
-    return NextResponse.json(positions);
+    return NextResponse.json({ positions, totals });
   } catch (error) {
     console.error("[ETF Positions] Error:", error);
     return NextResponse.json(
