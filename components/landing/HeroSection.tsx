@@ -55,10 +55,10 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
           </div>
 
           {/* Tagline */}
-          <h1 className="animate-fade-in-up animation-delay-200 mb-1 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-[var(--foreground)]">
+          <h1 className="animate-fade-in-up animation-delay-200 mb-1 text-[1.7rem] sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-[var(--foreground)] whitespace-nowrap">
             Trade Private Companies
           </h1>
-          <h1 className="animate-fade-in-up animation-delay-300 mb-6 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 bg-clip-text text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-transparent pb-1">
+          <h1 className="animate-fade-in-up animation-delay-300 mb-6 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 bg-clip-text text-[1.7rem] sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-transparent pb-1 whitespace-nowrap">
             Before They Go Public
           </h1>
 
