@@ -46,8 +46,8 @@ export function TokenTicker() {
   }, [prices.length]);
 
   return (
-    <div className="rounded-xl bg-gradient-to-br from-[var(--foreground)]/[0.02] to-transparent">
-      <div className="mb-2 flex items-center justify-between text-xs text-[var(--muted)] px-4 pt-4">
+    <div className="space-y-3">
+      <div className="mb-4 flex items-center justify-between text-xs text-[var(--muted)]">
         <span>Token</span>
         <div className="flex gap-8">
           <span>Price</span>
@@ -57,9 +57,9 @@ export function TokenTicker() {
       {prices.map((token, index) => (
         <div
           key={token.symbol}
-          className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ${
-            index !== prices.length - 1 ? "border-b border-[var(--border)]/50" : "pb-4"
-          } ${pulseIndex === index ? "bg-blue-500/5" : ""}`}
+          className={`flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-3 transition-all duration-300 ${
+            pulseIndex === index ? "border-blue-500/50 shadow-lg shadow-blue-500/10" : ""
+          }`}
         >
           <div className="flex items-center gap-3">
             <CompanyLogo name={token.companyName} size={32} />
@@ -69,15 +69,15 @@ export function TokenTicker() {
           </div>
           <div className="flex items-center gap-8">
             <span
-              className={`font-mono font-semibold text-[var(--foreground)] transition-all ${
+              className={`font-mono text-[var(--foreground)] transition-all ${
                 pulseIndex === index ? "scale-105" : ""
               }`}
             >
               ${token.price.toFixed(2)}
             </span>
             <span
-              className={`w-16 text-right font-mono font-medium text-sm ${
-                token.change >= 0 ? "text-emerald-500" : "text-red-500"
+              className={`w-16 text-right font-mono text-sm ${
+                token.change >= 0 ? "text-green-500" : "text-red-500"
               }`}
             >
               {token.change >= 0 ? "+" : ""}
@@ -120,11 +120,11 @@ const codeSnippet = `interface IPriceOracleAMM {
 export function CodeBlock() {
   return (
     <div className="overflow-hidden rounded-lg bg-[#0d1117] font-mono text-sm">
-      {/* Window controls - Mac style */}
+      {/* Window controls */}
       <div className="flex items-center gap-2 border-b border-gray-800 px-4 py-3">
-        <div className="h-3 w-3 rounded-full bg-[#FF5F56]" />
-        <div className="h-3 w-3 rounded-full bg-[#FFBD2E]" />
-        <div className="h-3 w-3 rounded-full bg-[#27C93F]" />
+        <div className="h-3 w-3 rounded-full bg-red-500/80" />
+        <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
+        <div className="h-3 w-3 rounded-full bg-green-500/80" />
         <span className="ml-3 text-xs text-gray-500">IPriceOracleAMM.sol</span>
       </div>
 
@@ -154,7 +154,7 @@ function highlightSolidity(line: string) {
     .map((part, i) => {
       if (/^(interface|function|external|view|returns)$/.test(part)) {
         return (
-          <span key={i} className="text-blue-400">
+          <span key={i} className="text-purple-400">
             {part}
           </span>
         );
@@ -196,34 +196,19 @@ const bridgeTokens = [
 
 export function ChainDiagram() {
   const [activeToken, setActiveToken] = useState(0);
-  // Animation phase: 0 = at Solana, 1 = moving to Polygon, 2 = at Polygon, 3 = moving to Solana
-  const [phase, setPhase] = useState(0);
+  const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setPhase((prev) => {
-        const next = (prev + 1) % 4;
-        // Change token when starting a new journey (phases 1 and 3)
-        if (next === 1 || next === 3) {
-          setActiveToken((t) => (t + 1) % bridgeTokens.length);
-        }
-        return next;
-      });
-    }, 2500); // 2.5 seconds per phase for smooth pacing
+      setAnimating(true);
+      setTimeout(() => {
+        setActiveToken((prev) => (prev + 1) % bridgeTokens.length);
+        setAnimating(false);
+      }, 1000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, []);
-
-  // Calculate left position as percentage (0% = at Solana, 100% - token width = at Polygon)
-  const getLeftPosition = () => {
-    switch (phase) {
-      case 0: return 0; // At Solana
-      case 1: return 100; // Moving to Polygon
-      case 2: return 100; // At Polygon
-      case 3: return 0; // Moving back to Solana
-      default: return 0;
-    }
-  };
 
   return (
     <div className="flex flex-col items-center gap-8 py-4">
@@ -231,7 +216,7 @@ export function ChainDiagram() {
       <div className="flex w-full items-center justify-between">
         {/* Solana */}
         <div className="flex flex-col items-center gap-2">
-          <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-black shadow-lg transition-all duration-500 ${phase === 0 || phase === 3 ? "ring-2 ring-cyan-500/50 scale-105" : ""}`}>
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black shadow-lg">
             <svg viewBox="0 0 397.7 311.7" className="h-9 w-9" fill="none">
               <linearGradient id="solana-grad-1" x1="360.879" y1="351.455" x2="141.213" y2="-69.294" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 -1 0 314)">
                 <stop offset="0" stopColor="#00FFA3"/>
@@ -257,26 +242,24 @@ export function ChainDiagram() {
         <div className="relative flex flex-1 items-center justify-center px-4">
           <div className="h-0.5 w-full bg-gradient-to-r from-[#9945FF] via-cyan-500 to-[#8247E5]" />
 
-          {/* Animated token with real logo - uses percentage-based left positioning */}
+          {/* Animated token with real logo */}
           <div
-            className="absolute flex h-10 w-10 items-center justify-center rounded-full bg-[var(--card-bg)] shadow-lg ring-2 ring-cyan-500/50"
-            style={{
-              left: `calc(${getLeftPosition()}% - ${getLeftPosition() === 100 ? '40px' : '0px'})`,
-              transition: 'left 2s ease-in-out',
-            }}
+            className={`absolute flex h-10 w-10 items-center justify-center rounded-full bg-[var(--card-bg)] shadow-lg ring-2 ring-cyan-500/50 transition-all duration-1000 ${
+              animating ? "translate-x-16 scale-110" : "-translate-x-16"
+            }`}
           >
             <CompanyLogo name={bridgeTokens[activeToken].companyName} size={32} />
           </div>
 
-          {/* Bridge logo in center */}
-          <div className={`absolute flex h-12 w-12 items-center justify-center rounded-full border-2 border-cyan-500/30 bg-[var(--card-bg)] overflow-hidden transition-all duration-300 ${phase === 1 || phase === 3 ? "scale-110 border-cyan-500/60" : ""}`}>
-            <img src="/bridge-logo.png" alt="Bridge" className="h-10 w-10 object-contain" />
+          {/* Wormhole logo in center */}
+          <div className="absolute flex h-12 w-12 items-center justify-center rounded-full border-2 border-cyan-500/30 bg-[var(--card-bg)]">
+            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600" />
           </div>
         </div>
 
         {/* Polygon */}
         <div className="flex flex-col items-center gap-2">
-          <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-[#8247E5] shadow-lg transition-all duration-500 ${phase === 1 || phase === 2 ? "ring-2 ring-cyan-500/50 scale-105" : ""}`}>
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#8247E5] shadow-lg">
             <svg viewBox="0 0 38.4 33.5" className="h-8 w-8" fill="white">
               <path d="M29 10.2c-.7-.4-1.6-.4-2.4 0L21 13.5l-3.8 2.1-5.5 3.3c-.7.4-1.6.4-2.4 0l-4.3-2.6c-.7-.4-1.2-1.2-1.2-2.1V10c0-.8.4-1.6 1.2-2.1l4.3-2.5c.7-.4 1.6-.4 2.4 0l4.3 2.6c.7.4 1.2 1.2 1.2 2.1v3.3l3.8-2.2V8c0-.8-.4-1.6-1.2-2.1l-8-4.7c-.7-.4-1.6-.4-2.4 0L1.2 5.9C.4 6.3 0 7.1 0 7.9v9.4c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l5.5-3.2 3.8-2.2 5.5-3.2c.7-.4 1.6-.4 2.4 0l4.3 2.5c.7.4 1.2 1.2 1.2 2.1v4.2c0 .8-.4 1.6-1.2 2.1l-4.3 2.5c-.7.4-1.6.4-2.4 0l-4.3-2.5c-.7-.4-1.2-1.2-1.2-2.1V21l-3.8 2.2v3.3c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l8.1-4.7c.7-.4 1.2-1.2 1.2-2.1V17c0-.8-.4-1.6-1.2-2.1L29 10.2z"/>
             </svg>

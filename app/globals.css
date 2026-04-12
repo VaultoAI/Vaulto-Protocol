@@ -181,19 +181,16 @@ body {
 
 @keyframes marquee {
   0% {
-    transform: translate3d(0, 0, 0);
+    transform: translateX(0);
   }
   100% {
-    transform: translate3d(-50%, 0, 0);
+    transform: translateX(-50%);
   }
 }
 
 .animate-marquee {
   animation: marquee 30s linear infinite;
-  transform: translateZ(0);
-  backface-visibility: hidden;
   will-change: transform;
-  contain: layout style paint;
 }
 
 .animate-scale-in {
