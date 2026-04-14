@@ -44,24 +44,12 @@ import {
   formatPrice,
   getValuationHistory,
 } from "@/lib/vaulto/companyUtils";
-import Link from "next/link";
 
 interface CompanyDetailPageProps {
   company: PrivateCompany;
   prefetchedImpliedData?: ImpliedValuationHistoryResponse | null;
   prefetchedTotalVolume?: number | null;
 }
-
-// Jupiter swap links for tradable companies
-const JUPITER_LINKS: Record<string, string> = {
-  "SpaceX": "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
-  "Anthropic": "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=Pren1FvFX6J3E4kXhJuCiAD5aDmGEb7qJRncwA8Lkhw",
-  "OpenAI": "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
-  "Anduril": "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=PresTj4Yc2bAR197Er7wz4UUKSfqt6FryBEdAriBoQB",
-  "Kalshi": "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=PreLWGkkeqG1s4HEfFZSy9moCrJ7btsHuUtfcCeoRua",
-  "Polymarket": "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=Pre8AREmFPtoJFT8mQSXQLh56cwJmM7CFDRuoGBZiUP",
-  "xAI": "https://jup.ag/swap?sell=PreC1KtJ1sBPPqaeeqL6Qb15GTLCYVvyYEwxhdfTwfx&buy=PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
-};
 
 /**
  * Full company detail page matching Robinhood design.
@@ -370,43 +358,9 @@ export function CompanyDetailPage({
                 </div>
               </div>
             )}
-            {/* Trade on Jupiter button - desktop */}
-            {JUPITER_LINKS[company.name] && (
-              <a
-                href={JUPITER_LINKS[company.name]}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 w-full flex items-center justify-center gap-2 py-4 px-4 bg-black text-white shadow-sm ring-1 ring-black/10 hover:bg-gray-800 dark:bg-white dark:text-black dark:ring-white/20 dark:hover:bg-gray-100 text-lg font-bold rounded-xl transition-colors"
-              >
-                Trade Now
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-              </a>
-            )}
           </div>
         </div>
 
-        {/* Mobile-only Trade on Jupiter button */}
-        {JUPITER_LINKS[company.name] && (
-          <div className="lg:hidden w-full -mt-4">
-            <a
-              href={JUPITER_LINKS[company.name]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-black text-white shadow-sm ring-1 ring-black/10 hover:bg-gray-800 dark:bg-white dark:text-black dark:ring-white/20 dark:hover:bg-gray-100 text-lg font-bold rounded-xl transition-colors"
-            >
-              Trade Now
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </a>
-          </div>
-        )}
       </div>
     </div>
   );

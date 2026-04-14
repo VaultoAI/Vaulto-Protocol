@@ -7,8 +7,8 @@ import { getCompanyCategory } from "@/lib/vaulto/companyUtils";
 import type { Category } from "@/lib/vaulto/companyUtils";
 import { ExploreAssetsNav } from "@/components/ExploreAssetsNav";
 import { ExploreAssetsGrid } from "@/components/ExploreAssetsGrid";
-import { IndexesSection } from "@/components/IndexesSection";
 import { ExploreTopSection } from "@/components/ExploreTopSection";
+import { IndexesSection } from "@/components/IndexesSection";
 import type { VaultoIndex, IndexPricesMap } from "@/lib/vaulto/indexes";
 
 type SortOption = "Most Popular" | "Price: High to Low" | "Price: Low to High" | "Name: A-Z";

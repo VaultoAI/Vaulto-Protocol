@@ -87,7 +87,7 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
         </div>
 
         {/* Right: Demo image - Desktop only */}
-        <div className="hidden lg:block animate-fade-in-up animation-delay-400 relative -ml-12">
+        <div className="hidden lg:block animate-fade-in-up animation-delay-400 relative -ml-24">
           <Image
             src="/demo-light.png"
             alt="Vaulto Platform"

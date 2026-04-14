@@ -147,7 +147,7 @@ export function PredictionMarketTradeWidget({
           }}
           className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
             activeTab === "long"
-              ? "text-green border-b-2 border-green"
+              ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
               : "text-muted hover:text-foreground"
           }`}
         >
@@ -267,12 +267,12 @@ export function PredictionMarketTradeWidget({
               <div
                 className={`rounded-lg p-4 text-center ${
                   isLong
-                    ? "bg-green/10 border border-green/20"
+                    ? "bg-blue-600/10 border border-blue-600/20"
                     : "bg-red/10 border border-red/20"
                 }`}
               >
                 <svg
-                  className={`mx-auto h-8 w-8 ${isLong ? "text-green" : "text-red"}`}
+                  className={`mx-auto h-8 w-8 ${isLong ? "text-blue-600 dark:text-blue-400" : "text-red"}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -280,7 +280,7 @@ export function PredictionMarketTradeWidget({
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <p className={`mt-2 font-medium ${isLong ? "text-green" : "text-red"}`}>
+                <p className={`mt-2 font-medium ${isLong ? "text-blue-600 dark:text-blue-400" : "text-red"}`}>
                   {isLong ? "Long" : "Short"} Position Opened
                 </p>
                 <p className="mt-1 text-sm text-muted">
@@ -329,7 +329,7 @@ export function PredictionMarketTradeWidget({
                       <span className="text-sm text-muted">Potential Payout</span>
                       <span
                         className={`text-sm font-medium ${
-                          isLong ? "text-green" : "text-red"
+                          isLong ? "text-blue-600 dark:text-blue-400" : "text-red"
                         }`}
                       >
                         ${potentialPayout.toFixed(2)}
@@ -355,9 +355,9 @@ export function PredictionMarketTradeWidget({
                     usdcAmount <= 0 ||
                     usdcAmount > usdcBalance
                   }
-                  className={`w-full py-3 rounded-full text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     isLong
-                      ? "bg-green text-white hover:bg-green/90"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
                       : "bg-red text-white hover:bg-red/90"
                   }`}
                 >
