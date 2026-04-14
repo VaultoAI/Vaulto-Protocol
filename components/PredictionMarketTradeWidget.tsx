@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol } from "@/lib/vaulto/companies";
 import { getDemoBalance } from "@/lib/swap/demo-state";
+import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
 import {
   usePredictionMarketData,
   formatVolume,
@@ -11,7 +13,11 @@ import {
   formatSpreadPercent,
 } from "@/hooks/usePredictionMarketData";
 import { buyPredictionMarketPosition } from "@/lib/polymarket/demo-trading";
-import { getPolymarketEventUrl } from "@/lib/polymarket/ipo-valuations";
+import { getPolymarketEventUrl, formatValuationPrecise } from "@/lib/polymarket/ipo-valuations";
+import {
+  getImpliedValuationSlug,
+  type ImpliedValuationResponse,
+} from "@/lib/polymarket/implied-valuations";
 
 interface PredictionMarketTradeWidgetProps {
   company: PrivateCompany;
@@ -31,11 +37,27 @@ export function PredictionMarketTradeWidget({
   const symbol = getSyntheticSymbol(company.name);
   const { data, isLoading, error } = usePredictionMarketData(eventSlug);
 
+  // Fetch implied valuation from the implied-valuations API (same as IPO visualization)
+  const impliedValuationSlug = getImpliedValuationSlug(company.name);
+  const { data: impliedData } = useQuery({
+    queryKey: ["implied-valuation", impliedValuationSlug],
+    queryFn: async () => {
+      if (!impliedValuationSlug) return null;
+      const res = await fetch(`/api/implied-valuations/${impliedValuationSlug}`);
+      if (!res.ok) return null;
+      return res.json() as Promise<ImpliedValuationResponse>;
+    },
+    enabled: !!impliedValuationSlug,
+    staleTime: 60000, // 1 minute
+  });
+
   const [activeTab, setActiveTab] = useState<"long" | "short">("long");
   const [amount, setAmount] = useState("");
   const [tradeState, setTradeState] = useState<TradeState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<{ shares: number; txHash: string } | null>(null);
+  const [logoError, setLogoError] = useState(false);
+  const polymarketLogoUrl = getProxiedFaviconUrl("polymarket.com");
 
   const usdcBalance = getDemoBalance("USDC");
   const usdcAmount = parseFloat(amount) || 0;
@@ -51,6 +73,9 @@ export function PredictionMarketTradeWidget({
   const bestReturn = isLong
     ? data?.valuation.bestLongReturn ?? 0
     : data?.valuation.bestShortReturn ?? 0;
+
+  // Get implied valuation from the implied-valuations API (consistent with IPO visualization)
+  const impliedValuation = impliedData?.impliedValuationUsd ?? 0;
 
   // Calculate trade estimates
   const sharesToReceive = positionCost > 0 ? usdcAmount / positionCost : 0;
@@ -144,6 +169,50 @@ export function PredictionMarketTradeWidget({
       </div>
 
       <div className="p-5 space-y-4">
+        {/* Polymarket Event Link */}
+        <a
+          href={eventUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
+        >
+          <div className="flex items-center gap-2">
+            {logoError ? (
+              <span className="w-5 h-5 rounded bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                P
+              </span>
+            ) : (
+              <img
+                src={polymarketLogoUrl}
+                alt="Polymarket"
+                width={20}
+                height={20}
+                className="w-5 h-5 rounded object-cover"
+                onError={() => setLogoError(true)}
+              />
+            )}
+            <div>
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                {data?.event.name || "Polymarket Event"}
+              </span>
+              <p className="text-xs text-blue-600/70 dark:text-blue-400/70">IPO Market Cap</p>
+            </div>
+          </div>
+          <svg
+            className="w-4 h-4 text-blue-400 dark:text-blue-500 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
+        </a>
+
         {/* Loading state */}
         {isLoading && (
           <div className="animate-pulse space-y-3">
@@ -164,6 +233,12 @@ export function PredictionMarketTradeWidget({
         {data && !isLoading && (
           <>
             <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted">Implied Valuation</span>
+                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  {formatValuationPrecise(impliedValuation)}
+                </span>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted">Position Cost</span>
                 <span className="text-sm font-medium text-foreground">
@@ -223,12 +298,7 @@ export function PredictionMarketTradeWidget({
               <>
                 {/* Amount input */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground">Amount (USDC)</span>
-                    <span className="text-xs text-muted">
-                      Balance: ${usdcBalance.toFixed(2)}
-                    </span>
-                  </div>
+                  <span className="text-sm font-medium text-foreground block mb-1">Amount (USDC)</span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -295,31 +365,6 @@ export function PredictionMarketTradeWidget({
                     ? "Processing..."
                     : `${isLong ? "Long" : "Short"} ${symbol}`}
                 </button>
-
-                {/* Polymarket link */}
-                <div className="text-center">
-                  <a
-                    href={eventUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted hover:text-foreground inline-flex items-center gap-1"
-                  >
-                    View on Polymarket
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                  </a>
-                </div>
               </>
             )}
           </>
