@@ -12,21 +12,13 @@ import {
   getValuationSparkline,
 } from "@/lib/vaulto/companyUtils";
 import type { PriceChange24h } from "@/lib/polymarket/implied-valuations";
+import { hasPrestockToken } from "@/lib/prestock/tokens";
+import { getCompanyPredictionMarket } from "@/lib/polymarket/ipo-valuations";
 
 interface AssetCardProps {
   company: PrivateCompany;
   priceChange24h?: PriceChange24h;
 }
-
-// Companies that are tradable on Jupiter
-const TRADABLE_COMPANIES = new Set([
-  "SpaceX",
-  "Anthropic",
-  "OpenAI",
-  "Anduril",
-  "Kalshi",
-  "Polymarket",
-]);
 
 /**
  * Asset card matching Ondo Finance design.
@@ -38,17 +30,25 @@ export function AssetCard({ company }: AssetCardProps) {
   const price = getCurrentPrice(company);
   const { changeAmount, changePercent, isPositive } = getDailyChange(company);
   const sparklineData = getValuationSparkline(company);
-  const isTradable = TRADABLE_COMPANIES.has(company.name);
+  const hasToken = hasPrestockToken(company.name);
+  const hasPredictionMarket = getCompanyPredictionMarket(company.name) !== null;
 
   return (
     <Link href={`/explore/${getCompanySlug(company.name)}`} className="block">
       <div className="group relative rounded-xl border border-border bg-card-bg p-5 transition-all duration-200 hover:shadow-md hover:border-border/80 cursor-pointer">
-        {/* Tradable indicator */}
-        {isTradable && (
-          <span className="absolute top-3 right-3 inline-flex items-center rounded-md bg-badge-bg px-2 py-0.5 text-[11px] font-medium text-badge-text">
-            LIVE
-          </span>
-        )}
+        {/* Status indicators */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {hasToken && (
+            <span className="inline-flex items-center rounded-md bg-badge-bg px-2 py-0.5 text-[11px] font-medium text-badge-text">
+              LIVE
+            </span>
+          )}
+          {hasPredictionMarket && (
+            <span className="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400">
+              POLY
+            </span>
+          )}
+        </div>
 
         {/* Header: Logo + Ticker + Name */}
         <div className="flex items-center gap-3 mb-4">
