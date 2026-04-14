@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
-import { getSyntheticSymbol, formatValuation, getCompanySlug } from "@/lib/vaulto/companies";
+import { getSyntheticSymbol, getCompanySlug, formatValuation } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
+import { HoldingsAvatars } from "@/components/HoldingsAvatars";
+import type { VaultoIndex, IndexPricesMap } from "@/lib/vaulto/indexes";
+import { getIndexPrice, getIndexChange } from "@/lib/vaulto/indexes";
 import {
   getDailyChange,
   getCurrentPrice,

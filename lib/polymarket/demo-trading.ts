@@ -488,6 +488,90 @@ export async function buyOverallIPOPosition(
   };
 }
 
+// ============================================================================
+// Prediction Market Trading (Company-level Long/Short)
+// ============================================================================
+
+export interface PredictionMarketTradeParams {
+  company: string;
+  eventSlug: string;
+  direction: "long" | "short";
+  usdcAmount: number;
+}
+
+export interface PredictionMarketTradeResult {
+  success: boolean;
+  txHash: string;
+  error?: string;
+  shares: number;
+  pricePerShare: number;
+  totalCost: number;
+  symbol: string;
+  direction: "long" | "short";
+}
+
+/**
+ * Buy a prediction market position (Long or Short) on a company's IPO.
+ *
+ * This is a simplified version that creates a single position symbol
+ * rather than distributing across bands. Uses a mock price based on
+ * typical market pricing.
+ */
+export async function buyPredictionMarketPosition(
+  params: PredictionMarketTradeParams
+): Promise<PredictionMarketTradeResult> {
+  const { company, eventSlug, direction, usdcAmount } = params;
+
+  // Check USDC balance
+  if (!hasSufficientBalance("USDC", usdcAmount)) {
+    return {
+      success: false,
+      txHash: "",
+      error: "Insufficient USDC balance",
+      shares: 0,
+      pricePerShare: 0,
+      totalCost: usdcAmount,
+      symbol: "",
+      direction,
+    };
+  }
+
+  // For prediction markets, typical prices range from 0.40 to 0.70
+  // Long positions tend to be priced around 0.55-0.65
+  // Short positions are the inverse: 1 - long price
+  const baseLongPrice = 0.55 + Math.random() * 0.1; // 0.55-0.65
+  const pricePerShare = direction === "long" ? baseLongPrice : 1 - baseLongPrice;
+
+  // Calculate shares: amount / price
+  const shares = usdcAmount / pricePerShare;
+
+  // Create a clean symbol for the position
+  const shortName = company.replace(/[^a-zA-Z]/g, "").slice(0, 8).toUpperCase();
+  const dirPrefix = direction === "long" ? "L" : "S";
+  const symbol = `pm${shortName}-${dirPrefix}`;
+
+  await simulateNetworkDelay();
+
+  // Record transaction
+  const tx = recordDemoTransaction({
+    type: "swap",
+    tokenIn: "USDC",
+    tokenOut: symbol,
+    amountIn: usdcAmount,
+    amountOut: shares,
+  });
+
+  return {
+    success: true,
+    txHash: tx.txHash,
+    shares,
+    pricePerShare,
+    totalCost: usdcAmount,
+    symbol,
+    direction,
+  };
+}
+
 /**
  * Get user's IPO band positions from demo balances.
  */

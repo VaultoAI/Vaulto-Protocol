@@ -15,6 +15,18 @@ import {
   getImpliedValuationSlug,
   type ImpliedValuationHistoryResponse,
 } from "@/lib/polymarket/implied-valuations";
+import { getCompanyPredictionMarket } from "@/lib/polymarket/ipo-valuations";
+
+// Lazy-load PredictionMarketTradeWidget to reduce initial bundle
+const PredictionMarketTradeWidget = dynamic(
+  () => import("@/components/PredictionMarketTradeWidget").then((mod) => mod.PredictionMarketTradeWidget),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-80 animate-pulse rounded-xl border border-border bg-card-bg" />
+    ),
+  }
+);
 
 // Lazy-load TradeWidget to reduce initial bundle
 const TradeWidget = dynamic(
@@ -89,6 +101,9 @@ export function CompanyDetailPage({
   // Check if company has prestock (live) data
   const hasLiveData = hasPrestockToken(company.name);
   const prestockAddress = getPrestockAddress(company.name);
+
+  // Check if company has a prediction market
+  const predictionMarket = getCompanyPredictionMarket(company.name);
 
   // State for live chart
   const [liveHoverData, setLiveHoverData] = useState<LiveHoverData | null>(null);
@@ -330,22 +345,31 @@ export function CompanyDetailPage({
 
         </div>
 
-        {/* Right side: Trade Widget (Coming Soon) - hidden on mobile */}
+        {/* Right side: Trade Widget - hidden on mobile */}
         <div className="hidden lg:block w-full lg:w-[340px] shrink-0">
           <div className="lg:sticky lg:top-8">
-            <div className="relative">
-              {/* Coming Soon Overlay */}
-              <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
-                <div className="text-center px-4 md:px-6 py-3 md:py-4">
-                  <p className="text-black/70 dark:text-white/90 uppercase tracking-widest text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">Coming Soon</p>
-                  <p className="text-black dark:text-white text-base md:text-lg font-semibold">Trading</p>
+            {predictionMarket ? (
+              /* Active Prediction Market Widget */
+              <PredictionMarketTradeWidget
+                company={company}
+                eventSlug={predictionMarket.eventSlug}
+              />
+            ) : (
+              /* Fallback: Coming Soon Widget for companies without prediction markets */
+              <div className="relative">
+                {/* Coming Soon Overlay */}
+                <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-[2px] rounded-xl z-10 flex items-center justify-center">
+                  <div className="text-center px-4 md:px-6 py-3 md:py-4">
+                    <p className="text-black/70 dark:text-white/90 uppercase tracking-widest text-[10px] md:text-xs font-medium mb-0.5 md:mb-1">Coming Soon</p>
+                    <p className="text-black dark:text-white text-base md:text-lg font-semibold">Trading</p>
+                  </div>
+                </div>
+                {/* Dimmed Widget */}
+                <div className="blur-[1px] opacity-70 pointer-events-none">
+                  <TradeWidget company={company} />
                 </div>
               </div>
-              {/* Dimmed Widget */}
-              <div className="blur-[1px] opacity-70 pointer-events-none">
-                <TradeWidget company={company} />
-              </div>
-            </div>
+            )}
             {/* Trade on Jupiter button - desktop */}
             {JUPITER_LINKS[company.name] && (
               <a

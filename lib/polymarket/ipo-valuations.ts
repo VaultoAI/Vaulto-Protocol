@@ -386,3 +386,28 @@ export function getPolymarketUrl(slug: string): string {
 export function getPolymarketEventUrl(eventSlug: string): string {
   return `https://polymarket.com/event/${eventSlug}`;
 }
+
+/**
+ * Map a company name to its prediction market event data.
+ * Returns null if the company doesn't have a prediction market.
+ */
+export function getCompanyPredictionMarket(companyName: string): { eventSlug: string; company: string } | null {
+  const normalizedName = companyName.toLowerCase();
+  const event = IPO_EVENTS.find(
+    (e) => e.company.toLowerCase() === normalizedName
+  );
+
+  if (!event) return null;
+
+  return {
+    eventSlug: event.slug,
+    company: event.company,
+  };
+}
+
+/**
+ * Get all company names that have prediction markets.
+ */
+export function getCompaniesWithPredictionMarkets(): string[] {
+  return IPO_EVENTS.map((e) => e.company);
+}

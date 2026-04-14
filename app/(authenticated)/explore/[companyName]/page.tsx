@@ -34,14 +34,19 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
   if (hasImpliedValuationData(company.name)) {
     const slug = getImpliedValuationSlug(company.name);
     if (slug) {
-      // Fetch history and current valuation in parallel
-      const [historyData, currentData] = await Promise.all([
-        getImpliedValuationHistory(slug, "ALL"),
-        getImpliedValuation(slug),
-      ]);
+      try {
+        // Fetch history and current valuation in parallel
+        const [historyData, currentData] = await Promise.all([
+          getImpliedValuationHistory(slug, "ALL"),
+          getImpliedValuation(slug),
+        ]);
 
-      prefetchedImpliedData = historyData;
-      prefetchedTotalVolume = currentData?.totalVolume ?? null;
+        prefetchedImpliedData = historyData;
+        prefetchedTotalVolume = currentData?.totalVolume ?? null;
+      } catch (error) {
+        // Silently fail - the client will fetch this data if needed
+        console.error("Failed to prefetch implied valuation data:", error);
+      }
     }
   }
 
