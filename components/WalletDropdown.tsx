@@ -19,6 +19,8 @@ import {
   User,
   LogOut,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
@@ -41,7 +43,16 @@ export function WalletDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isFunding, setIsFunding] = useState(false);
+  const [isDark, setIsDark] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Initialize theme state
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const prefersDark =
+      stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    setIsDark(prefersDark);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -139,6 +150,13 @@ export function WalletDropdown() {
     await logout();
   };
 
+  const handleThemeToggle = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  };
+
   const walletAddress = tradingWallet?.address || embeddedWallet?.address;
   const truncatedAddress = walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
@@ -212,8 +230,12 @@ export function WalletDropdown() {
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="fixed inset-x-0 top-16 z-50 max-h-[calc(85vh-4rem)] overflow-y-auto border-t border-gray-200 bg-background shadow-xl dark:border-zinc-700 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 sm:rounded-xl sm:border-t-0 sm:ring-1 sm:ring-black/10 dark:sm:ring-white/10">
-          {/* Wallet Info Header */}
-          <div className="border-b border-gray-100 px-4 py-4 dark:border-zinc-800 sm:py-3">
+          {/* Wallet Info Header - clickable to go to profile */}
+          <Link
+            href="/profile"
+            onClick={() => setIsOpen(false)}
+            className="block border-b border-gray-100 px-4 py-4 transition hover:bg-gray-50 active:bg-gray-100 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 sm:py-3"
+          >
             <div className="flex items-center gap-3 sm:gap-2">
               <ProfileAvatar
                 image={profileImage}
@@ -234,7 +256,7 @@ export function WalletDropdown() {
               ${formattedBalance}{" "}
               <span className="text-base font-normal text-gray-500 sm:text-sm">USDC</span>
             </div>
-          </div>
+          </Link>
 
           {/* Menu Items */}
           <div className="py-2 sm:py-1">
@@ -285,6 +307,19 @@ export function WalletDropdown() {
               <User className="h-5 w-5 text-gray-500 sm:h-4 sm:w-4" />
               <span>Account</span>
             </Link>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={handleThemeToggle}
+              className="flex w-full items-center gap-4 px-4 py-3.5 text-base text-gray-700 transition hover:bg-gray-50 active:bg-gray-100 dark:text-gray-200 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 sm:gap-3 sm:py-2.5 sm:text-sm"
+            >
+              {isDark ? (
+                <Sun className="h-5 w-5 text-gray-500 sm:h-4 sm:w-4" />
+              ) : (
+                <Moon className="h-5 w-5 text-gray-500 sm:h-4 sm:w-4" />
+              )}
+              <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+            </button>
 
             {/* Divider */}
             <div className="my-2 border-t border-gray-100 dark:border-zinc-800 sm:my-1" />
