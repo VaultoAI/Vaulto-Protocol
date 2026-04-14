@@ -275,7 +275,7 @@ export const COMPANY_SLUG_MAP: Record<string, string> = {
   Strava: "strava",
   "Fannie Mae": "fannie-mae",
   "Freddie Mac": "freddie-mac",
-  "Clear Street Group": "clear-street-group",
+  "Clear Street": "clear-street-group",
   "Liftoff Mobile": "liftoff-mobile",
   Kraken: "kraken",
   Consensys: "consensys",
