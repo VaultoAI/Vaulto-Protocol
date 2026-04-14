@@ -29,8 +29,11 @@ export async function getNewlyAddedCompanies(count: number = 3): Promise<Private
 
       try {
         // Query private_companies table directly, ordered by id DESC (newest first)
+        // Exclude hidden companies from the results
         const recentCompanies = await prisma.$queryRaw<{ id: number; name: string }[]>`
-          SELECT id, name FROM private_companies ORDER BY id DESC LIMIT ${count}
+          SELECT id, name FROM private_companies
+          WHERE name NOT IN ('Freddie Mac', 'Fannie Mae', 'Beast Industries')
+          ORDER BY id DESC LIMIT ${count}
         `;
 
         if (recentCompanies.length === 0) {

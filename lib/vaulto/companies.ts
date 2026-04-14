@@ -57,6 +57,22 @@ const VAULTO_API_URL = process.env.NEXT_PUBLIC_VAULTO_API_URL
   : "https://api.vaulto.ai/api/private-companies?limit=1000";
 
 /**
+ * Companies to hide from the site.
+ * These will be filtered out from all company listings.
+ */
+const HIDDEN_COMPANIES = [
+  "Freddie Mac",
+  "Fannie Mae",
+  "Beast Industries",
+];
+
+/** Filter out hidden companies from the list. */
+function filterHiddenCompanies(companies: PrivateCompany[]): PrivateCompany[] {
+  const hiddenSet = new Set(HIDDEN_COMPANIES.map((name) => name.toLowerCase()));
+  return companies.filter((c) => !hiddenSet.has(c.name.toLowerCase()));
+}
+
+/**
  * TEMPORARY OVERRIDE: Fix TML $50B round display issues.
  * Removes type and date for the round with $50B post-money valuation.
  * TODO: Remove this once the API data is corrected.
@@ -106,7 +122,8 @@ async function fetchPrivateCompaniesUncached(): Promise<PrivateCompany[]> {
     }
 
     const json = (await res.json()) as PrivateCompaniesResponse;
-    return json.companies ?? [];
+    const companies = json.companies ?? [];
+    return filterHiddenCompanies(companies);
   } catch (error) {
     console.error("Failed to fetch private companies:", error);
     return [];
