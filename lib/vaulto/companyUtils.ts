@@ -1,6 +1,8 @@
 "use client";
 
 import type { PrivateCompany } from "@/lib/vaulto/companies";
+import { hasPrestockToken } from "@/lib/prestock/tokens";
+import { getCompanyPredictionMarket } from "@/lib/polymarket/ipo-valuations";
 
 /**
  * Generate a deterministic pseudo-random number from a string seed.
@@ -246,12 +248,11 @@ export function getNewlyAdded(companies: PrivateCompany[], count: number = 3): P
  */
 export const CATEGORIES = [
   "All assets",
-  "Technology",
-  "AI & ML",
-  "Aerospace",
+  "Tradable",
   "Fintech",
-  "Consumer",
-  "Enterprise",
+  "Technology",
+  "AI ML",
+  "Aerospace",
 ] as const;
 
 export type Category = typeof CATEGORIES[number];
@@ -263,27 +264,28 @@ export function getCompanyCategory(company: PrivateCompany): Category[] {
   const industry = company.industry.toLowerCase();
   const categories: Category[] = ["All assets"];
 
+  // Company is tradable if it has a LIVE (prestock token) or POLY (prediction market) banner
+  const hasLiveBanner = hasPrestockToken(company.name);
+  const hasPolyBanner = getCompanyPredictionMarket(company.name) !== null;
+  if (hasLiveBanner || hasPolyBanner) {
+    categories.push("Tradable");
+  }
+
+  if (industry.includes("fintech") || industry.includes("financial") || industry.includes("payment") || industry.includes("banking")) {
+    categories.push("Fintech");
+  }
   if (industry.includes("tech") || industry.includes("software") || industry.includes("data")) {
     categories.push("Technology");
   }
-  if (industry.includes("ai") || industry.includes("artificial") || industry.includes("machine learning")) {
-    categories.push("AI & ML");
+  if (industry.includes("ai") || industry.includes("artificial") || industry.includes("machine learning") || industry.includes("ml")) {
+    categories.push("AI ML");
   }
   if (industry.includes("aero") || industry.includes("space") || industry.includes("defense")) {
     categories.push("Aerospace");
   }
-  if (industry.includes("fintech") || industry.includes("financial") || industry.includes("payment")) {
-    categories.push("Fintech");
-  }
-  if (industry.includes("consumer") || industry.includes("retail") || industry.includes("commerce")) {
-    categories.push("Consumer");
-  }
-  if (industry.includes("enterprise") || industry.includes("saas") || industry.includes("cloud")) {
-    categories.push("Enterprise");
-  }
 
-  // If no specific category matched, add Technology as default
-  if (categories.length === 1) {
+  // If no specific category matched (besides All assets and Tradable), add Technology as default
+  if (categories.length === 2) {
     categories.push("Technology");
   }
 
