@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { CATEGORIES } from "@/lib/vaulto/companyUtils";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol } from "@/lib/vaulto/companies";
 import { getCompanyCategory } from "@/lib/vaulto/companyUtils";
@@ -14,6 +16,8 @@ import type { VaultoIndex, IndexPricesMap } from "@/lib/vaulto/indexes";
 type SortOption = "Most Popular" | "Price: High to Low" | "Price: Low to High" | "Name: A-Z";
 type ViewMode = "grid" | "list";
 
+const SORT_OPTIONS: SortOption[] = ["Most Popular", "Price: High to Low", "Price: Low to High", "Name: A-Z"];
+
 interface ExplorePageClientProps {
   companies: PrivateCompany[];
   indexes: VaultoIndex[];
@@ -26,15 +30,36 @@ interface ExplorePageClientProps {
  * and renders sections in the correct order.
  */
 export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyAdded }: ExplorePageClientProps) {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<Category>("All assets");
-  const [sortBy, setSortBy] = useState<SortOption>("Most Popular");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const searchParams = useSearchParams();
+  const search = searchParams?.get("q") || "";
+
+  // Read category from URL params, fallback to state for ExploreAssetsNav compatibility
+  const categoryParam = searchParams?.get("category");
+  const urlCategory = categoryParam && CATEGORIES.includes(categoryParam as Category)
+    ? (categoryParam as Category)
+    : "All assets";
+  const [activeCategory, setActiveCategory] = useState<Category>(urlCategory);
+
+  // Sync state with URL param changes
+  useEffect(() => {
+    setActiveCategory(urlCategory);
+  }, [urlCategory]);
+
+  // Read view mode and sort from URL params
+  const viewParam = searchParams?.get("view");
+  const viewMode: ViewMode = viewParam === "list" ? "list" : "grid";
+
+  const sortParam = searchParams?.get("sort");
+  const sortBy: SortOption = sortParam && SORT_OPTIONS.includes(sortParam as SortOption)
+    ? (sortParam as SortOption)
+    : "Most Popular";
+
+  // Track if user is searching (hide top sections entirely)
+  const isSearching = search.trim() !== "";
 
   // Track if user is actively interacting with nav controls (mobile only behavior)
-  // Hide indexes/trending sections when: searching, non-default sort selected, OR list view selected
-  const hasActiveNavInteraction = search.trim() !== "" || sortBy !== "Most Popular" || viewMode === "list";
+  // Hide indexes/trending sections on mobile when: non-default sort selected OR list view selected
+  const hasActiveNavInteraction = sortBy !== "Most Popular" || viewMode === "list";
 
   const filteredCompanies = useMemo(() => {
     let result = [...companies];
@@ -88,55 +113,39 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
       {/* Nav at the top - mobile only */}
       <div className="md:hidden">
         <ExploreAssetsNav
-          search={search}
-          setSearch={setSearch}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          showSortDropdown={showSortDropdown}
-          setShowSortDropdown={setShowSortDropdown}
           filteredCount={filteredCompanies.length}
         />
       </div>
 
-      {/* Index Products section - hidden on mobile when nav has active interaction */}
-      <div className={hasActiveNavInteraction ? "hidden md:block" : ""}>
-        <IndexesSection indexes={indexes} companies={companies} indexPrices={indexPrices} />
-      </div>
+      {/* Index Products section - hidden when searching, or on mobile when nav has active interaction */}
+      {!isSearching && (
+        <div className={hasActiveNavInteraction ? "hidden md:block" : ""}>
+          <IndexesSection indexes={indexes} companies={companies} indexPrices={indexPrices} />
+        </div>
+      )}
 
-      {/* Divider - hidden on mobile */}
-      <div className="hidden md:block border-b border-border" />
+      {/* Divider - hidden when searching or on mobile */}
+      {!isSearching && <div className="hidden md:block border-b border-border" />}
 
-      {/* Top section: Gainers, Trending, Newly Added - hidden on mobile when nav has active interaction */}
-      <div className={hasActiveNavInteraction ? "hidden md:block" : ""}>
-        <ExploreTopSection companies={companies} newlyAdded={newlyAdded} />
-      </div>
+      {/* Top section: Gainers, Trending, Newly Added - hidden when searching, or on mobile when nav has active interaction */}
+      {!isSearching && (
+        <div className={hasActiveNavInteraction ? "hidden md:block" : ""}>
+          <ExploreTopSection companies={companies} newlyAdded={newlyAdded} />
+        </div>
+      )}
 
-      {/* Divider - hidden on mobile */}
-      <div className="hidden md:block border-b border-border" />
+      {/* Divider - hidden when searching or on mobile */}
+      {!isSearching && <div className="hidden md:block border-b border-border" />}
 
       {/* Nav above asset grid - desktop only */}
       <div className="hidden md:block">
         <ExploreAssetsNav
-          search={search}
-          setSearch={setSearch}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          showSortDropdown={showSortDropdown}
-          setShowSortDropdown={setShowSortDropdown}
           filteredCount={filteredCompanies.length}
         />
       </div>
 
       {/* Asset grid */}
-      <div className="py-6">
+      <div className="pt-5 pb-6">
         <ExploreAssetsGrid companies={filteredCompanies} viewMode={viewMode} />
       </div>
 
