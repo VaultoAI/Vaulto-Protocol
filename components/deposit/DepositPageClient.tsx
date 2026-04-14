@@ -550,7 +550,7 @@ export function DepositPageClient() {
         {transactions.length === 0 ? (
           <p className="text-sm text-muted">No transactions yet</p>
         ) : (
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-1">
             {transactions.map((tx) => {
               // Determine icon and colors based on transaction type
               const isBuy = tx.type === "buy";
@@ -591,10 +591,17 @@ export function DepositPageClient() {
                 return `Withdrawal${assetLabel}`;
               };
 
+              const polygonUrl = tx.txHash ? `https://polygonscan.com/tx/${tx.txHash}` : null;
+
               return (
-                <div
+                <a
                   key={tx.id}
-                  className="flex items-center justify-between py-1.5 sm:py-2"
+                  href={polygonUrl || undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center justify-between py-3 sm:py-4 -mx-3 px-3 rounded-lg transition-colors ${
+                    polygonUrl ? "hover:bg-foreground/[0.08] cursor-pointer" : "cursor-default"
+                  }`}
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3">
                     {/* Show asset logo for USDC/MATIC transactions, otherwise show icon */}
@@ -633,44 +640,36 @@ export function DepositPageClient() {
                       <p className="text-xs font-medium text-foreground sm:text-sm">
                         {getTypeLabel()}
                       </p>
-                      <p className="text-[10px] text-muted sm:text-xs">
+                      <p className="text-xs text-muted sm:text-sm">
                         {new Date(tx.timestamp).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
                         })}
-                        {" · "}
-                        <span className={getStatusColorClass(tx.status)}>
-                          {getStatusLabel(tx.status)}
-                        </span>
-                        {isEtfOrder && tx.filledQty !== undefined && tx.filledQty > 0 && (
-                          <span className="text-muted">
-                            {" · "}{tx.filledQty} shares
-                            {tx.filledAvgPrice && ` @ $${tx.filledAvgPrice.toFixed(2)}`}
-                          </span>
+                        {/* Only show status for non-completed transactions */}
+                        {tx.status !== "COMPLETED" && tx.status !== "FILLED" && (
+                          <>
+                            {" · "}
+                            <span className={getStatusColorClass(tx.status)}>
+                              {getStatusLabel(tx.status)}
+                            </span>
+                          </>
                         )}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className={`text-xs font-medium sm:text-sm ${amountColorClass}`}>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <span className={`text-base font-semibold sm:text-lg ${amountColorClass}`}>
                       {isDeposit || isBuy ? "+" : "-"}${tx.amount.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </span>
-                    {tx.txHash && (
-                      <a
-                        href={`https://polygonscan.com/tx/${tx.txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted hover:text-foreground transition-colors"
-                      >
-                        <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      </a>
+                    {polygonUrl && (
+                      <ExternalLink className="h-4 w-4 text-muted" />
                     )}
                   </div>
-                </div>
+                </a>
               );
             })}
           </div>
