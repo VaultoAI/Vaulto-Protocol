@@ -85,6 +85,17 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close dropdown on scroll
+  useEffect(() => {
+    if (!isFocused) return;
+
+    function handleScroll() {
+      setIsFocused(false);
+    }
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [isFocused]);
+
   // Filter companies for autocomplete (limit to 5)
   const matchingCompanies = useMemo(() => {
     if (mode !== "companies" || !searchValue.trim() || companies.length === 0) return [];

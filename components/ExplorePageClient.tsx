@@ -12,6 +12,7 @@ import { ExploreAssetsGrid } from "@/components/ExploreAssetsGrid";
 import { ExploreTopSection } from "@/components/ExploreTopSection";
 import { IndexesSection } from "@/components/IndexesSection";
 import type { VaultoIndex, IndexPricesMap } from "@/lib/vaulto/indexes";
+import type { AllImpliedValuationsResponse } from "@/lib/polymarket/implied-valuations";
 
 type SortOption = "Most Popular" | "Price: High to Low" | "Price: Low to High" | "Name: A-Z";
 type ViewMode = "grid" | "list";
@@ -23,13 +24,14 @@ interface ExplorePageClientProps {
   indexes: VaultoIndex[];
   indexPrices?: IndexPricesMap;
   newlyAdded?: PrivateCompany[];
+  impliedValuations?: AllImpliedValuationsResponse | null;
 }
 
 /**
  * Client-side wrapper for Explore page that manages state
  * and renders sections in the correct order.
  */
-export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyAdded }: ExplorePageClientProps) {
+export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyAdded, impliedValuations }: ExplorePageClientProps) {
   const searchParams = useSearchParams();
   const search = searchParams?.get("q") || "";
 
@@ -130,7 +132,7 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
       {/* Top section: Gainers, Trending, Newly Added - hidden when searching, or on mobile when nav has active interaction */}
       {!isSearching && (
         <div className={hasActiveNavInteraction ? "hidden md:block" : ""}>
-          <ExploreTopSection companies={companies} newlyAdded={newlyAdded} />
+          <ExploreTopSection companies={companies} newlyAdded={newlyAdded} impliedValuations={impliedValuations} />
         </div>
       )}
 
