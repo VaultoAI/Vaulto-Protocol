@@ -13,8 +13,10 @@ import { SearchDropdown } from "@/components/SearchDropdown";
 export function TopNav() {
   const pathname = usePathname();
 
+  const isExplorePage = pathname === "/explore";
+
   return (
-    <header className="border-b border-border bg-background">
+    <header className={`border-b border-border bg-background ${isExplorePage ? "sticky top-0 z-50" : ""}`}>
       <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6">
         {/* Left: Logo + Search bar */}
         <div className="flex items-center gap-4">

@@ -3,6 +3,37 @@
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { hasPrestockToken } from "@/lib/prestock/tokens";
 import { getCompanyPredictionMarket } from "@/lib/polymarket/ipo-valuations";
+import { hasImpliedValuationData } from "@/lib/polymarket/implied-valuations";
+
+/** Default price for IPO-only companies (no funding history) */
+export const IPO_ONLY_DEFAULT_PRICE = 100;
+
+/** Default base valuation for IPO-only companies ($1.3B) */
+export const IPO_ONLY_BASE_VALUATION = 1_300_000_000;
+
+/**
+ * Check if a company is IPO-only (has IPO data but no funding history)
+ */
+export function isIpoOnlyCompany(company: PrivateCompany): boolean {
+  const history = getValuationHistory(company);
+  return history.length < 2 && hasImpliedValuationData(company.name);
+}
+
+/**
+ * Get the base valuation for a company.
+ * For IPO-only companies, returns the default base valuation ($1.3B).
+ * For other companies, returns the latest funding valuation.
+ */
+export function getBaseValuation(company: PrivateCompany): number {
+  if (isIpoOnlyCompany(company)) {
+    return IPO_ONLY_BASE_VALUATION;
+  }
+  const history = getValuationHistory(company);
+  if (history.length > 0) {
+    return history[history.length - 1].valuation;
+  }
+  return company.valuationUsd;
+}
 
 /**
  * Generate a deterministic pseudo-random number from a string seed.
@@ -70,7 +101,17 @@ export function getDailyChange(company: PrivateCompany) {
 
   const isPositive = rand2 > 0.45;
   const percentChange = 0.5 + rand * 7;
-  const price = company.lastFundingEstPricePerShareUsd ?? getLatestPostMoneyValuation(company) / 1_000_000_000;
+
+  // Use $100 for IPO-only companies, otherwise calculate from valuation
+  let price: number;
+  if (company.lastFundingEstPricePerShareUsd) {
+    price = company.lastFundingEstPricePerShareUsd;
+  } else if (hasImpliedValuationData(company.name)) {
+    price = IPO_ONLY_DEFAULT_PRICE;
+  } else {
+    price = getLatestPostMoneyValuation(company) / 1_000_000_000;
+  }
+
   const changeAmount = price * (percentChange / 100);
 
   return {
@@ -96,9 +137,25 @@ function getLatestPostMoneyValuation(company: PrivateCompany): number {
  * Get current price (base price from latest funding data).
  * For companies without a price per share from the API,
  * uses the most recent post-money valuation / 1 billion.
+ * For IPO-only companies (no funding history but has IPO data), returns $100.
  */
 export function getCurrentPrice(company: PrivateCompany): number {
-  return company.lastFundingEstPricePerShareUsd ?? getLatestPostMoneyValuation(company) / 1_000_000_000;
+  // If company has explicit price per share, use it
+  if (company.lastFundingEstPricePerShareUsd) {
+    return company.lastFundingEstPricePerShareUsd;
+  }
+
+  // Check if company has funding history
+  const history = getValuationHistory(company);
+  const hasFundingHistory = history.length >= 2;
+
+  // For IPO-only companies (no funding history but has IPO data), return default $100
+  if (!hasFundingHistory && hasImpliedValuationData(company.name)) {
+    return IPO_ONLY_DEFAULT_PRICE;
+  }
+
+  // Fallback to valuation-based price
+  return getLatestPostMoneyValuation(company) / 1_000_000_000;
 }
 
 /**

@@ -39,6 +39,7 @@ interface ImpliedValuationChartProps {
   chartType?: ChartType;
   onChartTypeChange?: (type: ChartType) => void;
   hasLiveData?: boolean;
+  hasFundingData?: boolean;
 }
 
 // ============================================================================
@@ -125,6 +126,7 @@ export function ImpliedValuationChart({
   chartType,
   onChartTypeChange,
   hasLiveData,
+  hasFundingData = true,
 }: ImpliedValuationChartProps) {
   const [data, setData] = useState<ImpliedValuationHistoryResponse | null>(initialData ?? null);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
@@ -378,20 +380,22 @@ export function ImpliedValuationChart({
           </div>
         </div>
 
-        {/* Chart type toggle - always show so users can switch back */}
+        {/* Chart type toggle - only show if there are multiple chart types available */}
         <div className="flex items-center justify-end mt-3 border-t border-border pt-3">
-          {onChartTypeChange && (
+          {onChartTypeChange && (hasFundingData || hasLiveData) && (
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => onChartTypeChange("funding")}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  chartType === "funding"
-                    ? "text-accent bg-accent/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                Funding
-              </button>
+              {hasFundingData && (
+                <button
+                  onClick={() => onChartTypeChange("funding")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    chartType === "funding"
+                      ? "text-accent bg-accent/10"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Funding
+                </button>
+              )}
               <button
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
@@ -482,18 +486,20 @@ export function ImpliedValuationChart({
               <div className="ml-2 w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             )}
           </div>
-          {onChartTypeChange && (
+          {onChartTypeChange && (hasFundingData || hasLiveData) && (
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => onChartTypeChange("funding")}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  chartType === "funding"
-                    ? "text-accent bg-accent/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                Funding
-              </button>
+              {hasFundingData && (
+                <button
+                  onClick={() => onChartTypeChange("funding")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    chartType === "funding"
+                      ? "text-accent bg-accent/10"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Funding
+                </button>
+              )}
               <button
                 onClick={() => onChartTypeChange("market")}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
@@ -623,18 +629,20 @@ export function ImpliedValuationChart({
             <div className="ml-2 w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           )}
         </div>
-        {onChartTypeChange && (
+        {onChartTypeChange && (hasFundingData || hasLiveData) && (
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => onChartTypeChange("funding")}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                chartType === "funding"
-                  ? "text-accent bg-accent/10"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              Funding
-            </button>
+            {hasFundingData && (
+              <button
+                onClick={() => onChartTypeChange("funding")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  chartType === "funding"
+                    ? "text-accent bg-accent/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Funding
+              </button>
+            )}
             <button
               onClick={() => onChartTypeChange("market")}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${

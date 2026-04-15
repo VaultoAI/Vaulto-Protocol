@@ -237,12 +237,6 @@ export function WalletDropdown() {
             className="block border-b border-gray-100 px-4 py-4 transition hover:bg-gray-50 active:bg-gray-100 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 sm:py-3"
           >
             <div className="flex items-center gap-3 sm:gap-2">
-              <ProfileAvatar
-                image={profileImage}
-                walletAddress={walletAddress ?? null}
-                size={44}
-                editable={false}
-              />
               <div className="flex-1 min-w-0">
                 <p className="text-base font-medium font-username text-gray-900 dark:text-white sm:text-sm">
                   {profileName || generateUsername(walletAddress!)}
@@ -251,6 +245,12 @@ export function WalletDropdown() {
                   {truncatedAddress}
                 </p>
               </div>
+              <ProfileAvatar
+                image={profileImage}
+                walletAddress={walletAddress ?? null}
+                size={44}
+                editable={false}
+              />
             </div>
             <div className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white sm:mt-2 sm:text-lg">
               ${formattedBalance}{" "}

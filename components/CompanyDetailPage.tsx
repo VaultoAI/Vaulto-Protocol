@@ -43,6 +43,10 @@ import {
   getCurrentPrice,
   formatPrice,
   getValuationHistory,
+  getBaseValuation,
+  isIpoOnlyCompany,
+  IPO_ONLY_DEFAULT_PRICE,
+  IPO_ONLY_BASE_VALUATION,
 } from "@/lib/vaulto/companyUtils";
 
 interface CompanyDetailPageProps {
@@ -68,19 +72,15 @@ export function CompanyDetailPage({
 
   // Get current valuation for ratio calculations
   const history = getValuationHistory(company);
-  const currentValuation = history.length > 0 ? history[history.length - 1].valuation : company.valuationUsd;
+  const isIpoOnly = isIpoOnlyCompany(company);
+  // For IPO-only companies, use the default base valuation ($1.3B)
+  const currentValuation = isIpoOnly
+    ? IPO_ONLY_BASE_VALUATION
+    : (history.length > 0 ? history[history.length - 1].valuation : company.valuationUsd);
 
   // State for hover data
   const [hoverData, setHoverData] = useState<HoverData | null>(null);
   const [impliedHoverData, setImpliedHoverData] = useState<ImpliedHoverData | null>(null);
-
-  // Chart type toggle
-  const [chartType, setChartType] = useState<ChartType>("funding");
-  const [impliedData, setImpliedData] = useState<ImpliedValuationHistoryResponse | null>(
-    prefetchedImpliedData ?? null
-  );
-  const [impliedDataLoading, setImpliedDataLoading] = useState(false);
-  const [impliedChartData, setImpliedChartData] = useState<ImpliedChartData | null>(null);
 
   // Check if company has implied valuation data
   const hasMarketData = hasImpliedValuationData(company.name);
@@ -92,6 +92,22 @@ export function CompanyDetailPage({
 
   // Check if company has a prediction market
   const predictionMarket = getCompanyPredictionMarket(company.name);
+
+  // Check if there's sufficient funding data for the funding chart
+  const hasSufficientFundingData = history.length >= 2;
+
+  // Chart type toggle - default to IPO if insufficient funding data but IPO data exists
+  const [chartType, setChartType] = useState<ChartType>(() => {
+    if (!hasSufficientFundingData && hasMarketData) {
+      return "market";
+    }
+    return "funding";
+  });
+  const [impliedData, setImpliedData] = useState<ImpliedValuationHistoryResponse | null>(
+    prefetchedImpliedData ?? null
+  );
+  const [impliedDataLoading, setImpliedDataLoading] = useState(false);
+  const [impliedChartData, setImpliedChartData] = useState<ImpliedChartData | null>(null);
 
   // State for live chart
   const [liveHoverData, setLiveHoverData] = useState<LiveHoverData | null>(null);
@@ -311,6 +327,7 @@ export function CompanyDetailPage({
                 chartType={chartType}
                 onChartTypeChange={setChartType}
                 hasLiveData={hasLiveData}
+                hasFundingData={hasSufficientFundingData}
               />
             )}
             {chartType === "live" && prestockAddress && (

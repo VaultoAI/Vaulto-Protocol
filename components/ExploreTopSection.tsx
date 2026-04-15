@@ -5,12 +5,11 @@ import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol, getCompanySlug, formatValuation } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { HoldingsAvatars } from "@/components/HoldingsAvatars";
+import { DynamicPrice } from "@/components/DynamicPrice";
 import type { VaultoIndex, IndexPricesMap } from "@/lib/vaulto/indexes";
 import { getIndexPrice, getIndexChange } from "@/lib/vaulto/indexes";
 import {
   getDailyChange,
-  getCurrentPrice,
-  formatPrice,
   getTopGainers,
   getTrending,
   getNewlyAdded,
@@ -71,9 +70,9 @@ export function ExploreTopSection({ companies, newlyAdded: newlyAddedProp }: Exp
           title="Newly Added"
           companies={newlyAdded}
           hasBorderLeft
-          renderMetric={() => (
+          renderMetric={(company) => (
             <span className="text-xs text-muted">
-              Pre-IPO Stock
+              {formatValuation(company.valuationUsd)}
             </span>
           )}
         />
@@ -107,7 +106,6 @@ function TopColumn({ title, badge, companies, hasBorderLeft, renderMetric }: Top
       <div className="flex flex-col gap-4">
         {companies.map((company) => {
           const symbol = getSyntheticSymbol(company.name);
-          const price = getCurrentPrice(company);
 
           return (
             <Link
@@ -126,7 +124,7 @@ function TopColumn({ title, badge, companies, hasBorderLeft, renderMetric }: Top
 
               {/* Price + metric - fixed width, right-aligned */}
               <div className="flex flex-col items-end shrink-0 w-[90px]">
-                <p className="text-sm font-semibold text-foreground tabular-nums">{formatPrice(price)}</p>
+                <DynamicPrice company={company} className="text-sm font-semibold text-foreground tabular-nums" />
                 {renderMetric(company)}
               </div>
             </Link>
