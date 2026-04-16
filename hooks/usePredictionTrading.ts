@@ -234,39 +234,47 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
 
   // Ensure credentials are set up before trading
   const ensureCredentials = useCallback(async (): Promise<boolean> => {
+    console.log("[usePredictionTrading] Checking credentials status...");
+
     // Check if credentials exist
     const status = await checkCredentialsStatus();
+    console.log("[usePredictionTrading] Credentials status:", status);
 
     if (status.hasCredentials) {
+      console.log("[usePredictionTrading] Credentials already configured");
       return true;
     }
 
     // Credentials don't exist, need to set them up
+    console.log("[usePredictionTrading] No credentials found, setting up...");
     setIsSettingUpCredentials(true);
     setCredentialsError(null);
 
     try {
       // Get Privy access token
+      console.log("[usePredictionTrading] Getting Privy access token...");
       const privyToken = await getAccessToken();
       if (!privyToken) {
         throw new Error("Failed to get authentication token. Please try logging in again.");
       }
-
-      console.log("[usePredictionTrading] Setting up trading credentials...");
+      console.log("[usePredictionTrading] Got Privy token");
 
       // Step 1: Setup wallet on Vaulto API
-      await setupWallet(privyToken);
-      console.log("[usePredictionTrading] Wallet setup complete");
+      console.log("[usePredictionTrading] Step 1: Setting up wallet...");
+      const walletResult = await setupWallet(privyToken);
+      console.log("[usePredictionTrading] Wallet setup result:", walletResult);
 
       // Step 2: Derive Polymarket credentials
-      await deriveCredentials(privyToken);
-      console.log("[usePredictionTrading] Credentials derived successfully");
+      console.log("[usePredictionTrading] Step 2: Deriving credentials...");
+      const credResult = await deriveCredentials(privyToken);
+      console.log("[usePredictionTrading] Derive credentials result:", credResult);
 
       credentialsSetupAttemptedRef.current = true;
+      console.log("[usePredictionTrading] Credentials setup complete!");
       return true;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Failed to setup trading credentials";
-      console.error("[usePredictionTrading] Credential setup failed:", errorMsg);
+      console.error("[usePredictionTrading] Credential setup failed:", errorMsg, error);
       setCredentialsError(errorMsg);
       return false;
     } finally {
