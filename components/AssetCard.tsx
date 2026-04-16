@@ -78,9 +78,11 @@ export function AssetCard({ company }: AssetCardProps) {
   const hasPredictionMarket = getCompanyPredictionMarket(company.name) !== null;
   const isIpoOnly = isIpoOnlyCompany(company);
 
-  // Check if we need to fetch IPO data (no funding sparkline but has IPO data)
+  // Check if we need to fetch IPO/implied valuation data
+  // For companies with Polymarket data, always show implied valuation history
+  // Otherwise, fall back to IPO data only if no funding sparkline
   const hasIpoData = hasImpliedValuationData(company.name);
-  const needsIpoData = !fundingSparkline && hasIpoData;
+  const needsIpoData = (hasPredictionMarket && hasIpoData) || (!fundingSparkline && hasIpoData);
   const ipoSlug = needsIpoData ? getImpliedValuationSlug(company.name) : null;
 
   // State for IPO sparkline data and current valuation
@@ -109,8 +111,9 @@ export function AssetCard({ company }: AssetCardProps) {
       .catch(() => setIpoLoading(false));
   }, [needsIpoData, ipoSlug, ipoSparkline, ipoLoading]);
 
-  // Use funding sparkline if available, otherwise IPO sparkline
-  const sparklineData = fundingSparkline ?? ipoSparkline;
+  // For Polymarket companies, prioritize implied valuation sparkline
+  // Otherwise, use funding sparkline if available, then IPO sparkline
+  const sparklineData = (hasPredictionMarket && ipoSparkline) ? ipoSparkline : (fundingSparkline ?? ipoSparkline);
 
   // Calculate displayed price - for IPO-only companies, scale based on implied valuation
   const price = (() => {

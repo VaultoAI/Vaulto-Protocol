@@ -61,8 +61,6 @@ const VAULTO_API_URL = process.env.NEXT_PUBLIC_VAULTO_API_URL
  * These will be filtered out from all company listings.
  */
 const HIDDEN_COMPANIES = [
-  "Freddie Mac",
-  "Fannie Mae",
   "Beast Industries",
 ];
 
