@@ -172,13 +172,13 @@ async function handleResponse<T>(response: Response, url: string): Promise<T> {
  * Buy a prediction market position (LONG or SHORT)
  *
  * Routes through Vaulto API which handles all Polymarket complexity.
- * Requires wallet signature for authorization.
+ * Supports either Privy auth token or wallet signature for authorization.
  */
 export async function buyPosition(
   params: BuyPositionParams,
   apiKey: string,
   userId: string,
-  walletSignature?: WalletSignature
+  auth?: { privyToken?: string; walletSignature?: WalletSignature }
 ): Promise<BuyPositionResponse> {
   const url = `${getBaseUrl()}/api/trading/buy`;
 
@@ -188,9 +188,14 @@ export async function buyPosition(
     amount: params.amount,
   });
 
+  // Use Privy auth if available, otherwise fall back to wallet signature
+  const headers = auth?.privyToken
+    ? getAuthHeaders(apiKey, auth.privyToken)
+    : getHeaders(apiKey, userId, auth?.walletSignature);
+
   const response = await fetch(url, {
     method: "POST",
-    headers: getHeaders(apiKey, userId, walletSignature),
+    headers,
     body: JSON.stringify(params),
   });
 
@@ -217,13 +222,13 @@ export async function fetchPositions(
 
 /**
  * Sell a prediction market position
- * Requires wallet signature for authorization.
+ * Supports either Privy auth token or wallet signature for authorization.
  */
 export async function sellPosition(
   params: SellPositionParams,
   apiKey: string,
   userId: string,
-  walletSignature?: WalletSignature
+  auth?: { privyToken?: string; walletSignature?: WalletSignature }
 ): Promise<SellPositionResponse> {
   const url = `${getBaseUrl()}/api/trading/sell`;
 
@@ -232,9 +237,14 @@ export async function sellPosition(
     shares: params.shares,
   });
 
+  // Use Privy auth if available, otherwise fall back to wallet signature
+  const headers = auth?.privyToken
+    ? getAuthHeaders(apiKey, auth.privyToken)
+    : getHeaders(apiKey, userId, auth?.walletSignature);
+
   const response = await fetch(url, {
     method: "POST",
-    headers: getHeaders(apiKey, userId, walletSignature),
+    headers,
     body: JSON.stringify(params),
   });
 

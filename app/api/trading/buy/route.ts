@@ -99,13 +99,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract wallet signature headers
+    // Extract auth headers - prefer Privy token, fall back to wallet signature
+    const privyToken = request.headers.get("x-privy-token");
     const walletNonce = request.headers.get("x-wallet-nonce");
     const walletSignature = request.headers.get("x-wallet-signature");
 
-    if (!walletNonce || !walletSignature) {
+    if (!privyToken && (!walletNonce || !walletSignature)) {
       return NextResponse.json(
-        { error: "Wallet signature required. Include x-wallet-nonce and x-wallet-signature headers." },
+        { error: "Authentication required. Include x-privy-token header or x-wallet-nonce and x-wallet-signature headers." },
         { status: 400 }
       );
     }
@@ -114,11 +115,16 @@ export async function POST(request: NextRequest) {
     const apiKey = getVaultoApiToken();
     const userId = user.tradingWallet.address;
 
+    // Build auth object based on available credentials
+    const tradeAuth = privyToken
+      ? { privyToken }
+      : { walletSignature: { nonce: walletNonce!, signature: walletSignature! } };
+
     const result = await buyPosition(
       { eventId, side, amount },
       apiKey,
       userId,
-      { nonce: walletNonce, signature: walletSignature }
+      tradeAuth
     );
 
     if (!result.success) {

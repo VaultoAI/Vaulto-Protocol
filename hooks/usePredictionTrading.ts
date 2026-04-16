@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSignMessage } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
 
 // ============================================
@@ -81,20 +80,18 @@ async function fetchPositions(): Promise<PositionsResponse> {
   return res.json();
 }
 
-interface BuyPositionWithSignatureParams extends BuyPositionParams {
-  nonce: string;
-  signature: string;
+interface BuyPositionWithAuthParams extends BuyPositionParams {
+  privyToken: string;
 }
 
-async function buyPosition(params: BuyPositionWithSignatureParams): Promise<BuyPositionResponse> {
-  const { nonce, signature, ...tradeParams } = params;
+async function buyPosition(params: BuyPositionWithAuthParams): Promise<BuyPositionResponse> {
+  const { privyToken, ...tradeParams } = params;
 
   const res = await fetch("/api/trading/buy", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-wallet-nonce": nonce,
-      "x-wallet-signature": signature,
+      "x-privy-token": privyToken,
     },
     body: JSON.stringify(tradeParams),
   });
@@ -108,20 +105,18 @@ async function buyPosition(params: BuyPositionWithSignatureParams): Promise<BuyP
   return data;
 }
 
-interface SellPositionWithSignatureParams extends SellPositionParams {
-  nonce: string;
-  signature: string;
+interface SellPositionWithAuthParams extends SellPositionParams {
+  privyToken: string;
 }
 
-async function sellPosition(params: SellPositionWithSignatureParams): Promise<SellPositionResponse> {
-  const { nonce, signature, ...sellParams } = params;
+async function sellPosition(params: SellPositionWithAuthParams): Promise<SellPositionResponse> {
+  const { privyToken, ...sellParams } = params;
 
   const res = await fetch("/api/trading/sell", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-wallet-nonce": nonce,
-      "x-wallet-signature": signature,
+      "x-privy-token": privyToken,
     },
     body: JSON.stringify(sellParams),
   });
@@ -230,22 +225,12 @@ interface UsePredictionTradingOptions {
 export function usePredictionTrading(options: UsePredictionTradingOptions = {}) {
   const { fetchPositions: shouldFetchPositions = true } = options;
   const queryClient = useQueryClient();
-  const { signMessageAsync } = useSignMessage();
   const { getAccessToken } = usePrivy();
 
   // Track credential setup state
   const [isSettingUpCredentials, setIsSettingUpCredentials] = useState(false);
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
   const credentialsSetupAttemptedRef = useRef(false);
-
-  // Generate nonce and sign a trade message
-  const signTrade = async (action: string, params: object): Promise<{ nonce: string; signature: string }> => {
-    const nonce = Date.now().toString();
-    const message = `Vaulto Trade Authorization\n\nAction: ${action}\nParams: ${JSON.stringify(params)}\nNonce: ${nonce}`;
-
-    const signature = await signMessageAsync({ message });
-    return { nonce, signature };
-  };
 
   // Ensure credentials are set up before trading
   const ensureCredentials = useCallback(async (): Promise<boolean> => {
@@ -324,7 +309,7 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
     },
   });
 
-  // Convenience functions for buying long/short (ensures credentials, then signs before executing)
+  // Convenience functions for buying long/short (ensures credentials, then uses Privy auth)
   const buyLong = async (eventId: string, amount: number): Promise<BuyPositionResponse> => {
     // Ensure credentials are set up before trading
     const credentialsReady = await ensureCredentials();
@@ -332,9 +317,14 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
       throw new Error(credentialsError || "Trading credentials not configured. Please try again.");
     }
 
+    // Get Privy token for authentication
+    const privyToken = await getAccessToken();
+    if (!privyToken) {
+      throw new Error("Failed to get authentication token. Please try logging in again.");
+    }
+
     const params = { eventId, side: "LONG" as const, amount };
-    const { nonce, signature } = await signTrade("BUY", params);
-    return buyMutation.mutateAsync({ ...params, nonce, signature });
+    return buyMutation.mutateAsync({ ...params, privyToken });
   };
 
   const buyShort = async (eventId: string, amount: number): Promise<BuyPositionResponse> => {
@@ -344,12 +334,17 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
       throw new Error(credentialsError || "Trading credentials not configured. Please try again.");
     }
 
+    // Get Privy token for authentication
+    const privyToken = await getAccessToken();
+    if (!privyToken) {
+      throw new Error("Failed to get authentication token. Please try logging in again.");
+    }
+
     const params = { eventId, side: "SHORT" as const, amount };
-    const { nonce, signature } = await signTrade("BUY", params);
-    return buyMutation.mutateAsync({ ...params, nonce, signature });
+    return buyMutation.mutateAsync({ ...params, privyToken });
   };
 
-  // Sell helper (ensures credentials, then signs before executing)
+  // Sell helper (ensures credentials, then uses Privy auth)
   const sell = async (positionId: string, shares?: number): Promise<SellPositionResponse> => {
     // Ensure credentials are set up before trading
     const credentialsReady = await ensureCredentials();
@@ -357,9 +352,14 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
       throw new Error(credentialsError || "Trading credentials not configured. Please try again.");
     }
 
+    // Get Privy token for authentication
+    const privyToken = await getAccessToken();
+    if (!privyToken) {
+      throw new Error("Failed to get authentication token. Please try logging in again.");
+    }
+
     const params = { positionId, shares };
-    const { nonce, signature } = await signTrade("SELL", params);
-    return sellMutation.mutateAsync({ ...params, nonce, signature });
+    return sellMutation.mutateAsync({ ...params, privyToken });
   };
 
   // Helper to get position for a specific event
@@ -401,8 +401,13 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
         throw new Error(credentialsError || "Trading credentials not configured. Please try again.");
       }
 
-      const { nonce, signature } = await signTrade("BUY", params);
-      return buyMutation.mutateAsync({ ...params, nonce, signature });
+      // Get Privy token for authentication
+      const privyToken = await getAccessToken();
+      if (!privyToken) {
+        throw new Error("Failed to get authentication token. Please try logging in again.");
+      }
+
+      return buyMutation.mutateAsync({ ...params, privyToken });
     },
     isBuying: buyMutation.isPending || isSettingUpCredentials,
     buyError: buyMutation.error,
