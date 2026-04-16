@@ -5,7 +5,7 @@ import { fetchWalletTransactions } from "@/lib/alchemy/transactions";
 
 interface Transaction {
   id: string;
-  type: "deposit" | "withdrawal" | "buy" | "sell";
+  type: "deposit" | "withdrawal" | "buy" | "sell" | "prediction_long" | "prediction_short";
   amount: number;
   status: string;
   txHash: string | null;
@@ -17,6 +17,12 @@ interface Transaction {
   qty?: number;
   filledQty?: number;
   filledAvgPrice?: number;
+  // Prediction market fields
+  eventId?: string;
+  eventName?: string;
+  company?: string;
+  shares?: number;
+  averagePrice?: number;
 }
 
 export async function GET() {
@@ -50,6 +56,23 @@ export async function GET() {
                 createdAt: true,
               },
               orderBy: { createdAt: "desc" },
+            },
+            predictionTrades: {
+              select: {
+                id: true,
+                eventId: true,
+                eventName: true,
+                company: true,
+                side: true,
+                amount: true,
+                shares: true,
+                averagePrice: true,
+                status: true,
+                createdAt: true,
+                filledAt: true,
+              },
+              orderBy: { createdAt: "desc" },
+              take: 50,
             },
           },
         },
@@ -117,6 +140,24 @@ export async function GET() {
         qty: order.qty ? Number(order.qty) : undefined,
         filledQty: filledQty > 0 ? filledQty : undefined,
         filledAvgPrice: filledAvgPrice ?? undefined,
+      });
+    }
+
+    // Add prediction market trades from database
+    for (const trade of tradingWallet.predictionTrades) {
+      allTransactions.push({
+        id: trade.id,
+        type: trade.side === "LONG" ? "prediction_long" : "prediction_short",
+        amount: Number(trade.amount),
+        status: trade.status,
+        txHash: null,
+        timestamp: (trade.filledAt ?? trade.createdAt).toISOString(),
+        address: tradingWallet.address,
+        eventId: trade.eventId,
+        eventName: trade.eventName ?? undefined,
+        company: trade.company ?? undefined,
+        shares: trade.shares ? Number(trade.shares) : undefined,
+        averagePrice: trade.averagePrice ? Number(trade.averagePrice) : undefined,
       });
     }
 

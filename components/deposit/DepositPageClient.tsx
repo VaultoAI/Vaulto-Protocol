@@ -557,15 +557,22 @@ export function DepositPageClient() {
               const isSell = tx.type === "sell";
               const isDeposit = tx.type === "deposit";
               const isWithdrawal = tx.type === "withdrawal";
+              const isPredictionLong = tx.type === "prediction_long";
+              const isPredictionShort = tx.type === "prediction_short";
               const isEtfOrder = isBuy || isSell;
+              const isPrediction = isPredictionLong || isPredictionShort;
 
-              const iconBgClass = isDeposit || isBuy
+              const iconBgClass = isDeposit || isBuy || isPredictionLong
                 ? "bg-green-500/10 text-green-500"
-                : "bg-red-500/10 text-red-500";
+                : isPredictionShort
+                  ? "bg-blue-500/10 text-blue-500"
+                  : "bg-red-500/10 text-red-500";
 
-              const amountColorClass = isDeposit || isBuy
+              const amountColorClass = isDeposit || isBuy || isPredictionLong
                 ? "text-green-500"
-                : "text-red-500";
+                : isPredictionShort
+                  ? "text-blue-500"
+                  : "text-red-500";
 
               const getStatusLabel = (status: string) => {
                 if (status === "COMPLETED" || status === "FILLED") return "Completed";
@@ -585,6 +592,8 @@ export function DepositPageClient() {
               const getTypeLabel = () => {
                 if (isBuy) return `Buy ${tx.symbol}`;
                 if (isSell) return `Sell ${tx.symbol}`;
+                if (isPredictionLong) return `Long ${tx.company || tx.eventId}`;
+                if (isPredictionShort) return `Short ${tx.company || tx.eventId}`;
                 // Show asset name for deposits/withdrawals (e.g., "Deposit USDC", "Withdrawal MATIC")
                 const assetLabel = tx.asset ? ` ${tx.asset}` : "";
                 if (isDeposit) return `Deposit${assetLabel}`;
@@ -625,9 +634,9 @@ export function DepositPageClient() {
                       <div
                         className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${iconBgClass}`}
                       >
-                        {isBuy ? (
+                        {isBuy || isPredictionLong ? (
                           <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        ) : isSell ? (
+                        ) : isSell || isPredictionShort ? (
                           <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         ) : isDeposit ? (
                           <ArrowDownLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -640,6 +649,12 @@ export function DepositPageClient() {
                       <p className="text-xs font-medium text-foreground sm:text-sm">
                         {getTypeLabel()}
                       </p>
+                      {/* Show shares and price for prediction trades */}
+                      {isPrediction && tx.shares && tx.averagePrice && (
+                        <p className="text-xs text-muted">
+                          {tx.shares.toFixed(2)} shares @ ${tx.averagePrice.toFixed(3)}
+                        </p>
+                      )}
                       <p className="text-xs text-muted sm:text-sm">
                         {new Date(tx.timestamp).toLocaleDateString(undefined, {
                           month: "short",
@@ -660,7 +675,7 @@ export function DepositPageClient() {
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3">
                     <span className={`text-base font-semibold sm:text-lg ${amountColorClass}`}>
-                      {isDeposit || isBuy ? "+" : "-"}${tx.amount.toLocaleString(undefined, {
+                      {isDeposit || isBuy ? "+" : isPrediction ? "-" : "-"}${tx.amount.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}

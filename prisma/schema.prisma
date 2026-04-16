@@ -528,6 +528,7 @@ model TradingWallet {
   etfPositions       EtfPosition[]
   cachedTransactions CachedTransaction[]
   syncState          WalletSyncState?
+  predictionTrades   PredictionMarketTrade[]
 
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -718,4 +719,33 @@ model WalletSyncState {
 
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+}
+
+// ============================================
+// PREDICTION MARKET TRADING
+// ============================================
+
+model PredictionMarketTrade {
+  id                String        @id @default(cuid())
+  tradingWalletId   String
+  tradingWallet     TradingWallet @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  eventId           String        // e.g., "spacex-ipo-closing-market-cap"
+  eventName         String?       // Human-readable name
+  company           String?       // e.g., "SpaceX"
+  side              String        // "LONG" | "SHORT"
+  amount            Decimal       @db.Decimal(20, 2) // USD amount invested
+  shares            Decimal?      @db.Decimal(20, 8) // Shares received
+  averagePrice      Decimal?      @db.Decimal(20, 6) // Average entry price
+  positionId        String?       // From Vaulto API response
+
+  status            String        @default("PENDING") // PENDING, FILLED, FAILED
+  errorMessage      String?
+
+  createdAt         DateTime      @default(now())
+  filledAt          DateTime?
+
+  @@index([tradingWalletId])
+  @@index([eventId])
+  @@index([createdAt])
 }

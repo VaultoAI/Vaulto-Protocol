@@ -1,4 +1,16 @@
 /**
+ * @deprecated This file is deprecated. Use the real trading integration instead:
+ * - hooks/usePredictionTrading.ts - Trading hook for components
+ * - lib/vaulto-api/trading.ts - Vaulto API trading client
+ * - app/api/trading/buy/route.ts - Buy endpoint
+ * - app/api/trading/positions/route.ts - Positions endpoint
+ * - app/api/trading/sell/route.ts - Sell endpoint
+ *
+ * The real trading routes through Vaulto API which handles Polymarket complexity.
+ * Zero wallet signatures required per trade.
+ *
+ * ===== LEGACY CODE BELOW - DO NOT USE FOR NEW FEATURES =====
+ *
  * Demo trading for prediction markets.
  * Buy Yes = bullish (betting event will happen)
  * Buy No = bearish (betting event won't happen)

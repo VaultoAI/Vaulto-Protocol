@@ -1,59 +1,47 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { getPredictionPositions, sellPredictionShares, calculatePositionValue } from "@/lib/polymarket/demo-trading";
-import type { PredictionMarket } from "@/lib/polymarket/markets";
+import { useCallback, useMemo } from "react";
+import { usePredictionTrading, type PredictionPosition } from "@/hooks/usePredictionTrading";
 import { useSortableTable, type SortableColumn } from "@/hooks/useSortableTable";
 import { SortableTableHeader } from "@/components/SortableHeader";
 
-type PositionsProps = {
-  markets: PredictionMarket[];
-};
+export function PredictionPositions() {
+  const { positions, isLoadingPositions, sell, isSelling, refetchPositions } = usePredictionTrading();
 
-export function PredictionPositions({ markets }: PositionsProps) {
-  const [positions, setPositions] = useState<ReturnType<typeof getPredictionPositions>>([]);
-  const [selling, setSelling] = useState<string | null>(null);
+  const handleSell = useCallback(async (position: PredictionPosition) => {
+    try {
+      await sell(position.id);
+      refetchPositions();
+    } catch (error) {
+      console.error("Failed to sell position:", error);
+    }
+  }, [sell, refetchPositions]);
 
-  // Refresh positions on mount and after any updates
-  const refreshPositions = useCallback(() => {
-    setPositions(getPredictionPositions(markets));
-  }, [markets]);
+  type PositionColumnKey = "position" | "side" | "shares" | "currentValue" | "unrealizedPnl";
 
-  useEffect(() => {
-    refreshPositions();
-    // Poll for updates every 2 seconds
-    const interval = setInterval(refreshPositions, 2000);
-    return () => clearInterval(interval);
-  }, [refreshPositions]);
-
-  const handleSell = useCallback(async (position: typeof positions[0]) => {
-    const market = markets.find(m => m.id === position.marketId);
-    if (!market) return;
-
-    setSelling(position.symbol);
-    await sellPredictionShares({
-      market,
-      outcome: position.outcome,
-      shares: position.shares,
-    });
-    refreshPositions();
-    setSelling(null);
-  }, [markets, refreshPositions]);
-
-  type PredictionColumnKey = "position" | "outcome" | "shares" | "currentValue" | "potentialPayout";
-
-  const columns: SortableColumn<PredictionColumnKey, typeof positions[0]>[] = useMemo(
+  const columns: SortableColumn<PositionColumnKey, PredictionPosition>[] = useMemo(
     () => [
-      { key: "position", getValue: (p) => p.question },
-      { key: "outcome", getValue: (p) => p.outcome },
+      { key: "position", getValue: (p) => p.eventName || p.eventId },
+      { key: "side", getValue: (p) => p.side },
       { key: "shares", getValue: (p) => p.shares },
-      { key: "currentValue", getValue: (p) => calculatePositionValue(p.shares, p.currentPrice) },
-      { key: "potentialPayout", getValue: (p) => p.shares },
+      { key: "currentValue", getValue: (p) => p.shares * p.currentPrice },
+      { key: "unrealizedPnl", getValue: (p) => p.unrealizedPnl },
     ],
     []
   );
 
   const { sortedData, sortConfig, handleSort } = useSortableTable(positions, columns);
+
+  if (isLoadingPositions) {
+    return (
+      <div className="mt-6">
+        <h2 className="text-lg font-medium">Your Positions</h2>
+        <div className="mt-3 animate-pulse">
+          <div className="h-16 bg-badge-bg rounded-md" />
+        </div>
+      </div>
+    );
+  }
 
   if (positions.length === 0) {
     return null;
@@ -65,27 +53,32 @@ export function PredictionPositions({ markets }: PositionsProps) {
 
       {/* Mobile cards */}
       <div className="mt-3 flex flex-col gap-3 md:hidden">
-        {positions.map((position) => {
-          const currentValue = calculatePositionValue(position.shares, position.currentPrice);
-          const potentialPayout = position.shares;
+        {sortedData.map((position) => {
+          const currentValue = position.shares * position.currentPrice;
+          const isLong = position.side === "LONG";
+          const isProfitable = position.unrealizedPnl >= 0;
           return (
             <div
-              key={position.symbol}
+              key={position.id}
               className="rounded-md border border-border bg-background p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-medium text-sm line-clamp-2">{position.question}</p>
-                  <p className="text-xs text-muted">{position.symbol}</p>
+                  <p className="font-medium text-sm line-clamp-2">
+                    {position.eventName || position.eventId}
+                  </p>
+                  {position.company && (
+                    <p className="text-xs text-muted">{position.company}</p>
+                  )}
                 </div>
                 <span
                   className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                    position.outcome === "Yes"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                    isLong
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
                       : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
                   }`}
                 >
-                  {position.outcome}
+                  {position.side}
                 </span>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -98,9 +91,18 @@ export function PredictionPositions({ markets }: PositionsProps) {
                   <dd>${currentValue.toFixed(2)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted">Potential Payout</dt>
-                  <dd className="text-green-600 dark:text-green-400 font-medium">
-                    ${potentialPayout.toFixed(2)}
+                  <dt className="text-muted">Entry Price</dt>
+                  <dd>${position.entryPrice.toFixed(2)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">P&L</dt>
+                  <dd className={isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                    {isProfitable ? "+" : ""}${position.unrealizedPnl.toFixed(2)}
+                    {position.unrealizedPnlPercent !== undefined && (
+                      <span className="text-xs ml-1">
+                        ({isProfitable ? "+" : ""}{position.unrealizedPnlPercent.toFixed(1)}%)
+                      </span>
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -108,10 +110,10 @@ export function PredictionPositions({ markets }: PositionsProps) {
                 <button
                   type="button"
                   onClick={() => handleSell(position)}
-                  disabled={selling === position.symbol}
+                  disabled={isSelling}
                   className="w-full rounded border border-red-300 bg-red-50 py-2 text-sm font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/50 disabled:opacity-50"
                 >
-                  {selling === position.symbol ? "Selling..." : "Sell"}
+                  {isSelling ? "Selling..." : "Sell"}
                 </button>
               </div>
             </div>
@@ -132,8 +134,8 @@ export function PredictionPositions({ markets }: PositionsProps) {
                 onSort={handleSort as (column: string) => void}
               />
               <SortableTableHeader
-                label="Outcome"
-                columnKey="outcome"
+                label="Side"
+                columnKey="side"
                 currentSortColumn={sortConfig.column}
                 currentSortDirection={sortConfig.direction}
                 onSort={handleSort as (column: string) => void}
@@ -156,8 +158,8 @@ export function PredictionPositions({ markets }: PositionsProps) {
                 className="text-muted"
               />
               <SortableTableHeader
-                label="Potential Payout"
-                columnKey="potentialPayout"
+                label="P&L"
+                columnKey="unrealizedPnl"
                 currentSortColumn={sortConfig.column}
                 currentSortDirection={sortConfig.direction}
                 onSort={handleSort as (column: string) => void}
@@ -168,24 +170,29 @@ export function PredictionPositions({ markets }: PositionsProps) {
           </thead>
           <tbody>
             {sortedData.map((position) => {
-              const currentValue = calculatePositionValue(position.shares, position.currentPrice);
-              const potentialPayout = position.shares;
+              const currentValue = position.shares * position.currentPrice;
+              const isLong = position.side === "LONG";
+              const isProfitable = position.unrealizedPnl >= 0;
 
               return (
-                <tr key={position.symbol} className="border-b border-border last:border-0">
+                <tr key={position.id} className="border-b border-border last:border-0">
                   <td className="py-3 px-4">
-                    <p className="font-medium text-sm line-clamp-1">{position.question}</p>
-                    <p className="text-xs text-muted mt-0.5">{position.symbol}</p>
+                    <p className="font-medium text-sm line-clamp-1">
+                      {position.eventName || position.eventId}
+                    </p>
+                    {position.company && (
+                      <p className="text-xs text-muted mt-0.5">{position.company}</p>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        position.outcome === "Yes"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                        isLong
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
                           : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
                       }`}
                     >
-                      {position.outcome}
+                      {position.side}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-muted">
@@ -195,18 +202,23 @@ export function PredictionPositions({ markets }: PositionsProps) {
                     ${currentValue.toFixed(2)}
                   </td>
                   <td className="py-3 px-4">
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                      ${potentialPayout.toFixed(2)}
+                    <span className={isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                      {isProfitable ? "+" : ""}${position.unrealizedPnl.toFixed(2)}
+                      {position.unrealizedPnlPercent !== undefined && (
+                        <span className="text-xs ml-1">
+                          ({isProfitable ? "+" : ""}{position.unrealizedPnlPercent.toFixed(1)}%)
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="py-3 px-4">
                     <button
                       type="button"
                       onClick={() => handleSell(position)}
-                      disabled={selling === position.symbol}
+                      disabled={isSelling}
                       className="inline-block rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/50 disabled:opacity-50"
                     >
-                      {selling === position.symbol ? "Selling..." : "Sell"}
+                      {isSelling ? "Selling..." : "Sell"}
                     </button>
                   </td>
                 </tr>

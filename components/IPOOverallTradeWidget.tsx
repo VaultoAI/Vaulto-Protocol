@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { getDemoBalance } from "@/lib/swap/demo-state";
-import { buyOverallIPOPosition } from "@/lib/polymarket/demo-trading";
+import { usePredictionTrading } from "@/hooks/usePredictionTrading";
+import { useTradingWallet } from "@/hooks/useTradingWallet";
 import type { CompanyIPO } from "@/lib/polymarket/ipo-valuations";
 import {
   formatValuationPrecise,
@@ -24,12 +24,16 @@ export function IPOOverallTradeWidget({
   isOpen,
   onClose,
 }: TradeWidgetProps) {
+  const { buyLong, buyShort, isBuying } = usePredictionTrading({ fetchPositions: false });
+  const { balance, isActive: hasActiveWallet } = useTradingWallet();
+
   const [amount, setAmount] = useState("");
   const [tradeState, setTradeState] = useState<TradeState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<{ totalShares: number; bandCount: number } | null>(null);
 
   const isLong = direction === "long";
+  const usdcBalance = parseFloat(balance) || 0;
   const usdcAmount = parseFloat(amount) || 0;
 
   const handleClose = useCallback(() => {
@@ -46,32 +50,42 @@ export function IPOOverallTradeWidget({
       return;
     }
 
-    const usdcBalance = getDemoBalance("USDC");
+    if (!hasActiveWallet) {
+      setErrorMessage("Please set up your trading wallet first");
+      return;
+    }
+
     if (usdcBalance < usdcAmount) {
-      setErrorMessage(`Insufficient USDC balance (${usdcBalance.toFixed(2)} available)`);
+      setErrorMessage(`Insufficient USDC balance ($${usdcBalance.toFixed(2)} available)`);
       return;
     }
 
     setTradeState("loading");
     setErrorMessage(null);
 
-    const tradeResult = await buyOverallIPOPosition({
-      ipo,
-      direction,
-      usdcAmount,
-    });
+    try {
+      const tradeFn = direction === "long" ? buyLong : buyShort;
+      const tradeResult = await tradeFn(ipo.eventSlug, usdcAmount);
 
-    if (tradeResult.success) {
-      setTradeState("success");
-      setResult({
-        totalShares: tradeResult.totalShares,
-        bandCount: tradeResult.bandAllocations.length,
-      });
-    } else {
+      if (tradeResult.success) {
+        setTradeState("success");
+        // Calculate approximate shares from average price or use order data
+        const avgPrice = tradeResult.averagePrice || 0.5;
+        const totalShares = avgPrice > 0 ? usdcAmount / avgPrice : 0;
+        const bandCount = tradeResult.orders?.length || ipo.bands.length;
+        setResult({
+          totalShares,
+          bandCount,
+        });
+      } else {
+        setTradeState("error");
+        setErrorMessage(tradeResult.error ?? "Trade failed");
+      }
+    } catch (err) {
       setTradeState("error");
-      setErrorMessage(tradeResult.error ?? "Trade failed");
+      setErrorMessage(err instanceof Error ? err.message : "Trade failed");
     }
-  }, [amount, usdcAmount, ipo, direction]);
+  }, [amount, usdcAmount, usdcBalance, hasActiveWallet, ipo.eventSlug, ipo.bands.length, direction, buyLong, buyShort]);
 
   const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -212,7 +226,7 @@ export function IPOOverallTradeWidget({
                   Amount (USDC)
                 </label>
                 <span className="text-xs text-muted">
-                  Balance: ${getDemoBalance("USDC").toFixed(2)}
+                  Balance: ${usdcBalance.toFixed(2)}
                 </span>
               </div>
               <input
@@ -222,7 +236,7 @@ export function IPOOverallTradeWidget({
                 placeholder="0.00"
                 value={amount}
                 onChange={handleAmountChange}
-                disabled={tradeState === "loading"}
+                disabled={tradeState === "loading" || isBuying}
                 className="mt-1 w-full rounded border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-border disabled:opacity-50"
               />
             </div>
@@ -258,19 +272,19 @@ export function IPOOverallTradeWidget({
             <button
               type="button"
               onClick={handleBuy}
-              disabled={tradeState === "loading" || !amount || usdcAmount <= 0}
+              disabled={tradeState === "loading" || isBuying || !amount || usdcAmount <= 0 || usdcAmount > usdcBalance || !hasActiveWallet}
               className={`mt-6 w-full rounded border py-3 font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed ${
                 isLong
                   ? "border-green-600 bg-green-600 text-white hover:bg-green-700"
                   : "border-red-600 bg-red-600 text-white hover:bg-red-700"
               }`}
             >
-              {tradeState === "loading" ? "Processing..." : `${directionLabel} ${ipo.company}`}
+              {tradeState === "loading" || isBuying
+                ? "Processing..."
+                : !hasActiveWallet
+                  ? "Set up wallet to trade"
+                  : `${directionLabel} ${ipo.company}`}
             </button>
-
-            <p className="mt-3 text-xs text-center text-muted">
-              Demo mode: Trades are simulated with virtual USDC
-            </p>
           </>
         )}
       </div>

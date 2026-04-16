@@ -1,12 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  getIPOBandPositions,
-  sellIPOBandPosition,
-  calculatePositionValue,
-  type IPOBandPosition,
-} from "@/lib/polymarket/demo-trading";
+import { useCallback, useMemo } from "react";
+import { usePredictionTrading, type PredictionPosition } from "@/hooks/usePredictionTrading";
 import type { CompanyIPO } from "@/lib/polymarket/ipo-valuations";
 import { useSortableTable, type SortableColumn } from "@/hooks/useSortableTable";
 import { SortableTableHeader } from "@/components/SortableHeader";
@@ -16,57 +11,55 @@ type PositionsProps = {
 };
 
 export function IPOBandPositions({ ipos }: PositionsProps) {
-  const [positions, setPositions] = useState<IPOBandPosition[]>([]);
-  const [selling, setSelling] = useState<string | null>(null);
+  const { positions, isLoadingPositions, sell, isSelling, refetchPositions } = usePredictionTrading();
 
-  // Refresh positions on mount and after any updates
-  const refreshPositions = useCallback(() => {
-    setPositions(getIPOBandPositions(ipos));
-  }, [ipos]);
+  // Filter positions to only show those matching the provided IPOs
+  const ipoEventIds = useMemo(
+    () => new Set(ipos.map((ipo) => ipo.eventSlug)),
+    [ipos]
+  );
 
-  useEffect(() => {
-    refreshPositions();
-    // Poll for updates every 2 seconds
-    const interval = setInterval(refreshPositions, 2000);
-    return () => clearInterval(interval);
-  }, [refreshPositions]);
+  const filteredPositions = useMemo(
+    () => positions.filter((p) => ipoEventIds.has(p.eventId)),
+    [positions, ipoEventIds]
+  );
 
-  const handleSell = useCallback(async (position: IPOBandPosition) => {
-    const ipo = ipos.find((i) => i.company === position.company);
-    if (!ipo) return;
+  const handleSell = useCallback(async (position: PredictionPosition) => {
+    try {
+      await sell(position.id);
+      refetchPositions();
+    } catch (error) {
+      console.error("Failed to sell position:", error);
+    }
+  }, [sell, refetchPositions]);
 
-    // Find the band by matching the question
-    const band = ipo.bands.find((b) => b.question === position.question);
-    if (!band) return;
+  type IPOColumnKey = "position" | "side" | "shares" | "currentValue" | "unrealizedPnl";
 
-    setSelling(position.symbol);
-    await sellIPOBandPosition({
-      ipo,
-      band,
-      direction: position.direction,
-      shares: position.shares,
-    });
-    refreshPositions();
-    setSelling(null);
-  }, [ipos, refreshPositions]);
-
-  type IPOColumnKey = "position" | "outcome" | "range" | "shares" | "currentValue" | "potentialPayout";
-
-  const columns: SortableColumn<IPOColumnKey, IPOBandPosition>[] = useMemo(
+  const columns: SortableColumn<IPOColumnKey, PredictionPosition>[] = useMemo(
     () => [
-      { key: "position", getValue: (p) => p.company },
-      { key: "outcome", getValue: (p) => p.direction },
-      { key: "range", getValue: (p) => p.bandRange },
+      { key: "position", getValue: (p) => p.eventName || p.eventId },
+      { key: "side", getValue: (p) => p.side },
       { key: "shares", getValue: (p) => p.shares },
-      { key: "currentValue", getValue: (p) => calculatePositionValue(p.shares, p.currentPrice) },
-      { key: "potentialPayout", getValue: (p) => p.shares },
+      { key: "currentValue", getValue: (p) => p.shares * p.currentPrice },
+      { key: "unrealizedPnl", getValue: (p) => p.unrealizedPnl },
     ],
     []
   );
 
-  const { sortedData, sortConfig, handleSort } = useSortableTable(positions, columns);
+  const { sortedData, sortConfig, handleSort } = useSortableTable(filteredPositions, columns);
 
-  if (positions.length === 0) {
+  if (isLoadingPositions) {
+    return (
+      <div className="mt-6">
+        <h2 className="text-lg font-medium">Your IPO Positions</h2>
+        <div className="mt-3 animate-pulse">
+          <div className="h-16 bg-badge-bg rounded-md" />
+        </div>
+      </div>
+    );
+  }
+
+  if (filteredPositions.length === 0) {
     return null;
   }
 
@@ -76,35 +69,32 @@ export function IPOBandPositions({ ipos }: PositionsProps) {
 
       {/* Mobile cards */}
       <div className="mt-3 flex flex-col gap-3 md:hidden">
-        {positions.map((position) => {
-          const currentValue = calculatePositionValue(position.shares, position.currentPrice);
-          const potentialPayout = position.shares;
-          const isYes = position.direction === "long";
+        {sortedData.map((position) => {
+          const currentValue = position.shares * position.currentPrice;
+          const isLong = position.side === "LONG";
+          const isProfitable = position.unrealizedPnl >= 0;
           return (
             <div
-              key={position.symbol}
+              key={position.id}
               className="rounded-md border border-border bg-background p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-medium text-sm">{position.company} IPO</p>
-                  <p className="text-xs text-muted">{position.symbol}</p>
+                  <p className="font-medium text-sm">
+                    {position.company || position.eventName || position.eventId}
+                  </p>
                 </div>
                 <span
                   className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                    isYes
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                    isLong
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
                       : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
                   }`}
                 >
-                  {isYes ? "Yes" : "No"}
+                  {position.side}
                 </span>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                <div>
-                  <dt className="text-muted">Range</dt>
-                  <dd>{position.bandRange}</dd>
-                </div>
                 <div>
                   <dt className="text-muted">Shares</dt>
                   <dd>{position.shares.toFixed(2)}</dd>
@@ -114,11 +104,13 @@ export function IPOBandPositions({ ipos }: PositionsProps) {
                   <dd>${currentValue.toFixed(2)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted">Potential Payout</dt>
-                  <dd>
-                    <span className={isYes ? "text-green-600 dark:text-green-400 font-medium" : "text-red-600 dark:text-red-400 font-medium"}>
-                      ${potentialPayout.toFixed(2)}
-                    </span>
+                  <dt className="text-muted">Entry Price</dt>
+                  <dd>${position.entryPrice.toFixed(2)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">P&L</dt>
+                  <dd className={isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                    {isProfitable ? "+" : ""}${position.unrealizedPnl.toFixed(2)}
                   </dd>
                 </div>
               </dl>
@@ -126,10 +118,10 @@ export function IPOBandPositions({ ipos }: PositionsProps) {
                 <button
                   type="button"
                   onClick={() => handleSell(position)}
-                  disabled={selling === position.symbol}
+                  disabled={isSelling}
                   className="w-full rounded border border-red-300 bg-red-50 py-2 text-sm font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/50 disabled:opacity-50"
                 >
-                  {selling === position.symbol ? "Selling..." : "Sell"}
+                  {isSelling ? "Selling..." : "Sell"}
                 </button>
               </div>
             </div>
@@ -150,16 +142,8 @@ export function IPOBandPositions({ ipos }: PositionsProps) {
                 onSort={handleSort as (column: string) => void}
               />
               <SortableTableHeader
-                label="Outcome"
-                columnKey="outcome"
-                currentSortColumn={sortConfig.column}
-                currentSortDirection={sortConfig.direction}
-                onSort={handleSort as (column: string) => void}
-                className="text-muted"
-              />
-              <SortableTableHeader
-                label="Range"
-                columnKey="range"
+                label="Side"
+                columnKey="side"
                 currentSortColumn={sortConfig.column}
                 currentSortDirection={sortConfig.direction}
                 onSort={handleSort as (column: string) => void}
@@ -182,8 +166,8 @@ export function IPOBandPositions({ ipos }: PositionsProps) {
                 className="text-muted"
               />
               <SortableTableHeader
-                label="Potential Payout"
-                columnKey="potentialPayout"
+                label="P&L"
+                columnKey="unrealizedPnl"
                 currentSortColumn={sortConfig.column}
                 currentSortDirection={sortConfig.direction}
                 onSort={handleSort as (column: string) => void}
@@ -194,47 +178,43 @@ export function IPOBandPositions({ ipos }: PositionsProps) {
           </thead>
           <tbody>
             {sortedData.map((position) => {
-              const currentValue = calculatePositionValue(position.shares, position.currentPrice);
-              const potentialPayout = position.shares;
-              const isYes = position.direction === "long";
+              const currentValue = position.shares * position.currentPrice;
+              const isLong = position.side === "LONG";
+              const isProfitable = position.unrealizedPnl >= 0;
 
               return (
-                <tr key={position.symbol} className="border-b border-border last:border-0">
+                <tr key={position.id} className="border-b border-border last:border-0">
                   <td className="py-3 px-4">
-                    <p className="font-medium text-sm">{position.company} IPO</p>
-                    <p className="text-xs text-muted mt-0.5">{position.symbol}</p>
+                    <p className="font-medium text-sm">
+                      {position.company || position.eventName || position.eventId}
+                    </p>
                   </td>
                   <td className="py-3 px-4">
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        isYes
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                        isLong
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
                           : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
                       }`}
                     >
-                      {isYes ? "Yes" : "No"}
+                      {position.side}
                     </span>
-                  </td>
-                  <td className="py-3 px-4 text-muted">
-                    {position.bandRange}
                   </td>
                   <td className="py-3 px-4 text-muted">{position.shares.toFixed(2)}</td>
                   <td className="py-3 px-4 text-muted">${currentValue.toFixed(2)}</td>
                   <td className="py-3 px-4">
-                    <span className={`font-medium ${
-                      isYes ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                    }`}>
-                      ${potentialPayout.toFixed(2)}
+                    <span className={isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                      {isProfitable ? "+" : ""}${position.unrealizedPnl.toFixed(2)}
                     </span>
                   </td>
                   <td className="py-3 px-4">
                     <button
                       type="button"
                       onClick={() => handleSell(position)}
-                      disabled={selling === position.symbol}
+                      disabled={isSelling}
                       className="inline-block rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/50 disabled:opacity-50"
                     >
-                      {selling === position.symbol ? "Selling..." : "Sell"}
+                      {isSelling ? "Selling..." : "Sell"}
                     </button>
                   </td>
                 </tr>

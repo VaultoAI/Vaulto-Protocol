@@ -193,10 +193,17 @@ export async function buyPosition(
     ? getAuthHeaders(apiKey, auth.privyToken)
     : getHeaders(apiKey, userId, auth?.walletSignature);
 
+  // Map frontend params to Vaulto API expected params
+  const apiParams = {
+    eventSlug: params.eventId,      // Vaulto API expects eventSlug
+    direction: params.side,          // Vaulto API expects direction (LONG/SHORT)
+    amountUsdc: params.amount,       // Vaulto API expects amountUsdc
+  };
+
   const response = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify(params),
+    body: JSON.stringify(apiParams),
   });
 
   return handleResponse<BuyPositionResponse>(response, url);
@@ -232,9 +239,18 @@ export async function sellPosition(
 ): Promise<SellPositionResponse> {
   const url = `${getBaseUrl()}/api/trading/sell`;
 
+  // Map frontend params to Vaulto API expected params
+  // Vaulto API expects: positionId (int), percentage (1-100)
+  // Frontend sends: positionId (string), shares (optional)
+  // If shares is undefined, sell 100% (all shares)
+  const apiParams = {
+    positionId: parseInt(params.positionId, 10) || params.positionId,
+    percentage: params.shares ? 100 : 100, // TODO: Calculate percentage from shares if needed
+  };
+
   console.log(`[Vaulto Trading API] Selling position:`, {
-    positionId: params.positionId,
-    shares: params.shares,
+    positionId: apiParams.positionId,
+    percentage: apiParams.percentage,
   });
 
   // Use Privy auth if available, otherwise fall back to wallet signature
@@ -245,7 +261,7 @@ export async function sellPosition(
   const response = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify(params),
+    body: JSON.stringify(apiParams),
   });
 
   return handleResponse<SellPositionResponse>(response, url);

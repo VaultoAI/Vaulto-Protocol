@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol } from "@/lib/vaulto/companies";
-import { getDemoBalance } from "@/lib/swap/demo-state";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
 import {
   usePredictionMarketData,
@@ -12,7 +11,8 @@ import {
   formatCostPerDollar,
   formatSpreadPercent,
 } from "@/hooks/usePredictionMarketData";
-import { buyPredictionMarketPosition } from "@/lib/polymarket/demo-trading";
+import { usePredictionTrading } from "@/hooks/usePredictionTrading";
+import { useTradingWallet } from "@/hooks/useTradingWallet";
 import { getPolymarketEventUrl, formatValuationPrecise } from "@/lib/polymarket/ipo-valuations";
 import {
   getImpliedValuationSlug,
@@ -36,6 +36,8 @@ export function PredictionMarketTradeWidget({
 }: PredictionMarketTradeWidgetProps) {
   const symbol = getSyntheticSymbol(company.name);
   const { data, isLoading, error } = usePredictionMarketData(eventSlug);
+  const { buyLong, buyShort, isBuying } = usePredictionTrading({ fetchPositions: false });
+  const { balance, isActive: hasActiveWallet } = useTradingWallet();
 
   // Fetch implied valuation from the implied-valuations API (same as IPO visualization)
   const impliedValuationSlug = getImpliedValuationSlug(company.name);
@@ -55,11 +57,11 @@ export function PredictionMarketTradeWidget({
   const [amount, setAmount] = useState("");
   const [tradeState, setTradeState] = useState<TradeState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [result, setResult] = useState<{ shares: number; txHash: string } | null>(null);
+  const [result, setResult] = useState<{ shares: number; positionId: string } | null>(null);
   const [logoError, setLogoError] = useState(false);
   const polymarketLogoUrl = getProxiedFaviconUrl("polymarket.com");
 
-  const usdcBalance = getDemoBalance("USDC");
+  const usdcBalance = parseFloat(balance) || 0;
   const usdcAmount = parseFloat(amount) || 0;
 
   // Get current direction data
@@ -100,33 +102,42 @@ export function PredictionMarketTradeWidget({
       return;
     }
 
+    if (!hasActiveWallet) {
+      setErrorMessage("Please set up your trading wallet first");
+      return;
+    }
+
     if (usdcBalance < usdcAmount) {
-      setErrorMessage(`Insufficient USDC balance (${usdcBalance.toFixed(2)} available)`);
+      setErrorMessage(`Insufficient USDC balance ($${usdcBalance.toFixed(2)} available)`);
       return;
     }
 
     setTradeState("loading");
     setErrorMessage(null);
 
-    const tradeResult = await buyPredictionMarketPosition({
-      company: company.name,
-      eventSlug,
-      direction: activeTab,
-      usdcAmount,
-    });
+    try {
+      const tradeFn = activeTab === "long" ? buyLong : buyShort;
+      const tradeResult = await tradeFn(eventSlug, usdcAmount);
 
-    if (tradeResult.success) {
-      setTradeState("success");
-      setResult({
-        shares: tradeResult.shares,
-        txHash: tradeResult.txHash,
-      });
-      setAmount("");
-    } else {
+      if (tradeResult.success) {
+        setTradeState("success");
+        // Calculate approximate shares from average price
+        const avgPrice = tradeResult.averagePrice || positionCost;
+        const shares = avgPrice > 0 ? usdcAmount / avgPrice : 0;
+        setResult({
+          shares,
+          positionId: tradeResult.positionId || "",
+        });
+        setAmount("");
+      } else {
+        setTradeState("error");
+        setErrorMessage(tradeResult.error ?? "Trade failed");
+      }
+    } catch (err) {
       setTradeState("error");
-      setErrorMessage(tradeResult.error ?? "Trade failed");
+      setErrorMessage(err instanceof Error ? err.message : "Trade failed");
     }
-  }, [amount, usdcAmount, usdcBalance, company.name, eventSlug, activeTab]);
+  }, [amount, usdcAmount, usdcBalance, hasActiveWallet, eventSlug, activeTab, buyLong, buyShort, positionCost]);
 
   const handleReset = useCallback(() => {
     setTradeState("idle");
@@ -298,14 +309,19 @@ export function PredictionMarketTradeWidget({
               <>
                 {/* Amount input */}
                 <div>
-                  <span className="text-sm font-medium text-foreground block mb-1">Amount (USDC)</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-foreground">Amount (USDC)</span>
+                    <span className="text-xs text-muted">
+                      Balance: ${usdcBalance.toFixed(2)}
+                    </span>
+                  </div>
                   <input
                     type="text"
                     inputMode="decimal"
                     value={amount}
                     onChange={handleAmountChange}
                     placeholder="0.00"
-                    disabled={tradeState === "loading"}
+                    disabled={tradeState === "loading" || isBuying}
                     className="w-full bg-badge-bg border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50"
                   />
                 </div>
@@ -351,9 +367,11 @@ export function PredictionMarketTradeWidget({
                   onClick={handleTrade}
                   disabled={
                     tradeState === "loading" ||
+                    isBuying ||
                     !amount ||
                     usdcAmount <= 0 ||
-                    usdcAmount > usdcBalance
+                    usdcAmount > usdcBalance ||
+                    !hasActiveWallet
                   }
                   className={`w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     isLong
@@ -361,9 +379,11 @@ export function PredictionMarketTradeWidget({
                       : "bg-red text-white hover:bg-red/90"
                   }`}
                 >
-                  {tradeState === "loading"
+                  {tradeState === "loading" || isBuying
                     ? "Processing..."
-                    : `${isLong ? "Long" : "Short"} ${symbol}`}
+                    : !hasActiveWallet
+                      ? "Set up wallet to trade"
+                      : `${isLong ? "Long" : "Short"} ${symbol}`}
                 </button>
               </>
             )}
