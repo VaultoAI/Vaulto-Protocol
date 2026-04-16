@@ -48,6 +48,7 @@ const IPO_EVENTS = [
   { eventId: "28999", company: "MegaETH", slug: "megaeth-market-cap-fdv-one-day-after-launch", website: "https://megaeth.systems" },
   { eventId: "85457", company: "Kraken", slug: "kraken-ipo-closing-market-cap-above", website: "https://www.kraken.com" },
   { eventId: "199553", company: "Clear Street", slug: "clear-street-group-ipo-closing-market-cap", website: "https://clearstreet.io" },
+  { eventId: "164439", company: "Strava", slug: "strava-ipo-closing-market-cap", website: "https://www.strava.com" },
 ];
 
 interface PolymarketEvent {

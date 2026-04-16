@@ -100,6 +100,8 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   // AI Safety
   safesuperintelligence: "ssi.inc",
   ssi: "ssi.inc",
+  // Fitness
+  strava: "strava.com",
 };
 
 /**
