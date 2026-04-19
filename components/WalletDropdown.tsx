@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { usePrivy, useFundWallet } from "@privy-io/react-auth";
 import { polygon } from "viem/chains";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
+import { useLogout } from "@/hooks/useLogout";
 
 const DepositModal = dynamic(
   () => import("@/components/trading-wallet/DepositModal").then((mod) => mod.DepositModal),
@@ -27,7 +28,8 @@ import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { generateUsername } from "@/lib/utils/username";
 
 export function WalletDropdown() {
-  const { ready, authenticated, login, logout } = usePrivy();
+  const { ready, authenticated, login } = usePrivy();
+  const { logout } = useLogout();
   const { fundWallet } = useFundWallet();
   const {
     tradingWallet,

@@ -1,13 +1,60 @@
 "use client";
 
-import { useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { useState, useEffect, useRef } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { WagmiProvider } from "@privy-io/wagmi";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, signOut as nextAuthSignOut } from "next-auth/react";
 import { wagmiConfig } from "@/lib/wagmi";
 import { privyConfig, smartWalletConfig } from "@/lib/privy";
+
+/**
+ * Component that listens for auth state changes and clears cache on logout.
+ * This ensures stale user data doesn't persist across sessions.
+ */
+function AuthStateListener({ children }: { children: React.ReactNode }) {
+  const { ready, authenticated } = usePrivy();
+  const queryClient = useQueryClient();
+  const wasAuthenticated = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    // Only react after Privy is ready and we have a previous state to compare
+    if (!ready) return;
+
+    // If user just logged out (was authenticated, now isn't)
+    if (wasAuthenticated.current === true && authenticated === false) {
+      console.log("[AuthStateListener] User logged out, clearing caches...");
+
+      // Clear React Query cache
+      queryClient.clear();
+
+      // Clear NextAuth session
+      nextAuthSignOut({ redirect: false }).catch((e) => {
+        console.warn("[AuthStateListener] Failed to clear NextAuth session:", e);
+      });
+
+      // Clear any user-related localStorage
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("vaulto-") || key.startsWith("privy-"))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+      } catch (e) {
+        console.warn("[AuthStateListener] Failed to clear localStorage:", e);
+      }
+    }
+
+    // Update the ref for next comparison
+    wasAuthenticated.current = authenticated;
+  }, [ready, authenticated, queryClient]);
+
+  return <>{children}</>;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -21,7 +68,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SmartWalletsProvider config={smartWalletConfig}>
           <QueryClientProvider client={queryClient}>
             <WagmiProvider config={wagmiConfig}>
-              {children}
+              <AuthStateListener>
+                {children}
+              </AuthStateListener>
             </WagmiProvider>
           </QueryClientProvider>
         </SmartWalletsProvider>

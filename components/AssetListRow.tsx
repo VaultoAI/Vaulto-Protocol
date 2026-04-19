@@ -19,7 +19,6 @@ import {
   hasImpliedValuationData,
   getImpliedValuationSlug,
 } from "@/lib/polymarket/implied-valuations";
-import { getCompanyPredictionMarket } from "@/lib/polymarket/ipo-valuations";
 
 interface AssetListRowProps {
   company: PrivateCompany;
@@ -72,13 +71,11 @@ export function AssetListRow({ company }: AssetListRowProps) {
   const { changePercent, isPositive } = getDailyChange(company);
   const fundingSparkline = getValuationSparkline(company, 30);
   const isIpoOnly = isIpoOnlyCompany(company);
-  const hasPredictionMarket = getCompanyPredictionMarket(company.name) !== null;
 
   // Check if we need to fetch IPO/implied valuation data
-  // For companies with Polymarket data, always show implied valuation history
-  // Otherwise, fall back to IPO data only if no funding sparkline
+  // Only fetch IPO data as fallback when no funding sparkline exists
   const hasIpoData = hasImpliedValuationData(company.name);
-  const needsIpoData = (hasPredictionMarket && hasIpoData) || (!fundingSparkline && hasIpoData);
+  const needsIpoData = !fundingSparkline && hasIpoData;
   const ipoSlug = needsIpoData ? getImpliedValuationSlug(company.name) : null;
 
   // State for IPO sparkline data and current valuation
@@ -107,9 +104,8 @@ export function AssetListRow({ company }: AssetListRowProps) {
       .catch(() => setIpoLoading(false));
   }, [needsIpoData, ipoSlug, ipoSparkline, ipoLoading]);
 
-  // For Polymarket companies, prioritize implied valuation sparkline
-  // Otherwise, use funding sparkline if available, then IPO sparkline
-  const sparklineData = (hasPredictionMarket && ipoSparkline) ? ipoSparkline : (fundingSparkline ?? ipoSparkline);
+  // Always prioritize funding sparkline, fall back to IPO sparkline only if no funding data
+  const sparklineData = fundingSparkline ?? ipoSparkline;
 
   // Calculate displayed price - for IPO-only companies, scale based on implied valuation
   const price = (() => {

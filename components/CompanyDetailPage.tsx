@@ -96,9 +96,9 @@ export function CompanyDetailPage({
   // Check if there's sufficient funding data for the funding chart
   const hasSufficientFundingData = history.length >= 2;
 
-  // Chart type toggle - default to IPO if insufficient funding data but IPO data exists
+  // Chart type toggle - default to market (IPO prediction) if available, otherwise funding
   const [chartType, setChartType] = useState<ChartType>(() => {
-    if (!hasSufficientFundingData && hasMarketData) {
+    if (hasMarketData) {
       return "market";
     }
     return "funding";

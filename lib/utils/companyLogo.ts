@@ -14,6 +14,7 @@ const STATIC_LOGO_MAP: Record<string, string> = {
   bytedance: "bytedance.svg",
   safesuperintelligence: "ssi.jpg",
   ssi: "ssi.jpg",
+  fanniemae: "fanniemae.png", // Google Favicon API doesn't return good icon for fanniemae.com
 };
 
 /**

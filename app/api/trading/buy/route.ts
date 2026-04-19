@@ -171,8 +171,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("[Trading Buy] Error:", error);
+    // Log full stack trace for debugging
+    if (error instanceof Error) {
+      console.error("[Trading Buy] Stack:", error.stack);
+    }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to place trade" },
+      {
+        error: error instanceof Error ? error.message : "Failed to place trade",
+        details: error instanceof Error ? error.stack : undefined,
+      },
       { status: 500 }
     );
   }
