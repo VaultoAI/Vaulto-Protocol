@@ -48,11 +48,11 @@ async function main() {
       count++;
       users.push({
         id: user.id,
-        createdAt: user.createdAt,
-        linkedAccounts: (user.linkedAccounts || []).map((account) => ({
+        createdAt: user.created_at,
+        linkedAccounts: (user.linked_accounts || []).map((account) => ({
           type: account.type,
           address: "address" in account ? account.address : undefined,
-          chainType: "chainType" in account ? account.chainType : undefined,
+          chainType: "chain_type" in account ? account.chain_type : undefined,
         })),
       });
 

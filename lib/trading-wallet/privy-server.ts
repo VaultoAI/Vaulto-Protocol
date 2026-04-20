@@ -62,3 +62,56 @@ export function isPrivyServerConfigured(): boolean {
     process.env.NEXT_PUBLIC_PRIVY_APP_ID && process.env.PRIVY_APP_SECRET
   );
 }
+
+export interface PrivyUserWithWallet {
+  userId: string;
+  email: string;
+  embeddedWalletAddress: string;
+}
+
+/**
+ * Verify a Privy access token and get user info with embedded wallet address
+ */
+export async function verifyPrivyTokenAndGetUserWithWallet(
+  accessToken: string
+): Promise<PrivyUserWithWallet | null> {
+  const client = getPrivyClient();
+
+  try {
+    // Verify the token first
+    const verifiedClaims = await client.utils().auth().verifyAccessToken(accessToken);
+    const userId = verifiedClaims.user_id;
+
+    // Get full user details
+    const user = await client.users().get({ id_token: userId });
+
+    // Extract email from linked accounts
+    const emailAccount = user.linked_accounts.find(
+      (account) => account.type === "email"
+    );
+    if (!emailAccount || !("address" in emailAccount)) {
+      console.error("[Privy Server] User has no email linked:", userId);
+      return null;
+    }
+    const email = emailAccount.address as string;
+
+    // Extract embedded wallet address
+    const embeddedWallet = user.linked_accounts.find(
+      (account) => account.type === "wallet" && "wallet_client_type" in account && account.wallet_client_type === "privy"
+    );
+    if (!embeddedWallet || !("address" in embeddedWallet)) {
+      console.error("[Privy Server] User has no embedded wallet:", userId);
+      return null;
+    }
+    const embeddedWalletAddress = embeddedWallet.address as string;
+
+    return {
+      userId,
+      email,
+      embeddedWalletAddress,
+    };
+  } catch (error) {
+    console.error("[Privy Server] Token verification or user fetch failed:", error);
+    return null;
+  }
+}
