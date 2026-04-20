@@ -110,7 +110,7 @@ export function LandingPage() {
   };
 
   return (
-    <div className="landing-page-light min-h-screen bg-[var(--background)]">
+    <div className="landing-page-light min-h-screen bg-[var(--background)]" style={{ zoom: 0.9 }}>
       {/* Hidden form for Google sign-in */}
       <form ref={googleFormRef} action={signInWithGoogle} className="hidden" />
 
