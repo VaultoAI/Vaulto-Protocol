@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ThemeColorMeta } from "@/components/ThemeColorMeta";
 
 export const metadata: Metadata = {
   title: "Vaulto — The Future of Private Investing",
@@ -32,6 +33,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 const themeScript = `
 (function(){
   var t=localStorage.getItem('theme');
@@ -54,6 +61,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <ThemeColorMeta />
         {children}
       </body>
     </html>
