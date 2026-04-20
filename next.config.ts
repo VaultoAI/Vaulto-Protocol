@@ -53,33 +53,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      {
-        source: "/manifest.webmanifest",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=86400",
-          },
-        ],
-      },
-      {
-        source: "/icons/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
-      {
-        source: "/splash/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
     ];
   },
 
