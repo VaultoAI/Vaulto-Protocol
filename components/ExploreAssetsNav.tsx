@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 
@@ -8,27 +7,24 @@ type ViewMode = "grid" | "list";
 
 interface ExploreAssetsNavProps {
   filteredCount: number;
+  searchValue: string;
+  onSearchChange: (value: string) => void;
 }
 
 /**
  * Navigation section for Explore Assets header with view toggle.
+ * Search state is managed by parent (ExplorePageClient) for debounced URL updates.
  */
 export function ExploreAssetsNav({
   filteredCount,
+  searchValue,
+  onSearchChange,
 }: ExploreAssetsNavProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const viewParam = searchParams?.get("view");
   const viewMode: ViewMode = viewParam === "list" ? "list" : "grid";
-
-  // Mobile search state - synced with URL
-  const [searchValue, setSearchValue] = useState(searchParams?.get("q") || "");
-
-  // Sync search value with URL changes
-  useEffect(() => {
-    setSearchValue(searchParams?.get("q") || "");
-  }, [searchParams]);
 
   const handleViewModeChange = (mode: ViewMode) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -41,17 +37,7 @@ export function ExploreAssetsNav({
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchValue(value);
-
-    // Update URL for grid filtering
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    if (value.trim()) {
-      params.set("q", value);
-    } else {
-      params.delete("q");
-    }
-    router.push(`/explore${params.toString() ? `?${params}` : ""}`);
+    onSearchChange(e.target.value);
   };
 
   return (

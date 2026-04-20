@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CATEGORIES } from "@/lib/vaulto/companyUtils";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol } from "@/lib/vaulto/companies";
@@ -32,8 +32,56 @@ interface ExplorePageClientProps {
  * and renders sections in the correct order.
  */
 export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyAdded, impliedValuations }: ExplorePageClientProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const search = searchParams?.get("q") || "";
+
+  // Local search state for immediate filtering (no lag)
+  const [searchValue, setSearchValue] = useState(searchParams?.get("q") || "");
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced URL update - only updates URL after user stops typing
+  const updateUrlWithSearch = useCallback((value: string) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    if (value.trim()) {
+      params.set("q", value);
+    } else {
+      params.delete("q");
+    }
+    router.push(`/explore${params.toString() ? `?${params}` : ""}`, { scroll: false });
+  }, [router, searchParams]);
+
+  // Handle search change - immediate local state, debounced URL
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchValue(value);
+
+    // Clear any pending URL update
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Schedule URL update after 300ms of inactivity
+    debounceTimerRef.current = setTimeout(() => {
+      updateUrlWithSearch(value);
+    }, 300);
+  }, [updateUrlWithSearch]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Sync local state with URL when URL changes externally (e.g., browser back/forward)
+  useEffect(() => {
+    const urlSearch = searchParams?.get("q") || "";
+    if (urlSearch !== searchValue) {
+      setSearchValue(urlSearch);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Read category from URL params, fallback to state for ExploreAssetsNav compatibility
   const categoryParam = searchParams?.get("category");
@@ -56,8 +104,8 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
     ? (sortParam as SortOption)
     : "Most Popular";
 
-  // Track if user is searching (hide top sections entirely)
-  const isSearching = search.trim() !== "";
+  // Track if user is searching (hide top sections entirely) - use local state for immediate response
+  const isSearching = searchValue.trim() !== "";
 
   // Track if user is actively interacting with nav controls (mobile only behavior)
   // Hide indexes/trending sections on mobile when: non-default sort selected OR list view selected
@@ -66,9 +114,9 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   const filteredCompanies = useMemo(() => {
     let result = [...companies];
 
-    // Search filter
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
+    // Search filter - use local searchValue for immediate filtering
+    if (searchValue.trim()) {
+      const q = searchValue.toLowerCase().trim();
       result = result.filter((c) => {
         const symbol = getSyntheticSymbol(c.name).toLowerCase();
         return (
@@ -108,7 +156,7 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
     }
 
     return result;
-  }, [companies, search, activeCategory, sortBy]);
+  }, [companies, searchValue, activeCategory, sortBy]);
 
   return (
     <div>
@@ -116,6 +164,8 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
       <div className="md:hidden">
         <ExploreAssetsNav
           filteredCount={filteredCompanies.length}
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
         />
       </div>
 
@@ -143,6 +193,8 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
       <div className="hidden md:block">
         <ExploreAssetsNav
           filteredCount={filteredCompanies.length}
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
         />
       </div>
 
