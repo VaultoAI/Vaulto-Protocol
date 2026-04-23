@@ -17,6 +17,8 @@ export interface PredictionPosition {
   shares: number;
   entryPrice: number;
   currentPrice: number;
+  marketValue: number;
+  costBasis: number;
   unrealizedPnl: number;
   unrealizedPnlPercent: number;
   createdAt: string;
@@ -240,9 +242,17 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
     const status = await checkCredentialsStatus();
     console.log("[usePredictionTrading] Credentials status:", status);
 
-    if (status.hasCredentials) {
+    // TEMP FIX: Always re-derive credentials on first attempt to fix wallet address association
+    // Remove this after credentials are properly set up
+    const forceRederive = !credentialsSetupAttemptedRef.current;
+
+    if (status.hasCredentials && !forceRederive) {
       console.log("[usePredictionTrading] Credentials already configured");
       return true;
+    }
+
+    if (forceRederive) {
+      console.log("[usePredictionTrading] Force re-deriving credentials to fix wallet association...");
     }
 
     // Credentials don't exist, need to set them up
@@ -370,14 +380,40 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
     return sellMutation.mutateAsync({ ...params, privyToken });
   };
 
-  // Helper to get position for a specific event
-  const getPositionForEvent = (eventId: string, side?: "LONG" | "SHORT"): PredictionPosition | null => {
-    if (!positionsData?.positions) return null;
-    return (
-      positionsData.positions.find(
-        (p) => p.eventId === eventId && (side === undefined || p.side === side)
-      ) || null
+  // Helper to get ALL positions for a specific event (may have multiple bands)
+  const getPositionsForEvent = (eventId: string, side?: "LONG" | "SHORT"): PredictionPosition[] => {
+    if (!positionsData?.positions) return [];
+    return positionsData.positions.filter(
+      (p) => p.eventId === eventId && (side === undefined || p.side === side)
     );
+  };
+
+  // Helper to get aggregated position for a specific event (combines all bands)
+  const getPositionForEvent = (eventId: string, side?: "LONG" | "SHORT"): PredictionPosition | null => {
+    const positions = getPositionsForEvent(eventId, side);
+    if (positions.length === 0) return null;
+    if (positions.length === 1) return positions[0];
+
+    // Aggregate multiple positions into one
+    const totalShares = positions.reduce((sum, p) => sum + p.shares, 0);
+    const totalCostBasis = positions.reduce((sum, p) => sum + p.costBasis, 0);
+    const totalMarketValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
+    const totalUnrealizedPnl = positions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
+    const avgEntryPrice = totalShares > 0 ? totalCostBasis / totalShares : 0;
+    const avgCurrentPrice = totalShares > 0 ? totalMarketValue / totalShares : 0;
+    const unrealizedPnlPercent = totalCostBasis > 0 ? (totalUnrealizedPnl / totalCostBasis) * 100 : 0;
+
+    // Return aggregated position using first position as base
+    return {
+      ...positions[0],
+      shares: totalShares,
+      entryPrice: avgEntryPrice,
+      currentPrice: avgCurrentPrice,
+      marketValue: totalMarketValue,
+      costBasis: totalCostBasis,
+      unrealizedPnl: totalUnrealizedPnl,
+      unrealizedPnlPercent,
+    };
   };
 
   // Helper to check if user has a position in an event
@@ -428,6 +464,7 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
 
     // Helpers
     getPositionForEvent,
+    getPositionsForEvent,
     hasPosition,
   };
 }

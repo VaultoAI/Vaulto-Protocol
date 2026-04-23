@@ -7,10 +7,31 @@ import {
 } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
 import {
-  verifyPrivyTokenAndGetUserWithWallet,
+  verifyPrivyToken,
   isValidEthereumAddress,
 } from "@/lib/trading-wallet/privy-server";
+import {
+  createWalletForExistingUser,
+  getUserWallet,
+  isServerSigningConfigured,
+} from "@/lib/trading-wallet/server-wallet";
 import { DEFAULT_TRADING_CHAIN_ID } from "@/lib/trading-wallet/constants";
+import { PrivyClient } from "@privy-io/node";
+
+// Lazy initialization of Privy client
+let _privyClient: PrivyClient | null = null;
+
+function getPrivyClient(): PrivyClient {
+  if (!_privyClient) {
+    const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+    const appSecret = process.env.PRIVY_APP_SECRET;
+    if (!appId || !appSecret) {
+      throw new Error("Missing Privy configuration");
+    }
+    _privyClient = new PrivyClient({ appId, appSecret });
+  }
+  return _privyClient;
+}
 
 /**
  * POST /api/trading/ensure-credentials
@@ -47,19 +68,126 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Verify Privy token and extract user info + embedded wallet
-    console.log("[Ensure Credentials] Verifying Privy token and extracting user info...");
-    const privyUser = await verifyPrivyTokenAndGetUserWithWallet(privyAuthToken);
+    // Step 1: Verify Privy token
+    console.log("[Ensure Credentials] Verifying Privy token...");
+    const verifiedUser = await verifyPrivyToken(privyAuthToken);
 
-    if (!privyUser) {
-      console.error("[Ensure Credentials] Failed to verify Privy token or extract wallet");
+    if (!verifiedUser) {
+      console.error("[Ensure Credentials] Failed to verify Privy token");
       return NextResponse.json(
-        { error: "Invalid authentication token or missing embedded wallet", ready: false },
+        { error: "Invalid authentication token", ready: false },
         { status: 401 }
       );
     }
 
-    const { email, embeddedWalletAddress } = privyUser;
+    const privyUserId = verifiedUser.userId;
+    console.log("[Ensure Credentials] Token verified for user:", privyUserId);
+
+    // Step 1.5: Get user details from Privy (use _get with user ID for server-side queries)
+    const privy = getPrivyClient();
+    const privyUser = await privy.users()._get(privyUserId);
+
+    // Extract email from linked accounts (check multiple account types)
+    // 1. Direct email account
+    const emailAccount = privyUser.linked_accounts.find(
+      (account) => account.type === "email" && "address" in account
+    );
+    // 2. Google OAuth account
+    const googleAccount = privyUser.linked_accounts.find(
+      (account) => account.type === "google_oauth" && "email" in account
+    );
+    // 3. Apple OAuth account
+    const appleAccount = privyUser.linked_accounts.find(
+      (account) => account.type === "apple_oauth" && "email" in account
+    );
+
+    // Find existing external wallet (for wallet-only logins)
+    const externalWallet = privyUser.linked_accounts.find(
+      (account) =>
+        account.type === "wallet" &&
+        "wallet_client_type" in account &&
+        account.wallet_client_type !== "privy" &&
+        "address" in account
+    );
+
+    // Determine email: use linked email from any source, or generate placeholder
+    let email: string;
+    if (emailAccount && "address" in emailAccount) {
+      email = emailAccount.address as string;
+      console.log("[Ensure Credentials] Using direct email:", email);
+    } else if (googleAccount && "email" in googleAccount) {
+      email = (googleAccount as { email: string }).email;
+      console.log("[Ensure Credentials] Using Google OAuth email:", email);
+    } else if (appleAccount && "email" in appleAccount) {
+      email = (appleAccount as { email: string }).email;
+      console.log("[Ensure Credentials] Using Apple OAuth email:", email);
+    } else if (externalWallet && "address" in externalWallet) {
+      // Generate placeholder email from wallet address for wallet-only users
+      const walletAddr = (externalWallet.address as string).toLowerCase();
+      email = `${walletAddr}@wallet.vaulto.app`;
+      console.log("[Ensure Credentials] Using wallet-based placeholder email:", email);
+    } else {
+      // Fallback: use Privy user ID
+      const userIdSuffix = privyUserId.replace("did:privy:", "");
+      email = `${userIdSuffix}@privy.vaulto.app`;
+      console.log("[Ensure Credentials] Using Privy ID-based placeholder email:", email);
+    }
+
+    // Step 2: Check if user already has an embedded wallet, or create one server-side
+    let embeddedWalletAddress: string;
+    let privyWalletId: string | null = null;
+    let hasServerSigner = false;
+    let policyId: string | null = null;
+    let serverSignerId: string | null = null;
+
+    // Find existing embedded wallet
+    const existingWallet = privyUser.linked_accounts.find(
+      (account) =>
+        account.type === "wallet" &&
+        "wallet_client_type" in account &&
+        account.wallet_client_type === "privy" &&
+        "chain_type" in account &&
+        account.chain_type === "ethereum"
+    );
+
+    if (existingWallet && "address" in existingWallet) {
+      // User already has an embedded wallet (legacy or previously created)
+      embeddedWalletAddress = existingWallet.address as string;
+      privyWalletId = "wallet_id" in existingWallet ? (existingWallet.wallet_id as string) : null;
+      console.log("[Ensure Credentials] Found existing embedded wallet:", embeddedWalletAddress);
+    } else {
+      // No wallet exists - create one server-side with policy
+      console.log("[Ensure Credentials] No embedded wallet found, creating server-side...");
+
+      if (!isServerSigningConfigured()) {
+        console.error("[Ensure Credentials] Server signing not configured");
+        return NextResponse.json(
+          { error: "Server signing not configured. Please contact support.", ready: false },
+          { status: 500 }
+        );
+      }
+
+      try {
+        const newWallet = await createWalletForExistingUser(privyUserId);
+        embeddedWalletAddress = newWallet.address;
+        privyWalletId = newWallet.walletId;
+        hasServerSigner = true;
+        policyId = newWallet.policyId;
+        serverSignerId = process.env.PRIVY_AUTHORIZATION_KEY_ID || null;
+        console.log("[Ensure Credentials] Created server wallet:", {
+          address: embeddedWalletAddress,
+          walletId: privyWalletId,
+          policyId,
+        });
+      } catch (error) {
+        console.error("[Ensure Credentials] Failed to create server wallet:", error);
+        return NextResponse.json(
+          { error: "Failed to create trading wallet", ready: false },
+          { status: 500 }
+        );
+      }
+    }
+
     console.log("[Ensure Credentials] User verified:", { email, embeddedWalletAddress });
 
     // Validate wallet address format
@@ -125,14 +253,17 @@ export async function POST(request: NextRequest) {
           );
         }
       } else {
-        // Create new trading wallet
+        // Create new trading wallet with server signing info if available
         tradingWallet = await db.tradingWallet.create({
           data: {
             userId: user.id,
-            privyWalletId: embeddedWalletAddress,
+            privyWalletId: privyWalletId || embeddedWalletAddress,
             address: embeddedWalletAddress,
             chainId: DEFAULT_TRADING_CHAIN_ID,
             status: "ACTIVE",
+            hasServerSigner,
+            policyId,
+            serverSignerId,
           },
         });
 
@@ -146,6 +277,8 @@ export async function POST(request: NextRequest) {
               address: tradingWallet.address,
               chainId: tradingWallet.chainId,
               source: "ensure-credentials",
+              hasServerSigner,
+              policyId,
             }),
             entityType: "TradingWallet",
             entityId: tradingWallet.id,
@@ -153,27 +286,47 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        console.log("[Ensure Credentials] Created trading wallet:", tradingWallet.id);
+        console.log("[Ensure Credentials] Created trading wallet:", {
+          id: tradingWallet.id,
+          hasServerSigner,
+        });
       }
     } else {
       console.log("[Ensure Credentials] Trading wallet already exists:", tradingWallet.id);
+      // Use the existing wallet's hasServerSigner value
+      hasServerSigner = tradingWallet.hasServerSigner;
     }
 
-    // Step 4: Check credentials status on Vaulto API
+    // For wallets without server signing, skip Vaulto API credential setup
+    // These wallets use client-side signing and don't need server credentials
+    if (!hasServerSigner) {
+      console.log("[Ensure Credentials] Wallet uses client-side signing, skipping Vaulto API setup. Done!");
+      return NextResponse.json({ ready: true });
+    }
+
+    // Step 4: Check credentials status on Vaulto API (only for server-signed wallets)
     console.log("[Ensure Credentials] Checking credentials status on Vaulto API...");
     const apiKey = getVaultoApiToken();
 
-    try {
-      const credStatus = await checkCredentialsStatus(apiKey, tradingWallet.address);
-      console.log("[Ensure Credentials] Credentials status:", credStatus);
+    // Check if force re-derivation is requested via query param or header
+    const forceRederive = request.nextUrl.searchParams.get("force") === "true" ||
+                          request.headers.get("x-force-rederive") === "true";
 
-      if (credStatus.hasCredentials) {
-        console.log("[Ensure Credentials] Credentials already configured, done!");
-        return NextResponse.json({ ready: true });
+    if (!forceRederive) {
+      try {
+        const credStatus = await checkCredentialsStatus(apiKey, tradingWallet.address);
+        console.log("[Ensure Credentials] Credentials status:", credStatus);
+
+        if (credStatus.hasCredentials) {
+          console.log("[Ensure Credentials] Credentials already configured, done!");
+          return NextResponse.json({ ready: true });
+        }
+      } catch (error) {
+        // If credentials check fails, assume no credentials and try to set up
+        console.log("[Ensure Credentials] Credentials check failed, will try to set up:", error);
       }
-    } catch (error) {
-      // If credentials check fails, assume no credentials and try to set up
-      console.log("[Ensure Credentials] Credentials check failed, will try to set up:", error);
+    } else {
+      console.log("[Ensure Credentials] Force re-derivation requested, skipping credentials check");
     }
 
     // Step 5: Set up wallet on Vaulto API with retry logic
@@ -185,7 +338,8 @@ export async function POST(request: NextRequest) {
     for (let attempt = 1; attempt <= MAX_SETUP_RETRIES; attempt++) {
       console.log(`[Ensure Credentials] Setting up wallet on Vaulto API (attempt ${attempt}/${MAX_SETUP_RETRIES})...`);
       try {
-        const walletResult = await setupWallet(apiKey, privyAuthToken);
+        // Pass wallet address so Vaulto API can associate credentials with this wallet
+        const walletResult = await setupWallet(apiKey, privyAuthToken, embeddedWalletAddress);
         console.log("[Ensure Credentials] Wallet setup result:", walletResult);
 
         if (!walletResult.success) {
@@ -229,7 +383,8 @@ export async function POST(request: NextRequest) {
     for (let attempt = 1; attempt <= MAX_DERIVE_RETRIES; attempt++) {
       console.log(`[Ensure Credentials] Deriving credentials on Vaulto API (attempt ${attempt}/${MAX_DERIVE_RETRIES})...`);
       try {
-        const credResult = await deriveCredentials(apiKey, privyAuthToken);
+        // Pass wallet address so Vaulto API can associate credentials with this wallet
+        const credResult = await deriveCredentials(apiKey, privyAuthToken, embeddedWalletAddress);
         console.log("[Ensure Credentials] Derive credentials result:", credResult);
 
         if (credResult.success) {

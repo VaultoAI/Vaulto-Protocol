@@ -511,6 +511,9 @@ model TradingWallet {
   address           String              @unique
   chainId           Int                 @default(137) // Polygon
 
+  // Safe wallet address (used for Polymarket trading)
+  safeAddress       String?
+
   // Status
   status            TradingWalletStatus @default(PENDING_CREATION)
 

@@ -5,6 +5,9 @@
 
 import { PrivyClient } from "@privy-io/node";
 
+// Re-export server wallet functions for convenience
+export { isServerSigningConfigured } from "./server-wallet";
+
 // Lazy initialization of Privy client
 let _privyClient: PrivyClient | null = null;
 
@@ -82,18 +85,47 @@ export async function verifyPrivyTokenAndGetUserWithWallet(
     const verifiedClaims = await client.utils().auth().verifyAccessToken(accessToken);
     const userId = verifiedClaims.user_id;
 
-    // Get full user details
-    const user = await client.users().get({ id_token: userId });
+    // Get full user details (use _get with user ID for server-side queries)
+    const user = await client.users()._get(userId);
 
-    // Extract email from linked accounts
+    // Extract email from linked accounts (check multiple account types)
+    // 1. Direct email account
     const emailAccount = user.linked_accounts.find(
-      (account) => account.type === "email"
+      (account) => account.type === "email" && "address" in account
     );
-    if (!emailAccount || !("address" in emailAccount)) {
-      console.error("[Privy Server] User has no email linked:", userId);
-      return null;
+    // 2. Google OAuth account
+    const googleAccount = user.linked_accounts.find(
+      (account) => account.type === "google_oauth" && "email" in account
+    );
+    // 3. Apple OAuth account
+    const appleAccount = user.linked_accounts.find(
+      (account) => account.type === "apple_oauth" && "email" in account
+    );
+
+    // Find external wallet (for wallet-only logins)
+    const externalWallet = user.linked_accounts.find(
+      (account) =>
+        account.type === "wallet" &&
+        "wallet_client_type" in account &&
+        account.wallet_client_type !== "privy" &&
+        "address" in account
+    );
+
+    // Determine email: use linked email from any source, or generate placeholder
+    let email: string;
+    if (emailAccount && "address" in emailAccount) {
+      email = emailAccount.address as string;
+    } else if (googleAccount && "email" in googleAccount) {
+      email = (googleAccount as { email: string }).email;
+    } else if (appleAccount && "email" in appleAccount) {
+      email = (appleAccount as { email: string }).email;
+    } else if (externalWallet && "address" in externalWallet) {
+      const walletAddr = (externalWallet.address as string).toLowerCase();
+      email = `${walletAddr}@wallet.vaulto.app`;
+    } else {
+      const userIdSuffix = userId.replace("did:privy:", "");
+      email = `${userIdSuffix}@privy.vaulto.app`;
     }
-    const email = emailAccount.address as string;
 
     // Extract embedded wallet address
     const embeddedWallet = user.linked_accounts.find(

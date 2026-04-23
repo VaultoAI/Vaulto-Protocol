@@ -131,12 +131,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               create: {
                 email: user.email,
                 name: user.name,
-                image: user.image,
                 isVaultoEmployee,
               },
               update: {
                 name: user.name,
-                image: user.image,
                 // Only update isVaultoEmployee if true (don't downgrade manually-set employees)
                 ...(isVaultoEmployee ? { isVaultoEmployee: true } : {}),
               },

@@ -40,7 +40,7 @@ export function WalletDropdown() {
     detectDeposits,
     refetchBalance,
   } = useTradingWallet();
-  const { image: profileImage, name: profileName } = useProfile();
+  const { name: profileName } = useProfile();
 
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -248,10 +248,8 @@ export function WalletDropdown() {
                 </p>
               </div>
               <ProfileAvatar
-                image={profileImage}
                 walletAddress={walletAddress ?? null}
                 size={44}
-                editable={false}
               />
             </div>
             <div className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white sm:mt-2 sm:text-lg">

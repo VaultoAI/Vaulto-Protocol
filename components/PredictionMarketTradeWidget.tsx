@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol } from "@/lib/vaulto/companies";
-import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
 import {
   usePredictionMarketData,
   formatVolume,
@@ -13,7 +12,7 @@ import {
 } from "@/hooks/usePredictionMarketData";
 import { usePredictionTrading } from "@/hooks/usePredictionTrading";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
-import { getPolymarketEventUrl, formatValuationPrecise } from "@/lib/polymarket/ipo-valuations";
+import { formatValuationPrecise } from "@/lib/polymarket/ipo-valuations";
 import {
   getImpliedValuationSlug,
   type ImpliedValuationResponse,
@@ -58,8 +57,6 @@ export function PredictionMarketTradeWidget({
   const [tradeState, setTradeState] = useState<TradeState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<{ shares: number; positionId: string } | null>(null);
-  const [logoError, setLogoError] = useState(false);
-  const polymarketLogoUrl = getProxiedFaviconUrl("polymarket.com");
 
   const usdcBalance = parseFloat(balance) || 0;
   const usdcAmount = parseFloat(amount) || 0;
@@ -145,8 +142,6 @@ export function PredictionMarketTradeWidget({
     setErrorMessage(null);
   }, []);
 
-  const eventUrl = getPolymarketEventUrl(eventSlug);
-
   return (
     <div className="w-full rounded-xl border border-border bg-card-bg">
       {/* Long/Short tabs */}
@@ -180,50 +175,6 @@ export function PredictionMarketTradeWidget({
       </div>
 
       <div className="p-5 space-y-4">
-        {/* Polymarket Event Link */}
-        <a
-          href={eventUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
-        >
-          <div className="flex items-center gap-2">
-            {logoError ? (
-              <span className="w-5 h-5 rounded bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                P
-              </span>
-            ) : (
-              <img
-                src={polymarketLogoUrl}
-                alt="Polymarket"
-                width={20}
-                height={20}
-                className="w-5 h-5 rounded object-cover"
-                onError={() => setLogoError(true)}
-              />
-            )}
-            <div>
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                {data?.event.name || "Polymarket Event"}
-              </span>
-              <p className="text-xs text-blue-600/70 dark:text-blue-400/70">IPO Market Cap</p>
-            </div>
-          </div>
-          <svg
-            className="w-4 h-4 text-blue-400 dark:text-blue-500 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-            />
-          </svg>
-        </a>
-
         {/* Loading state */}
         {isLoading && (
           <div className="animate-pulse space-y-3">

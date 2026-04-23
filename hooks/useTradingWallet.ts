@@ -1,10 +1,28 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { CHAIN_IDS, USDC_DECIMALS } from "@/lib/trading-wallet/constants";
+
+/**
+ * Ensure trading credentials are set up (creates wallet server-side if needed)
+ */
+async function ensureCredentials(privyToken: string): Promise<{ ready: boolean; error?: string }> {
+  const res = await fetch("/api/trading/ensure-credentials", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-privy-token": privyToken,
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    return { ready: false, error: data.error || "Failed to ensure credentials" };
+  }
+  return data;
+}
 
 // Hook to track document visibility
 function useDocumentVisibility() {
@@ -31,6 +49,7 @@ export interface TradingWalletStatus {
   status: "PENDING_CREATION" | "ACTIVE" | "SUSPENDED";
   balance: string;
   balanceUsd: string;
+  hasServerSigner?: boolean;
 }
 
 export interface DepositTransaction {
@@ -43,20 +62,30 @@ export interface WithdrawalRequest {
   toAddress: string;
 }
 
-async function fetchTradingWalletStatus(): Promise<TradingWalletStatus | null> {
-  const res = await fetch("/api/trading-wallet/status");
+async function fetchTradingWalletStatus(privyToken?: string): Promise<TradingWalletStatus | null> {
+  const headers: HeadersInit = {};
+  if (privyToken) {
+    headers["x-privy-token"] = privyToken;
+  }
+
+  const res = await fetch("/api/trading-wallet/status", { headers });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error("Failed to fetch trading wallet status");
   return res.json();
 }
 
 async function createTradingWallet(
-  walletAddress: string
+  walletAddressOrToken: string,
+  isPrivyToken: boolean = false
 ): Promise<TradingWalletStatus> {
+  const body = isPrivyToken
+    ? { privyToken: walletAddressOrToken }
+    : { walletAddress: walletAddressOrToken };
+
   const res = await fetch("/api/trading-wallet/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ walletAddress }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const data = await res.json();
@@ -146,11 +175,16 @@ async function executeWithdrawal(withdrawalId: string): Promise<{
   return data;
 }
 
-async function fetchBalance(): Promise<{
+async function fetchBalance(privyToken?: string): Promise<{
   balance: string;
   balanceUsd: string;
 }> {
-  const res = await fetch("/api/trading-wallet/balance");
+  const headers: HeadersInit = {};
+  if (privyToken) {
+    headers["x-privy-token"] = privyToken;
+  }
+
+  const res = await fetch("/api/trading-wallet/balance", { headers });
   if (!res.ok) throw new Error("Failed to fetch balance");
   return res.json();
 }
@@ -198,7 +232,7 @@ async function recoverWithdrawals(): Promise<{
 
 export function useTradingWallet() {
   const queryClient = useQueryClient();
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated, user, getAccessToken } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const { client: smartWalletClient } = useSmartWallets();
   const isVisible = useDocumentVisibility();
@@ -220,7 +254,11 @@ export function useTradingWallet() {
     refetch: refetchWallet,
   } = useQuery({
     queryKey: ["trading-wallet", user?.id],
-    queryFn: fetchTradingWalletStatus,
+    queryFn: async () => {
+      // Get Privy token to pass to the API
+      const token = await getAccessToken();
+      return fetchTradingWalletStatus(token || undefined);
+    },
     enabled: ready && authenticated,
     staleTime: 30_000,
   });
@@ -233,15 +271,25 @@ export function useTradingWallet() {
     refetch: refetchBalance,
   } = useQuery({
     queryKey: ["trading-wallet-balance", tradingWallet?.address],
-    queryFn: fetchBalance,
+    queryFn: async () => {
+      const token = await getAccessToken();
+      return fetchBalance(token || undefined);
+    },
     enabled: !!tradingWallet?.address && tradingWallet.status === "ACTIVE",
     staleTime: 15_000,
     refetchInterval: isVisible ? 30_000 : false, // Poll every 30 seconds only when visible
   });
 
   // Create trading wallet mutation
+  // Supports both legacy (wallet address) and new (Privy token) modes
   const createWalletMutation = useMutation({
-    mutationFn: (walletAddress: string) => createTradingWallet(walletAddress),
+    mutationFn: ({
+      walletAddressOrToken,
+      isPrivyToken = false,
+    }: {
+      walletAddressOrToken: string;
+      isPrivyToken?: boolean;
+    }) => createTradingWallet(walletAddressOrToken, isPrivyToken),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trading-wallet"] });
     },
@@ -354,12 +402,13 @@ export function useTradingWallet() {
   }, [isVisible, tradingWallet?.address, tradingWallet?.status, detectDepositsMutation]);
 
   // Auto-create trading wallet when conditions are met
+  // Note: With server-side wallet creation, we don't need an embedded wallet to exist first
   useEffect(() => {
     const shouldAutoCreate =
       ready &&
       walletsReady &&
       authenticated &&
-      embeddedWallet?.address &&
+      user?.id &&
       !tradingWallet &&
       !isLoadingWallet &&
       !createWalletMutation.isPending &&
@@ -373,19 +422,44 @@ export function useTradingWallet() {
       setAutoCreateError(null);
 
       try {
-        await createWalletMutation.mutateAsync(embeddedWallet.address);
+        // Always use ensure-credentials to handle wallet creation server-side
+        // This works for both new users and users with existing embedded wallets
+        console.log("[useTradingWallet] Calling ensure-credentials to set up trading wallet...");
+
+        // Get Privy access token
+        const accessToken = await getAccessToken();
+        if (!accessToken) {
+          throw new Error("Failed to get Privy access token");
+        }
+
+        // Call ensure-credentials to create/configure wallet server-side
+        const result = await ensureCredentials(accessToken);
+
+        if (!result.ready) {
+          throw new Error(result.error || "Failed to set up trading wallet");
+        }
+
+        console.log("[useTradingWallet] ensure-credentials succeeded, refetching wallet...");
+        // Refetch to get the newly created wallet
+        await refetchWallet();
       } catch (err) {
-        // Handle "already exists" errors silently - just refetch
+        // Handle specific errors appropriately
         if (err instanceof Error) {
           const errorMessage = err.message.toLowerCase();
           if (
             errorMessage.includes("already exists") ||
-            errorMessage.includes("duplicate") ||
-            errorMessage.includes("conflict")
+            errorMessage.includes("duplicate")
           ) {
             // Wallet already exists, just refetch to get the data
+            console.log("[useTradingWallet] Wallet already exists, refetching...");
             await refetchWallet();
+          } else if (errorMessage.includes("conflict") || errorMessage.includes("registered to another")) {
+            // Conflict error - wallet belongs to different user (data issue)
+            // Mark as permanent error to stop retrying
+            console.error("[useTradingWallet] Conflict error (wallet belongs to another user):", err.message);
+            setAutoCreateError("This wallet is registered to another account. Please contact support.");
           } else {
+            console.error("[useTradingWallet] Auto-create error:", err.message);
             setAutoCreateError(err.message);
           }
         } else {
@@ -402,11 +476,13 @@ export function useTradingWallet() {
     ready,
     walletsReady,
     authenticated,
+    user?.id,
     embeddedWallet?.address,
     tradingWallet,
     isLoadingWallet,
     createWalletMutation,
     refetchWallet,
+    getAccessToken,
   ]);
 
   // Computed values
@@ -453,8 +529,12 @@ export function useTradingWallet() {
     autoCreateError,
     chainId: tradingWallet?.chainId ?? CHAIN_IDS.POLYGON,
 
+    // Server signer status
+    hasServerSigner: tradingWallet?.hasServerSigner ?? false,
+
     // Actions
-    createWallet: createWalletMutation.mutateAsync,
+    createWallet: (walletAddressOrToken: string, isPrivyToken: boolean = false) =>
+      createWalletMutation.mutateAsync({ walletAddressOrToken, isPrivyToken }),
     isCreatingWallet: createWalletMutation.isPending,
 
     initiateDeposit: initiateDepositMutation.mutateAsync,

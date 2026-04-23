@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-withdrawal";
+import { getUserEmail } from "@/lib/trading-wallet/get-user-email";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
+    const email = await getUserEmail(request);
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -16,7 +16,7 @@ export async function GET() {
     const db = getDb();
 
     const user = await db.user.findUnique({
-      where: { email: session.user.email },
+      where: { email },
       include: { tradingWallet: true },
     });
 

@@ -14,8 +14,9 @@ export const privyConfig: PrivyClientConfig = {
   },
   embeddedWallets: {
     ethereum: {
-      // Create embedded wallet for ALL users (trading wallet)
-      createOnLogin: "all-users",
+      // Wallet creation is handled server-side with Server Side Signing Policy
+      // This enables the server to sign transactions on behalf of users
+      createOnLogin: "off",
     },
   },
   // Default chain for smart wallets on Polygon

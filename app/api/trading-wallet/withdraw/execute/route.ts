@@ -4,6 +4,11 @@ import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { getWithdrawalTxData } from "@/lib/trading-wallet/execute-withdrawal";
 import { createPublicClient, http } from "viem";
 import { polygon } from "viem/chains";
+import {
+  executeUsdcTransfer,
+  waitForTransaction,
+  isServerSigningConfigured,
+} from "@/lib/trading-wallet/server-wallet";
 
 export async function POST(request: Request) {
   const LOG_PREFIX = "[Withdraw Execute]";
@@ -212,8 +217,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // No txHash - return transaction data for client to sign
-    console.log(`${LOG_PREFIX} No txHash - preparing transaction data for signing`);
+    // No txHash - either sign server-side or return transaction data for client to sign
+    console.log(`${LOG_PREFIX} No txHash - checking signing method`);
     console.log(`${LOG_PREFIX} Raw withdrawal.amount:`, withdrawal.amount);
     console.log(`${LOG_PREFIX} withdrawal.amount.toString():`, withdrawal.amount.toString());
     console.log(`${LOG_PREFIX} Type of withdrawal.amount:`, typeof withdrawal.amount);
@@ -224,6 +229,135 @@ export async function POST(request: Request) {
     console.log(`${LOG_PREFIX} Amount string after split: ${amountStr}`);
     console.log(`${LOG_PREFIX} Amount as BigInt: ${amountBigInt}`);
     console.log(`${LOG_PREFIX} Amount in USDC: ${Number(amountBigInt) / 1_000_000}`);
+
+    // Check if this wallet has server signing enabled
+    const hasServerSigner = user.tradingWallet.hasServerSigner;
+    const privyWalletId = user.tradingWallet.privyWalletId;
+
+    if (hasServerSigner && isServerSigningConfigured() && privyWalletId) {
+      // Server-side signing path
+      console.log(`${LOG_PREFIX} Using server-side signing`);
+      console.log(`${LOG_PREFIX} Wallet ID: ${privyWalletId}`);
+
+      // Update status to processing before signing
+      await db.withdrawal.update({
+        where: { id: withdrawalId },
+        data: { status: "PROCESSING" },
+      });
+
+      try {
+        // Execute the transfer using server signing
+        const txResult = await executeUsdcTransfer(
+          privyWalletId,
+          withdrawal.toAddress,
+          amountBigInt,
+          withdrawal.chainId
+        );
+
+        if (!txResult.success || !txResult.txHash) {
+          console.error(`${LOG_PREFIX} Server signing failed:`, txResult.error);
+          await db.withdrawal.update({
+            where: { id: withdrawalId },
+            data: {
+              status: "REJECTED",
+              rejectionReason: txResult.error || "Server signing failed",
+            },
+          });
+          return NextResponse.json(
+            { error: txResult.error || "Server signing failed" },
+            { status: 500 }
+          );
+        }
+
+        console.log(`${LOG_PREFIX} Transaction submitted: ${txResult.txHash}`);
+
+        // Update withdrawal with txHash
+        await db.withdrawal.update({
+          where: { id: withdrawalId },
+          data: {
+            txHash: txResult.txHash,
+            executedAt: new Date(),
+          },
+        });
+
+        // Wait for transaction confirmation
+        console.log(`${LOG_PREFIX} Waiting for transaction confirmation...`);
+        try {
+          const receipt = await waitForTransaction(txResult.txHash, 1, 60_000);
+          const finalStatus = receipt.success ? "COMPLETED" : "REJECTED";
+
+          console.log(`${LOG_PREFIX} Transaction ${finalStatus}: ${txResult.txHash}`);
+
+          await db.withdrawal.update({
+            where: { id: withdrawalId },
+            data: { status: finalStatus },
+          });
+
+          // Create audit log
+          await db.auditLog.create({
+            data: {
+              userId: user.id,
+              action: "TRADING_WALLET_WITHDRAWAL_EXECUTED",
+              details: JSON.stringify({
+                withdrawalId,
+                txHash: txResult.txHash,
+                amount: withdrawal.amount.toString(),
+                toAddress: withdrawal.toAddress,
+                finalStatus,
+                signingMethod: "server",
+              }),
+              entityType: "Withdrawal",
+              entityId: withdrawalId,
+              logHash: `withdrawal-execute-${withdrawalId}-${Date.now()}`,
+            },
+          });
+
+          return NextResponse.json({
+            success: receipt.success,
+            status: finalStatus === "COMPLETED" ? "SUBMITTED" : "FAILED",
+            txHash: txResult.txHash,
+            message: receipt.success
+              ? "Withdrawal submitted and confirmed"
+              : "Transaction failed on-chain",
+          });
+        } catch (confirmError) {
+          console.error(`${LOG_PREFIX} Confirmation error:`, confirmError);
+          // Transaction was submitted but confirmation timed out
+          // The client should poll for status
+          return NextResponse.json({
+            success: true,
+            status: "SUBMITTED",
+            txHash: txResult.txHash,
+            message: "Withdrawal submitted, awaiting confirmation",
+          });
+        }
+      } catch (signingError) {
+        console.error(`${LOG_PREFIX} Server signing error:`, signingError);
+        await db.withdrawal.update({
+          where: { id: withdrawalId },
+          data: {
+            status: "REJECTED",
+            rejectionReason:
+              signingError instanceof Error
+                ? signingError.message
+                : "Server signing failed",
+          },
+        });
+        return NextResponse.json(
+          {
+            error: "Server signing failed",
+            details:
+              signingError instanceof Error
+                ? signingError.message
+                : "Unknown error",
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Client-side signing path (legacy)
+    console.log(`${LOG_PREFIX} Using client-side signing (legacy)`);
 
     const txData = getWithdrawalTxData(
       withdrawal.toAddress as `0x${string}`,

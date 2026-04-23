@@ -284,6 +284,50 @@ export const COMPANY_SLUG_MAP: Record<string, string> = {
 };
 
 /**
+ * Map of company slugs to their Polymarket IPO market expiry dates
+ * These are the resolution dates for the "Will X IPO by end of 2025?" markets
+ */
+export const IPO_MARKET_END_DATES: Record<string, string> = {
+  spacex: "2026-01-01",
+  openai: "2026-01-01",
+  anthropic: "2026-01-01",
+  perplexity: "2026-01-01",
+  stripe: "2026-01-01",
+  discord: "2026-01-01",
+  databricks: "2026-01-01",
+  strava: "2026-01-01",
+  "fannie-mae": "2026-01-01",
+  "freddie-mac": "2026-01-01",
+  "clear-street-group": "2026-01-01",
+  "liftoff-mobile": "2026-01-01",
+  kraken: "2026-01-01",
+  consensys: "2026-01-01",
+  ledger: "2026-01-01",
+  megaeth: "2026-01-01",
+};
+
+/**
+ * Get the IPO market expiry date for a company slug
+ */
+export function getIPOMarketEndDate(companySlug: string): string | null {
+  return IPO_MARKET_END_DATES[companySlug] ?? null;
+}
+
+/**
+ * Format the IPO market expiry date for display
+ */
+export function formatIPOExpiryDate(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "—";
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return "—";
+  }
+}
+
+/**
  * Get company slug for implied valuations from company name
  */
 export function getImpliedValuationSlug(companyName: string): string | null {

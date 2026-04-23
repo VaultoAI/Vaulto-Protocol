@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Vaulto API to setup wallet
+    // Call Vaulto API to setup wallet - pass wallet address for credential association
     const apiKey = getVaultoApiToken();
-    const result = await setupWallet(apiKey, privyAuthToken);
+    const result = await setupWallet(apiKey, privyAuthToken, user.tradingWallet.address);
 
     if (!result.success) {
       return NextResponse.json(

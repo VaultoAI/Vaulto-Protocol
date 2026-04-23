@@ -46,6 +46,8 @@ export interface PredictionPosition {
   shares: number;
   entryPrice: number;
   currentPrice: number;
+  marketValue: number;
+  costBasis: number;
   unrealizedPnl: number;
   unrealizedPnlPercent: number;
   createdAt: string;
@@ -118,12 +120,17 @@ function getHeaders(apiKey: string, userId?: string, walletSignature?: WalletSig
   return headers;
 }
 
-function getAuthHeaders(apiKey: string, privyAuthToken: string): Record<string, string> {
-  return {
+function getAuthHeaders(apiKey: string, privyAuthToken: string, userId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "x-api-key": apiKey,
     "Authorization": `Bearer ${privyAuthToken}`,
   };
+  // Always include x-user-id so Vaulto API can look up credentials by wallet address
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+  return headers;
 }
 
 async function handleResponse<T>(response: Response, url: string): Promise<T> {
@@ -182,16 +189,23 @@ export async function buyPosition(
 ): Promise<BuyPositionResponse> {
   const url = `${getBaseUrl()}/api/trading/buy`;
 
+  // Use Privy auth if available, otherwise fall back to wallet signature
+  // Always include userId so Vaulto API can look up credentials by wallet address
+  const headers = auth?.privyToken
+    ? getAuthHeaders(apiKey, auth.privyToken, userId)
+    : getHeaders(apiKey, userId, auth?.walletSignature);
+
   console.log(`[Vaulto Trading API] Buying position:`, {
     eventId: params.eventId,
     side: params.side,
     amount: params.amount,
+    userId,
+    hasPrivyToken: !!auth?.privyToken,
+    headers: {
+      "x-user-id": headers["x-user-id"] || "(not set)",
+      "Authorization": headers["Authorization"] ? "Bearer ***" : "(not set)",
+    },
   });
-
-  // Use Privy auth if available, otherwise fall back to wallet signature
-  const headers = auth?.privyToken
-    ? getAuthHeaders(apiKey, auth.privyToken)
-    : getHeaders(apiKey, userId, auth?.walletSignature);
 
   // Map frontend params to Vaulto API expected params
   const apiParams = {
@@ -209,6 +223,74 @@ export async function buyPosition(
   return handleResponse<BuyPositionResponse>(response, url);
 }
 
+// Raw position from Vaulto API (different field names)
+interface VaultoApiPosition {
+  positionId: number;
+  eventSlug: string;
+  eventName?: string;
+  company?: string;
+  direction: "LONG" | "SHORT";
+  totalShares: number;
+  entryPrice: number;
+  currentPrice: number;
+  marketValue?: number;
+  value?: number; // Alternative field name
+  costBasis?: number;
+  totalCost?: number; // Alternative field name
+  unrealizedPnl: number;
+  unrealizedPnlPercent: number;
+  createdAt: string;
+}
+
+interface VaultoApiPositionsResponse {
+  positions: VaultoApiPosition[];
+  totals: {
+    totalValue: number;
+    totalCost: number;
+    unrealizedPnl: number;
+    unrealizedPnlPercent: number;
+  };
+}
+
+/**
+ * Transform Vaulto API position format to frontend format
+ */
+function transformPosition(apiPosition: VaultoApiPosition): PredictionPosition {
+  // Use API values if available (check multiple field names), otherwise calculate
+  const costBasis = apiPosition.costBasis ?? apiPosition.totalCost ?? (apiPosition.totalShares * apiPosition.entryPrice);
+  const marketValue = apiPosition.marketValue ?? apiPosition.value ?? (costBasis + apiPosition.unrealizedPnl);
+
+  console.log("[Vaulto Trading API] Transform position:", {
+    positionId: apiPosition.positionId,
+    totalShares: apiPosition.totalShares,
+    entryPrice: apiPosition.entryPrice,
+    currentPrice: apiPosition.currentPrice,
+    apiMarketValue: apiPosition.marketValue,
+    apiValue: apiPosition.value,
+    apiCostBasis: apiPosition.costBasis,
+    apiTotalCost: apiPosition.totalCost,
+    calculatedCostBasis: costBasis,
+    calculatedMarketValue: marketValue,
+    unrealizedPnl: apiPosition.unrealizedPnl,
+  });
+
+  return {
+    id: String(apiPosition.positionId),
+    eventId: apiPosition.eventSlug,
+    eventName: apiPosition.eventName,
+    company: apiPosition.company,
+    side: apiPosition.direction,
+    shares: apiPosition.totalShares,
+    entryPrice: apiPosition.entryPrice,
+    currentPrice: apiPosition.currentPrice,
+    marketValue,
+    costBasis,
+    unrealizedPnl: apiPosition.unrealizedPnl,
+    unrealizedPnlPercent: apiPosition.unrealizedPnlPercent,
+    createdAt: apiPosition.createdAt,
+  };
+}
+
 /**
  * Fetch user's prediction market positions
  */
@@ -218,13 +300,25 @@ export async function fetchPositions(
 ): Promise<PositionsResponse> {
   const url = `${getBaseUrl()}/api/trading/positions`;
 
-  console.log(`[Vaulto Trading API] Fetching positions for user`);
   const response = await fetch(url, {
     method: "GET",
     headers: getHeaders(apiKey, userId),
   });
 
-  return handleResponse<PositionsResponse>(response, url);
+  const rawData = await handleResponse<VaultoApiPositionsResponse>(response, url);
+
+  // Log raw API response for debugging
+  console.log("[Vaulto Trading API] Raw positions response:", JSON.stringify(rawData, null, 2));
+
+  // Transform API response to frontend format
+  const transformed = {
+    positions: rawData.positions.map(transformPosition),
+    totals: rawData.totals,
+  };
+
+  console.log("[Vaulto Trading API] Transformed positions:", JSON.stringify(transformed, null, 2));
+
+  return transformed;
 }
 
 /**
@@ -254,8 +348,9 @@ export async function sellPosition(
   });
 
   // Use Privy auth if available, otherwise fall back to wallet signature
+  // Always include userId so Vaulto API can look up credentials by wallet address
   const headers = auth?.privyToken
-    ? getAuthHeaders(apiKey, auth.privyToken)
+    ? getAuthHeaders(apiKey, auth.privyToken, userId)
     : getHeaders(apiKey, userId, auth?.walletSignature);
 
   const response = await fetch(url, {
@@ -296,15 +391,16 @@ export async function fetchPosition(
  */
 export async function setupWallet(
   apiKey: string,
-  privyAuthToken: string
+  privyAuthToken: string,
+  walletAddress?: string
 ): Promise<SetupWalletResponse> {
   const url = `${getBaseUrl()}/api/trading/setup-wallet`;
 
-  console.log(`[Vaulto Trading API] Setting up wallet`);
+  console.log(`[Vaulto Trading API] Setting up wallet`, { walletAddress });
 
   const response = await fetch(url, {
     method: "POST",
-    headers: getAuthHeaders(apiKey, privyAuthToken),
+    headers: getAuthHeaders(apiKey, privyAuthToken, walletAddress),
   });
 
   return handleResponse<SetupWalletResponse>(response, url);
@@ -316,15 +412,16 @@ export async function setupWallet(
  */
 export async function deriveCredentials(
   apiKey: string,
-  privyAuthToken: string
+  privyAuthToken: string,
+  walletAddress?: string
 ): Promise<DeriveCredentialsResponse> {
   const url = `${getBaseUrl()}/api/trading/derive-credentials`;
 
-  console.log(`[Vaulto Trading API] Deriving credentials`);
+  console.log(`[Vaulto Trading API] Deriving credentials`, { walletAddress });
 
   const response = await fetch(url, {
     method: "POST",
-    headers: getAuthHeaders(apiKey, privyAuthToken),
+    headers: getAuthHeaders(apiKey, privyAuthToken, walletAddress),
   });
 
   return handleResponse<DeriveCredentialsResponse>(response, url);

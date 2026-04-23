@@ -144,7 +144,18 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
       const executeResult = await executeWithdrawal(requestResult.id);
       console.log(`${LOG} Execute result:`, executeResult);
 
+      // Handle server-side signing (SUBMITTED status)
+      if (executeResult.status === "SUBMITTED" && executeResult.txHash) {
+        // Server already signed and submitted the transaction
+        console.log(`${LOG} Server signed and submitted, txHash:`, executeResult.txHash);
+        setTxHash(executeResult.txHash as `0x${string}`);
+        setStep("success");
+        invalidateAll();
+        return;
+      }
+
       if (executeResult.status === "READY_TO_SIGN" && executeResult.txData) {
+        // Client-side signing (legacy wallets without server signer)
         if (!embeddedWallet?.address) {
           throw new Error("Trading wallet not available");
         }
@@ -209,6 +220,10 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
         console.log(`${LOG} Already completed with txHash:`, executeResult.txHash);
         setStep("success");
         invalidateAll();
+      } else if (executeResult.status === "FAILED") {
+        // Server signing failed
+        console.error(`${LOG} Server signing failed:`, executeResult.message);
+        throw new Error(executeResult.message || "Transaction failed");
       } else {
         console.error(`${LOG} Unexpected response:`, executeResult);
         throw new Error(`Unexpected response: status=${executeResult.status}`);

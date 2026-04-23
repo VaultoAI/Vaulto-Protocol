@@ -13,9 +13,21 @@ import { CompanyAbout } from "@/components/CompanyAbout";
 import {
   hasImpliedValuationData,
   getImpliedValuationSlug,
+  getIPOMarketEndDate,
   type ImpliedValuationHistoryResponse,
 } from "@/lib/polymarket/implied-valuations";
 import { getCompanyPredictionMarket } from "@/lib/polymarket/ipo-valuations";
+
+// Lazy-load PolymarketEventBox
+const PolymarketEventBox = dynamic(
+  () => import("@/components/PolymarketEventBox").then((mod) => mod.PolymarketEventBox),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-14 animate-pulse rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50" />
+    ),
+  }
+);
 
 // Lazy-load PredictionMarketTradeWidget to reduce initial bundle
 const PredictionMarketTradeWidget = dynamic(
@@ -25,6 +37,15 @@ const PredictionMarketTradeWidget = dynamic(
     loading: () => (
       <div className="h-80 animate-pulse rounded-xl border border-border bg-card-bg" />
     ),
+  }
+);
+
+// Lazy-load PredictionPositionCard
+const PredictionPositionCard = dynamic(
+  () => import("@/components/PredictionPositionCard").then((mod) => mod.PredictionPositionCard),
+  {
+    ssr: false,
+    loading: () => null,
   }
 );
 
@@ -85,6 +106,7 @@ export function CompanyDetailPage({
   // Check if company has implied valuation data
   const hasMarketData = hasImpliedValuationData(company.name);
   const impliedValuationSlug = getImpliedValuationSlug(company.name);
+  const marketEndDate = impliedValuationSlug ? getIPOMarketEndDate(impliedValuationSlug) : null;
 
   // Check if company has prestock (live) data
   const hasLiveData = hasPrestockToken(company.name);
@@ -322,6 +344,7 @@ export function CompanyDetailPage({
                 companyName={company.name}
                 initialData={impliedData}
                 initialTotalVolume={prefetchedTotalVolume}
+                marketEndDate={marketEndDate}
                 onHover={handleImpliedChartHover}
                 onDataChange={handleImpliedDataChange}
                 chartType={chartType}
@@ -352,13 +375,17 @@ export function CompanyDetailPage({
 
         {/* Right side: Trade Widget - hidden on mobile */}
         <div className="hidden lg:block w-full lg:w-[340px] shrink-0">
-          <div className="lg:sticky lg:top-8">
+          <div className="lg:sticky lg:top-8 space-y-4">
             {predictionMarket ? (
-              /* Active Prediction Market Widget */
-              <PredictionMarketTradeWidget
-                company={company}
-                eventSlug={predictionMarket.eventSlug}
-              />
+              /* Polymarket Event Box + Active Prediction Market Widget + Position Card */
+              <>
+                <PolymarketEventBox eventSlug={predictionMarket.eventSlug} />
+                <PredictionMarketTradeWidget
+                  company={company}
+                  eventSlug={predictionMarket.eventSlug}
+                />
+                <PredictionPositionCard eventSlug={predictionMarket.eventSlug} />
+              </>
             ) : (
               /* Fallback: Coming Soon Widget for companies without prediction markets */
               <div className="relative">

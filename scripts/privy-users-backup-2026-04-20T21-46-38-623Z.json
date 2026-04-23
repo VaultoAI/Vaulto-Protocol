@@ -1,0 +1,47 @@
+{
+  "exportedAt": "2026-04-20T21:46:38.624Z",
+  "appId": "cmn3hbylh00xe0clbti17vmru",
+  "totalUsers": 10,
+  "users": [
+    {
+      "id": "did:privy:cmndk19z400940ckyu0kxnvnz",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmndsxulp005x0cl1x32k6fcf",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmngklvoc00be0djsr2qbttqq",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmnglkzlm00010cjogsryyqtl",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmngm4n8f00200clavzud3394",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmnhxcwtu00rg0dkw9tk86re7",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmno4gj3o005o0cjx3l2ppyv2",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmo257v1d00z60cibnv7xskx8",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmo3jhs0400el0cks8660takg",
+      "linkedAccounts": []
+    },
+    {
+      "id": "did:privy:cmo3k2rpn00lk0dl8uxbo2py1",
+      "linkedAccounts": []
+    }
+  ]
+}

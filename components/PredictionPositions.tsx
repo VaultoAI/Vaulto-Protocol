@@ -1,21 +1,12 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { usePredictionTrading, type PredictionPosition } from "@/hooks/usePredictionTrading";
 import { useSortableTable, type SortableColumn } from "@/hooks/useSortableTable";
 import { SortableTableHeader } from "@/components/SortableHeader";
 
 export function PredictionPositions() {
-  const { positions, isLoadingPositions, sell, isSelling, refetchPositions } = usePredictionTrading();
-
-  const handleSell = useCallback(async (position: PredictionPosition) => {
-    try {
-      await sell(position.id);
-      refetchPositions();
-    } catch (error) {
-      console.error("Failed to sell position:", error);
-    }
-  }, [sell, refetchPositions]);
+  const { positions, isLoadingPositions } = usePredictionTrading();
 
   type PositionColumnKey = "position" | "side" | "shares" | "currentValue" | "unrealizedPnl";
 
@@ -72,7 +63,7 @@ export function PredictionPositions() {
                   )}
                 </div>
                 <span
-                  className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`shrink-0 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
                     isLong
                       ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
                       : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
@@ -106,16 +97,6 @@ export function PredictionPositions() {
                   </dd>
                 </div>
               </dl>
-              <div className="mt-3 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => handleSell(position)}
-                  disabled={isSelling}
-                  className="w-full rounded border border-red-300 bg-red-50 py-2 text-sm font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/50 disabled:opacity-50"
-                >
-                  {isSelling ? "Selling..." : "Sell"}
-                </button>
-              </div>
             </div>
           );
         })}
@@ -165,7 +146,6 @@ export function PredictionPositions() {
                 onSort={handleSort as (column: string) => void}
                 className="text-muted"
               />
-              <th className="px-4 py-3" aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
@@ -186,7 +166,7 @@ export function PredictionPositions() {
                   </td>
                   <td className="py-3 px-4">
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
                         isLong
                           ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
                           : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
@@ -210,16 +190,6 @@ export function PredictionPositions() {
                         </span>
                       )}
                     </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button
-                      type="button"
-                      onClick={() => handleSell(position)}
-                      disabled={isSelling}
-                      className="inline-block rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/50 disabled:opacity-50"
-                    >
-                      {isSelling ? "Selling..." : "Sell"}
-                    </button>
                   </td>
                 </tr>
               );

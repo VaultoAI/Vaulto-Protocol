@@ -59,6 +59,9 @@ export async function GET() {
 
     const result = await fetchPositions(apiKey, userId);
 
+    // Log for debugging
+    console.log("[Trading Positions] Returning positions:", JSON.stringify(result, null, 2));
+
     return NextResponse.json(result);
   } catch (error) {
     console.error("[Trading Positions] Error:", error);

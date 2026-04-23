@@ -8,6 +8,7 @@ import {
   formatImpliedValuation,
   formatProbability,
   formatVolume,
+  formatIPOExpiryDate,
 } from "@/lib/polymarket/implied-valuations";
 import { useChartInteraction } from "@/hooks/useChartInteraction";
 
@@ -33,6 +34,7 @@ interface ImpliedValuationChartProps {
   companyName: string;
   initialData?: ImpliedValuationHistoryResponse | null;
   initialTotalVolume?: number | null;
+  marketEndDate?: string | null;
   onHover?: (data: ImpliedHoverData | null) => void;
   onRangeChange?: (range: TimeRange) => void;
   onDataChange?: (data: ImpliedChartData | null) => void;
@@ -120,6 +122,7 @@ export function ImpliedValuationChart({
   companyName,
   initialData,
   initialTotalVolume,
+  marketEndDate,
   onHover,
   onRangeChange,
   onDataChange,
@@ -691,6 +694,11 @@ export function ImpliedValuationChart({
               <p className="text-2xl font-semibold text-foreground">
                 {formatProbability(history[history.length - 1].noIpoProbability ?? null)}
               </p>
+              {marketEndDate && (
+                <p className="text-xs text-muted mt-1">
+                  Expires: {formatIPOExpiryDate(marketEndDate)}
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Vaulto API to derive credentials
+    // Call Vaulto API to derive credentials - pass wallet address for credential association
     const apiKey = getVaultoApiToken();
-    const result = await deriveCredentials(apiKey, privyAuthToken);
+    const result = await deriveCredentials(apiKey, privyAuthToken, user.tradingWallet.address);
 
     if (!result.success) {
       return NextResponse.json(

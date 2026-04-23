@@ -82,19 +82,6 @@ export function ProfileEditor() {
     }
   }, [nameInput, updateProfile]);
 
-  const handleImageChange = useCallback(
-    async (dataUrl: string | null) => {
-      try {
-        await updateProfile({ image: dataUrl });
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
-      } catch (err) {
-        console.error("Failed to update image:", err);
-      }
-    },
-    [updateProfile]
-  );
-
   const handleNameInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setNameInput(e.target.value);
@@ -133,11 +120,8 @@ export function ProfileEditor() {
     <div className="flex items-start gap-4">
       {/* Avatar */}
       <ProfileAvatar
-        image={profile?.image ?? null}
         walletAddress={walletAddress}
         size={80}
-        editable
-        onImageChange={handleImageChange}
       />
 
       {/* User info */}

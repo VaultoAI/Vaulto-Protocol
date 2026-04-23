@@ -1,8 +1,29 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
-import { isValidEthereumAddress } from "@/lib/trading-wallet/privy-server";
+import { isValidEthereumAddress, verifyPrivyToken } from "@/lib/trading-wallet/privy-server";
+import {
+  createWalletForExistingUser,
+  getUserWallet,
+  isServerSigningConfigured,
+} from "@/lib/trading-wallet/server-wallet";
 import { DEFAULT_TRADING_CHAIN_ID } from "@/lib/trading-wallet/constants";
+import { PrivyClient } from "@privy-io/node";
+
+// Lazy initialization of Privy client
+let _privyClient: PrivyClient | null = null;
+
+function getPrivyClient(): PrivyClient {
+  if (!_privyClient) {
+    const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+    const appSecret = process.env.PRIVY_APP_SECRET;
+    if (!appId || !appSecret) {
+      throw new Error("Missing Privy configuration");
+    }
+    _privyClient = new PrivyClient({ appId, appSecret });
+  }
+  return _privyClient;
+}
 
 export async function POST(request: Request) {
   try {
@@ -35,40 +56,113 @@ export async function POST(request: Request) {
         address: user.tradingWallet.address,
         chainId: user.tradingWallet.chainId,
         status: user.tradingWallet.status,
+        hasServerSigner: user.tradingWallet.hasServerSigner,
         balance: "0",
         balanceUsd: "0",
       });
     }
 
-    // Get embedded wallet address from request body
-    // The client passes the address of their Privy embedded wallet
+    // Get request body - now supports both legacy (walletAddress) and new (privyToken) modes
     const body = await request.json().catch(() => ({}));
-    const { walletAddress } = body;
+    const { walletAddress, privyToken } = body;
 
-    if (!walletAddress || !isValidEthereumAddress(walletAddress)) {
+    let embeddedWalletAddress: string;
+    let privyWalletId: string | null = null;
+    let hasServerSigner = false;
+    let policyId: string | null = null;
+    let serverSignerId: string | null = null;
+
+    // New server-side wallet creation flow
+    if (privyToken) {
+      console.log("[Trading Wallet] Using server-side wallet creation");
+
+      // Verify the Privy token
+      const verifiedUser = await verifyPrivyToken(privyToken);
+      if (!verifiedUser) {
+        return NextResponse.json(
+          { error: "Invalid Privy token", code: "INVALID_TOKEN" },
+          { status: 401 }
+        );
+      }
+
+      const privyUserId = verifiedUser.userId;
+
+      // Check if user already has an embedded wallet in Privy
+      const existingWallet = await getUserWallet(privyUserId);
+
+      if (existingWallet) {
+        embeddedWalletAddress = existingWallet.address;
+        privyWalletId = existingWallet.walletId;
+        console.log("[Trading Wallet] Found existing Privy wallet:", embeddedWalletAddress);
+      } else {
+        // Create wallet server-side with policy
+        if (!isServerSigningConfigured()) {
+          return NextResponse.json(
+            { error: "Server signing not configured", code: "CONFIG_ERROR" },
+            { status: 500 }
+          );
+        }
+
+        try {
+          const newWallet = await createWalletForExistingUser(privyUserId);
+          embeddedWalletAddress = newWallet.address;
+          privyWalletId = newWallet.walletId;
+          hasServerSigner = true;
+          policyId = newWallet.policyId;
+          serverSignerId = process.env.PRIVY_AUTHORIZATION_KEY_ID || null;
+          console.log("[Trading Wallet] Created server wallet:", {
+            address: embeddedWalletAddress,
+            walletId: privyWalletId,
+          });
+        } catch (error) {
+          console.error("[Trading Wallet] Failed to create server wallet:", error);
+          return NextResponse.json(
+            { error: "Failed to create wallet", code: "WALLET_CREATION_FAILED" },
+            { status: 500 }
+          );
+        }
+      }
+    } else if (walletAddress) {
+      // Legacy flow: client provides wallet address
+      console.log("[Trading Wallet] Using legacy client-side wallet address");
+
+      if (!isValidEthereumAddress(walletAddress)) {
+        return NextResponse.json(
+          {
+            error: "Invalid wallet address",
+            message: "Please provide a valid Ethereum wallet address.",
+          },
+          { status: 400 }
+        );
+      }
+
+      embeddedWalletAddress = walletAddress;
+      privyWalletId = walletAddress;
+    } else {
       return NextResponse.json(
         {
-          error: "Invalid wallet address",
-          message: "Please provide a valid Ethereum wallet address.",
+          error: "Missing wallet information",
+          message: "Please provide either a privyToken or walletAddress.",
         },
         { status: 400 }
       );
     }
 
     // Check if this wallet address already exists in the database
-    const existingWallet = await db.tradingWallet.findUnique({
-      where: { address: walletAddress },
+    const existingDbWallet = await db.tradingWallet.findUnique({
+      where: { address: embeddedWalletAddress },
     });
 
-    if (existingWallet) {
+    if (existingDbWallet) {
       // If wallet belongs to this user, just return it
-      if (existingWallet.userId === user.id) {
+      if (existingDbWallet.userId === user.id) {
         console.log("[Trading Wallet] Wallet already exists for this user, returning existing");
         return NextResponse.json({
-          id: existingWallet.id,
-          address: existingWallet.address,
-          chainId: existingWallet.chainId,
-          status: existingWallet.status,
+          id: existingDbWallet.id,
+          address: existingDbWallet.address,
+          chainId: existingDbWallet.chainId,
+          status: existingDbWallet.status,
+          hasServerSigner: existingDbWallet.hasServerSigner,
           balance: "0",
           balanceUsd: "0",
         });
@@ -76,8 +170,8 @@ export async function POST(request: Request) {
 
       // If wallet belongs to a different user, that's an error
       console.error("[Trading Wallet] Wallet address belongs to a different user:", {
-        address: walletAddress,
-        existingUserId: existingWallet.userId,
+        address: embeddedWalletAddress,
+        existingUserId: existingDbWallet.userId,
         requestingUserId: user.id,
       });
       return NextResponse.json(
@@ -94,10 +188,13 @@ export async function POST(request: Request) {
     const tradingWallet = await db.tradingWallet.create({
       data: {
         userId: user.id,
-        privyWalletId: walletAddress, // Using address as ID for embedded wallets
-        address: walletAddress,
+        privyWalletId: privyWalletId || embeddedWalletAddress,
+        address: embeddedWalletAddress,
         chainId: DEFAULT_TRADING_CHAIN_ID,
         status: "ACTIVE",
+        hasServerSigner,
+        policyId,
+        serverSignerId,
       },
     });
 
@@ -110,6 +207,8 @@ export async function POST(request: Request) {
           tradingWalletId: tradingWallet.id,
           address: tradingWallet.address,
           chainId: tradingWallet.chainId,
+          hasServerSigner,
+          policyId,
         }),
         entityType: "TradingWallet",
         entityId: tradingWallet.id,
@@ -122,6 +221,7 @@ export async function POST(request: Request) {
       address: tradingWallet.address,
       chainId: tradingWallet.chainId,
       status: tradingWallet.status,
+      hasServerSigner: tradingWallet.hasServerSigner,
       balance: "0",
       balanceUsd: "0",
     });

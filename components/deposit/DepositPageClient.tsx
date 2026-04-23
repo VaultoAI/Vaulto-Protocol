@@ -17,6 +17,7 @@ import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
 import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
+import { PredictionPositions } from "@/components/PredictionPositions";
 
 // Lazy-load modal to reduce initial bundle
 const WithdrawModal = dynamic(
@@ -250,14 +251,6 @@ export function DepositPageClient() {
     }
   };
 
-  const handleImageChange = async (dataUrl: string | null) => {
-    try {
-      await updateProfile({ image: dataUrl });
-    } catch (err) {
-      console.error("Failed to update image:", err);
-    }
-  };
-
   const isDepositing = depositStatus === "initiating" || depositStatus === "pending" || depositStatus === "confirming" || isInitiatingDeposit || isSending || isConfirmingTx;
 
   // Fetch portfolio history for chart data
@@ -386,11 +379,8 @@ export function DepositPageClient() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <ProfileAvatar
-              image={profile?.image ?? null}
               walletAddress={walletAddress}
               size={48}
-              editable
-              onImageChange={handleImageChange}
             />
             <div className="min-w-0">
               {isEditingName ? (
@@ -458,17 +448,14 @@ export function DepositPageClient() {
 
         {/* Portfolio Value - desktop */}
         <div className="hidden border-l border-border pl-8 sm:block">
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-semibold tracking-tight text-foreground">
-              ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : formattedBalance}
-            </span>
-            {chartHover && (
-              <span className="text-sm text-muted">
-                {new Date(chartHover.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-sm text-muted">Portfolio Value</p>
+          <span className="text-4xl font-semibold tracking-tight text-foreground">
+            ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : formattedBalance}
+          </span>
+          <p className="mt-1 text-sm text-muted">
+            {chartHover
+              ? new Date(chartHover.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
+              : "Portfolio Value"}
+          </p>
         </div>
 
         {/* Wallet Total - hidden on mobile */}
@@ -689,6 +676,11 @@ export function DepositPageClient() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Prediction Market Positions */}
+      <div className="mt-8">
+        <PredictionPositions />
       </div>
 
       {/* Referral Section */}
