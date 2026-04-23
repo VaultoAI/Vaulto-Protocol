@@ -383,6 +383,7 @@ export function CompanyDetailPage({
                 <PredictionMarketTradeWidget
                   company={company}
                   eventSlug={predictionMarket.eventSlug}
+                  currentImpliedValuation={impliedChartData?.endValue}
                 />
                 <PredictionPositionCard eventSlug={predictionMarket.eventSlug} />
               </>

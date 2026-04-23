@@ -7,7 +7,6 @@ import { getSyntheticSymbol } from "@/lib/vaulto/companies";
 import {
   usePredictionMarketData,
   formatVolume,
-  formatCostPerDollar,
   formatSpreadPercent,
 } from "@/hooks/usePredictionMarketData";
 import { usePredictionTrading } from "@/hooks/usePredictionTrading";
@@ -21,6 +20,7 @@ import {
 interface PredictionMarketTradeWidgetProps {
   company: PrivateCompany;
   eventSlug: string;
+  currentImpliedValuation?: number | null;
 }
 
 type TradeState = "idle" | "loading" | "success" | "error";
@@ -32,6 +32,7 @@ type TradeState = "idle" | "loading" | "success" | "error";
 export function PredictionMarketTradeWidget({
   company,
   eventSlug,
+  currentImpliedValuation,
 }: PredictionMarketTradeWidgetProps) {
   const symbol = getSyntheticSymbol(company.name);
   const { data, isLoading, error } = usePredictionMarketData(eventSlug);
@@ -73,8 +74,8 @@ export function PredictionMarketTradeWidget({
     ? data?.valuation.bestLongReturn ?? 0
     : data?.valuation.bestShortReturn ?? 0;
 
-  // Get implied valuation from the implied-valuations API (consistent with IPO visualization)
-  const impliedValuation = impliedData?.impliedValuationUsd ?? 0;
+  // Use passed prop if available (synced with chart), otherwise fall back to fetched data
+  const impliedValuation = currentImpliedValuation ?? impliedData?.impliedValuationUsd ?? 0;
 
   // Calculate trade estimates
   const sharesToReceive = positionCost > 0 ? usdcAmount / positionCost : 0;
@@ -199,12 +200,6 @@ export function PredictionMarketTradeWidget({
                 <span className="text-sm text-muted">Implied Valuation</span>
                 <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                   {formatValuationPrecise(impliedValuation)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Position Cost</span>
-                <span className="text-sm font-medium text-foreground">
-                  {formatCostPerDollar(positionCost)} per $1
                 </span>
               </div>
               <div className="flex items-center justify-between">
