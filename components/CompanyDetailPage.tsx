@@ -326,7 +326,7 @@ export function CompanyDetailPage({
             )}
           </div>
 
-          {/* Charts Container */}
+{/* Charts Container */}
           <div className="w-full">
             {chartType === "funding" && (
               <ValuationChart
@@ -365,6 +365,18 @@ export function CompanyDetailPage({
               />
             )}
           </div>
+
+          {/* Mobile trading widget - show under chart for prediction markets */}
+          {predictionMarket && (
+            <div className="lg:hidden mt-6 space-y-4">
+              <PredictionMarketTradeWidget
+                company={company}
+                eventSlug={predictionMarket.eventSlug}
+                currentImpliedValuation={impliedChartData?.endValue}
+              />
+              <PredictionPositionCard eventSlug={predictionMarket.eventSlug} />
+            </div>
+          )}
 
           {/* About + Key Stats section - inside left column so trading widget stays sticky */}
           <div className="mt-10">
