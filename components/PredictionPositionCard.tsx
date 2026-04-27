@@ -18,7 +18,7 @@ const SELL_PERCENTAGES = [25, 50, 75, 100] as const;
  */
 export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: PredictionPositionCardProps) {
   const { authenticated } = usePrivy();
-  const { getPositionForEvent, sellPercentage, isSelling, isLoadingPositions } = usePredictionTrading({
+  const { getPositionForEvent, sell, isSelling, isLoadingPositions } = usePredictionTrading({
     fetchPositions: true,
   });
 
@@ -51,7 +51,17 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
     }
 
     try {
-      await sellPercentage(position.id, selectedPercentage);
+      await sell(position.id, {
+        percentage: selectedPercentage,
+        totalShares: position.shares,
+        // Pass position metadata for database logging
+        eventId: position.eventId,
+        eventName: position.eventName,
+        company: position.company,
+        side: position.side,
+        costBasis: position.costBasis,
+        avgEntryPrice: position.entryPrice,
+      });
       setShowConfirm(false);
       setSelectedPercentage(100);
     } catch (error) {

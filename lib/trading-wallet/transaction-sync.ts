@@ -4,6 +4,8 @@
  * Syncs in the background and serves cached data immediately.
  */
 
+import { createPublicClient, http, formatUnits } from "viem";
+import { polygon } from "viem/chains";
 import { getDb } from "@/lib/onboarding/db";
 import {
   fetchWalletTransactions,
@@ -11,6 +13,52 @@ import {
   type OnChainTransaction,
 } from "@/lib/alchemy/transactions";
 import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-withdrawal";
+import { USDC_ADDRESSES, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
+import { fetchPositions } from "@/lib/vaulto-api/trading";
+import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
+
+// Create a public client for Polygon
+const polygonClient = createPublicClient({
+  chain: polygon,
+  transport: http(process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? "https://polygon.drpc.org"),
+});
+
+/**
+ * Get USDC.e (bridged) balance for an address
+ */
+async function getUsdcBridgedBalance(address: `0x${string}`): Promise<bigint> {
+  try {
+    const balance = await polygonClient.readContract({
+      address: USDC_ADDRESSES.POLYGON_BRIDGED as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    });
+    return balance as bigint;
+  } catch (error) {
+    console.error("[Transaction Sync] Failed to get USDC.e balance:", error);
+    return BigInt(0);
+  }
+}
+
+/**
+ * Fetch position totals from Vaulto API
+ * Returns null if API is not configured or fails
+ */
+async function fetchPositionTotals(userId: string): Promise<{ totalValue: number } | null> {
+  if (!isVaultoApiConfigured()) {
+    return null;
+  }
+
+  try {
+    const apiKey = getVaultoApiToken();
+    const result = await fetchPositions(apiKey, userId);
+    return { totalValue: result.totals.totalValue };
+  } catch (error) {
+    console.error("[Transaction Sync] Failed to fetch positions:", error);
+    return null;
+  }
+}
 
 const SYNC_STALE_MS = 5 * 60 * 1000; // 5 minutes
 const BALANCE_STALE_MS = 60 * 1000; // 1 minute for balance cache
@@ -254,13 +302,14 @@ export async function getCachedPortfolioHistory(walletId: string): Promise<Cache
 
 /**
  * Compute and cache portfolio history from transactions.
- * Also fetches and caches current on-chain balance.
+ * Also fetches and caches current total balance (EOA + Safe + Positions).
  */
 export async function syncPortfolioHistory(
   walletId: string,
   walletAddress: string,
   walletCreatedAt: Date,
-  chainId: number = 137
+  chainId: number = 137,
+  safeAddress?: string | null
 ): Promise<CachedPortfolioData | null> {
   const db = getDb();
 
@@ -307,12 +356,37 @@ export async function syncPortfolioHistory(
       }
     }
 
-    // Fetch current on-chain balance
-    const balanceBigInt = await getUsdcBalance(
+    // Fetch current balances for total calculation
+    // 1. EOA USDC balance (native)
+    const eoaBalanceBigInt = await getUsdcBalance(
       walletAddress as `0x${string}`,
       chainId
     );
-    const currentBalance = parseFloat(formatUsdcAmount(balanceBigInt));
+    const eoaBalance = parseFloat(formatUsdcAmount(eoaBalanceBigInt));
+
+    // 2. Safe USDC.e balance (if safeAddress exists)
+    let safeBalance = 0;
+    if (safeAddress) {
+      const safeBalanceBigInt = await getUsdcBridgedBalance(safeAddress as `0x${string}`);
+      safeBalance = parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
+    }
+
+    // 3. Positions value from Vaulto API
+    let positionsValue = 0;
+    const positionTotals = await fetchPositionTotals(walletAddress);
+    if (positionTotals) {
+      positionsValue = positionTotals.totalValue;
+    }
+
+    // Total = EOA USDC + Safe USDC.e + Positions market value
+    const currentBalance = eoaBalance + safeBalance + positionsValue;
+
+    console.log("[Portfolio Sync] Balance breakdown:", {
+      eoaBalance,
+      safeBalance,
+      positionsValue,
+      total: currentBalance,
+    });
 
     // Add current balance as final point
     history.push({
@@ -321,24 +395,24 @@ export async function syncPortfolioHistory(
       type: "current",
     });
 
-    // Cache the computed data
+    // Cache the computed data (cache EOA balance for stale check compatibility)
     await db.walletSyncState.upsert({
       where: { tradingWalletId: walletId },
       create: {
         tradingWalletId: walletId,
         cachedHistory: history as unknown as object,
-        cachedBalance: currentBalance,
+        cachedBalance: eoaBalance, // Cache EOA balance for backwards compatibility
         balanceSyncedAt: new Date(),
       },
       update: {
         cachedHistory: history as unknown as object,
-        cachedBalance: currentBalance,
+        cachedBalance: eoaBalance, // Cache EOA balance for backwards compatibility
         balanceSyncedAt: new Date(),
       },
     });
 
     console.log(
-      `[Portfolio Sync] Cached history with ${history.length} points, balance: ${currentBalance} for wallet ${walletId}`
+      `[Portfolio Sync] Cached history with ${history.length} points, total balance: ${currentBalance} for wallet ${walletId}`
     );
 
     return { history, balance: currentBalance };
@@ -356,9 +430,10 @@ export function triggerBackgroundPortfolioSync(
   walletId: string,
   walletAddress: string,
   walletCreatedAt: Date,
-  chainId: number = 137
+  chainId: number = 137,
+  safeAddress?: string | null
 ): void {
-  syncPortfolioHistory(walletId, walletAddress, walletCreatedAt, chainId).catch((error) => {
+  syncPortfolioHistory(walletId, walletAddress, walletCreatedAt, chainId, safeAddress).catch((error) => {
     console.error(`[Portfolio Sync] Background sync failed for ${walletId}:`, error);
   });
 }

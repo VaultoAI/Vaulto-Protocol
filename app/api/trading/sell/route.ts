@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { sellPosition, returnFundsAfterSell } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
+import { triggerBackgroundSnapshot } from "@/lib/trading-wallet/portfolio-snapshot";
 
 /**
  * POST /api/trading/sell
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { positionId, shares, percentage, totalShares } = body;
+    const { positionId, shares, percentage, totalShares, eventId, eventName, company, side, costBasis, avgEntryPrice } = body;
 
     // Validate positionId
     if (!positionId || typeof positionId !== "string") {
@@ -126,6 +127,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log successful sale to database
+    if (result.proceeds !== undefined) {
+      try {
+        // Calculate the percentage sold for the record
+        const percentageSold = percentage || (shares && totalShares ? Math.round((shares / totalShares) * 100) : 100);
+        const sharesSold = result.sharesSold || shares || 0;
+
+        // Calculate cost basis for shares sold if provided
+        const saleCostBasis = costBasis !== undefined
+          ? (sharesSold / (totalShares || sharesSold)) * costBasis
+          : null;
+
+        // Calculate realized P&L if we have cost basis
+        const realizedPnl = saleCostBasis !== null
+          ? result.proceeds - saleCostBasis
+          : 0;
+
+        await db.predictionMarketSale.create({
+          data: {
+            tradingWalletId: user.tradingWallet.id,
+            positionId,
+            eventId: eventId || "",
+            eventName: eventName || null,
+            company: company || null,
+            side: side || "LONG",
+            sharesSold,
+            percentage: percentageSold,
+            proceeds: result.proceeds,
+            realizedPnl,
+            costBasis: saleCostBasis,
+            avgEntryPrice: avgEntryPrice || null,
+            exitPrice: result.exitPrice || null,
+            status: "COMPLETED",
+            completedAt: new Date(),
+          },
+        });
+      } catch (logError) {
+        // Log error but don't fail the sale - the sale itself succeeded
+        console.error("[Trading Sell] Failed to log sale to database:", logError);
+      }
+    }
+
     // Optionally return funds from Safe to EOA (non-blocking)
     // Funds will remain in Safe for subsequent trades if this is skipped
     if (privyToken && result.proceeds && result.proceeds > 0) {
@@ -142,6 +185,14 @@ export async function POST(request: NextRequest) {
           console.error("[Trading Sell] Fund return error (non-blocking):", err);
         });
     }
+
+    // Trigger portfolio snapshot in background (non-blocking)
+    triggerBackgroundSnapshot(
+      user.tradingWallet.id,
+      user.tradingWallet.address,
+      user.tradingWallet.safeAddress,
+      user.tradingWallet.chainId
+    );
 
     return NextResponse.json(result);
   } catch (error) {

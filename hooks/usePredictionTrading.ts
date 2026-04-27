@@ -53,6 +53,11 @@ export interface BuyPositionResponse {
   orders?: BuyPositionOrder[];
   totalCost?: number;
   averagePrice?: number;
+  // Alternative field names that Vaulto API might use
+  shares?: number;
+  totalShares?: number;
+  entryPrice?: number;
+  avgPrice?: number;
   error?: string;
 }
 
@@ -61,6 +66,13 @@ export interface SellPositionParams {
   shares?: number;
   percentage?: number;
   totalShares?: number;
+  // Additional metadata for database logging
+  eventId?: string;
+  eventName?: string;
+  company?: string;
+  side?: "LONG" | "SHORT";
+  costBasis?: number;
+  avgEntryPrice?: number;
 }
 
 export interface SellPositionResponse {
@@ -69,6 +81,7 @@ export interface SellPositionResponse {
   sharesSold?: number;
   percentageSold?: number;
   remainingShares?: number;
+  exitPrice?: number;
   error?: string;
 }
 
@@ -134,7 +147,19 @@ interface SellPositionWithAuthParams extends SellPositionParams {
 }
 
 async function sellPosition(params: SellPositionWithAuthParams): Promise<SellPositionResponse> {
-  const { privyToken, positionId, shares, percentage, totalShares } = params;
+  const {
+    privyToken,
+    positionId,
+    shares,
+    percentage,
+    totalShares,
+    eventId,
+    eventName,
+    company,
+    side,
+    costBasis,
+    avgEntryPrice,
+  } = params;
 
   const res = await fetch("/api/trading/sell", {
     method: "POST",
@@ -142,7 +167,18 @@ async function sellPosition(params: SellPositionWithAuthParams): Promise<SellPos
       "Content-Type": "application/json",
       "x-privy-token": privyToken,
     },
-    body: JSON.stringify({ positionId, shares, percentage, totalShares }),
+    body: JSON.stringify({
+      positionId,
+      shares,
+      percentage,
+      totalShares,
+      eventId,
+      eventName,
+      company,
+      side,
+      costBasis,
+      avgEntryPrice,
+    }),
   });
 
   const data = await res.json();
@@ -426,9 +462,20 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
 
   // Sell helper (ensures credentials, then uses Privy auth)
   // Accepts either shares (with totalShares) or percentage
+  // Also accepts position metadata for database logging
   const sell = async (
     positionId: string,
-    options?: { shares?: number; percentage?: number; totalShares?: number }
+    options?: {
+      shares?: number;
+      percentage?: number;
+      totalShares?: number;
+      eventId?: string;
+      eventName?: string;
+      company?: string;
+      side?: "LONG" | "SHORT";
+      costBasis?: number;
+      avgEntryPrice?: number;
+    }
   ): Promise<SellPositionResponse> => {
     // Ensure credentials are set up before trading
     const credentialsReady = await ensureCredentials();
@@ -447,6 +494,12 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
       shares: options?.shares,
       percentage: options?.percentage,
       totalShares: options?.totalShares,
+      eventId: options?.eventId,
+      eventName: options?.eventName,
+      company: options?.company,
+      side: options?.side,
+      costBasis: options?.costBasis,
+      avgEntryPrice: options?.avgEntryPrice,
     };
     return sellMutation.mutateAsync({ ...params, privyToken });
   };

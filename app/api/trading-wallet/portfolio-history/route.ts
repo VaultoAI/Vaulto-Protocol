@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { createPublicClient, http, formatUnits } from "viem";
+import { polygon } from "viem/chains";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-withdrawal";
+import { USDC_ADDRESSES, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
 import { filterUsdcTransactions } from "@/lib/alchemy/transactions";
 import {
   getCachedTransactions,
@@ -12,11 +15,57 @@ import {
   isBalanceStale,
   getCachedPortfolioHistory,
 } from "@/lib/trading-wallet/transaction-sync";
+import { getPortfolioSnapshots } from "@/lib/trading-wallet/portfolio-snapshot";
+import { fetchPositions } from "@/lib/vaulto-api/trading";
+import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
+
+// Create a public client for Polygon
+const polygonClient = createPublicClient({
+  chain: polygon,
+  transport: http(process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? "https://polygon.drpc.org"),
+});
+
+/**
+ * Get USDC.e (bridged) balance for an address
+ */
+async function getUsdcBridgedBalance(address: `0x${string}`): Promise<bigint> {
+  try {
+    const balance = await polygonClient.readContract({
+      address: USDC_ADDRESSES.POLYGON_BRIDGED as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    });
+    return balance as bigint;
+  } catch (error) {
+    console.error("[Portfolio History] Failed to get USDC.e balance:", error);
+    return BigInt(0);
+  }
+}
+
+/**
+ * Fetch position totals from Vaulto API
+ * Returns null if API is not configured or fails
+ */
+async function fetchPositionTotals(userId: string): Promise<{ totalValue: number } | null> {
+  if (!isVaultoApiConfigured()) {
+    return null;
+  }
+
+  try {
+    const apiKey = getVaultoApiToken();
+    const result = await fetchPositions(apiKey, userId);
+    return { totalValue: result.totals.totalValue };
+  } catch (error) {
+    console.error("[Portfolio History] Failed to fetch positions:", error);
+    return null;
+  }
+}
 
 interface HistoryPoint {
   timestamp: string;
   balance: number;
-  type: "deposit" | "withdrawal" | "initial" | "current";
+  type: "deposit" | "withdrawal" | "initial" | "current" | "snapshot";
 }
 
 interface Transaction {
@@ -175,7 +224,8 @@ export async function GET() {
     // Try to get cached portfolio data first (instant - no RPC call)
     const cachedPortfolio = await getCachedPortfolioHistory(tradingWallet.id);
 
-    // If we have cached portfolio data and balance is fresh, return immediately
+    // If we have cached portfolio data and balance is fresh, update the final point
+    // with enhanced balance (Safe + positions) and return
     if (cachedPortfolio && !balanceStale) {
       // Trigger background refresh if transaction cache is stale
       if (transactionsStale && !syncState?.isSyncing) {
@@ -186,8 +236,43 @@ export async function GET() {
         });
       }
 
+      // Calculate enhanced current balance with Safe + positions
+      let enhancedCurrentBalance = cachedPortfolio.balance;
+      const polymarketAddress = tradingWallet.safeAddress;
+
+      if (tradingWallet.status === "ACTIVE") {
+        // Get Safe USDC.e balance
+        if (polymarketAddress) {
+          const safeBalanceBigInt = await getUsdcBridgedBalance(polymarketAddress as `0x${string}`);
+          enhancedCurrentBalance += parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
+        }
+
+        // Get positions value from Vaulto API
+        const positionTotals = await fetchPositionTotals(tradingWallet.address);
+        if (positionTotals) {
+          enhancedCurrentBalance += positionTotals.totalValue;
+        }
+      }
+
+      // Update the last point in history with enhanced balance
+      const enhancedHistory = [...cachedPortfolio.history];
+      if (enhancedHistory.length > 0) {
+        const lastPoint = enhancedHistory[enhancedHistory.length - 1];
+        if (lastPoint.type === "current") {
+          lastPoint.balance = enhancedCurrentBalance;
+          lastPoint.timestamp = new Date().toISOString();
+        } else {
+          // Add a new current point if the last one isn't a current type
+          enhancedHistory.push({
+            timestamp: new Date().toISOString(),
+            balance: enhancedCurrentBalance,
+            type: "current",
+          });
+        }
+      }
+
       return NextResponse.json({
-        history: cachedPortfolio.history,
+        history: enhancedHistory,
         transactions: allTransactions,
         syncState: {
           lastSyncedAt: syncState?.lastSyncedAt?.toISOString() ?? null,
@@ -201,13 +286,8 @@ export async function GET() {
     }
 
     // No cache or stale balance - need to compute history
-    // First, get cached transactions
-    const cachedTransactions = await getCachedTransactions(tradingWallet.id);
-
-    // Build chart data
-    const history: HistoryPoint[] = [];
-    let runningBalance = 0;
-    const usingCachedData = cachedTransactions.length > 0;
+    // First, try to load portfolio snapshots (most accurate for total value)
+    const snapshots = await getPortfolioSnapshots(tradingWallet.id);
 
     // Trigger background sync if transactions are stale (non-blocking)
     if (transactionsStale && !syncState?.isSyncing) {
@@ -218,6 +298,10 @@ export async function GET() {
       });
     }
 
+    // Build chart data
+    const history: HistoryPoint[] = [];
+    let runningBalance = 0;
+
     // Add initial point at wallet creation
     history.push({
       timestamp: tradingWallet.createdAt.toISOString(),
@@ -225,35 +309,52 @@ export async function GET() {
       type: "initial",
     });
 
-    if (usingCachedData) {
-      // Use cached data for accurate blockchain timestamps
-      // Filter to USDC transactions only for balance chart
-      const usdcTxs = filterUsdcTransactions(cachedTransactions);
-
-      // Sort by timestamp ascending for chart
-      const sortedTxs = [...usdcTxs].sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-
-      // Build running balance from Alchemy data
-      for (const tx of sortedTxs) {
-        if (tx.amount !== null && tx.amount > 0) {
-          if (tx.type === "deposit") {
-            runningBalance += tx.amount;
-          } else {
-            runningBalance -= tx.amount;
-          }
-          runningBalance = Math.max(0, runningBalance);
-
-          history.push({
-            timestamp: tx.timestamp, // Accurate blockchain timestamp
-            balance: runningBalance,
-            type: tx.type,
-          });
-        }
+    // Use snapshots if available (they have accurate total value including positions)
+    if (snapshots.length > 0) {
+      // Add snapshot points to history
+      for (const snapshot of snapshots) {
+        history.push({
+          timestamp: snapshot.timestamp.toISOString(),
+          balance: snapshot.totalValue,
+          type: "snapshot",
+        });
       }
+      // Set running balance to last snapshot value for current calculation
+      runningBalance = snapshots[snapshots.length - 1].totalValue;
     } else {
+      // Fall back to transaction-based history
+      const cachedTransactions = await getCachedTransactions(tradingWallet.id);
+      const usingCachedData = cachedTransactions.length > 0;
+
+      if (usingCachedData) {
+        // Use cached data for accurate blockchain timestamps
+        // Filter to USDC transactions only for balance chart
+        const usdcTxs = filterUsdcTransactions(cachedTransactions);
+
+        // Sort by timestamp ascending for chart
+        const sortedTxs = [...usdcTxs].sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+
+        // Build running balance from Alchemy data
+        for (const tx of sortedTxs) {
+          if (tx.amount !== null && tx.amount > 0) {
+            if (tx.type === "deposit") {
+              runningBalance += tx.amount;
+            } else {
+              runningBalance -= tx.amount;
+            }
+            runningBalance = Math.max(0, runningBalance);
+
+            history.push({
+              timestamp: tx.timestamp, // Accurate blockchain timestamp
+              balance: runningBalance,
+              type: tx.type,
+            });
+          }
+        }
+      } else {
       // Fallback: use database transactions
       const completedTransactions: Array<{
         timestamp: Date;
@@ -303,16 +404,43 @@ export async function GET() {
           type: tx.type,
         });
       }
+      }
     }
 
-    // Get current on-chain balance and add as final point
+    // Get current total balance including Safe USDC.e and positions
     let currentBalance = runningBalance;
     if (tradingWallet.status === "ACTIVE") {
-      const balanceBigInt = await getUsdcBalance(
+      // 1. Get EOA USDC balance (native)
+      const eoaBalanceBigInt = await getUsdcBalance(
         tradingWallet.address as `0x${string}`,
         tradingWallet.chainId
       );
-      currentBalance = parseFloat(formatUsdcAmount(balanceBigInt));
+      const eoaBalance = parseFloat(formatUsdcAmount(eoaBalanceBigInt));
+
+      // 2. Get Safe USDC.e balance if polymarket address exists
+      let safeBalance = 0;
+      const polymarketAddress = tradingWallet.safeAddress;
+      if (polymarketAddress) {
+        const safeBalanceBigInt = await getUsdcBridgedBalance(polymarketAddress as `0x${string}`);
+        safeBalance = parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
+      }
+
+      // 3. Get positions value from Vaulto API
+      let positionsValue = 0;
+      const positionTotals = await fetchPositionTotals(tradingWallet.address);
+      if (positionTotals) {
+        positionsValue = positionTotals.totalValue;
+      }
+
+      // Total = EOA USDC + Safe USDC.e + Positions market value
+      currentBalance = eoaBalance + safeBalance + positionsValue;
+
+      console.log("[Portfolio History] Current balance breakdown:", {
+        eoaBalance,
+        safeBalance,
+        positionsValue,
+        total: currentBalance,
+      });
     }
 
     history.push({
@@ -326,7 +454,8 @@ export async function GET() {
       tradingWallet.id,
       tradingWallet.address,
       tradingWallet.createdAt,
-      tradingWallet.chainId
+      tradingWallet.chainId,
+      tradingWallet.safeAddress
     );
 
     return NextResponse.json({

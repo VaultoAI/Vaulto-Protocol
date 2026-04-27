@@ -34,6 +34,21 @@ export interface BuyPositionResponse {
   orders?: BuyPositionOrder[];
   totalCost?: number;
   averagePrice?: number;
+  // Alternative field names that Vaulto API might use
+  shares?: number;
+  totalShares?: number;
+  entryPrice?: number;
+  avgPrice?: number;
+  // Nested position object that Vaulto API may return
+  position?: {
+    totalShares?: number;
+    shares?: number;
+    entryPrice?: number;
+    averagePrice?: number;
+    costBasis?: number;
+    totalCost?: number;
+    positionId?: string;
+  };
   error?: string;
 }
 
@@ -76,6 +91,7 @@ export interface SellPositionResponse {
   sharesSold?: number;
   percentageSold?: number;
   remainingShares?: number;
+  exitPrice?: number;
   error?: string;
 }
 
@@ -371,12 +387,31 @@ export async function fetchPositions(
   console.log("[Vaulto Trading API] Raw positions response:", JSON.stringify(rawData, null, 2));
 
   // Transform API response to frontend format
+  const transformedPositions = rawData.positions.map(transformPosition);
+
+  // Calculate totals from transformed positions (don't rely on API totals which may be stale)
+  const calculatedTotals = transformedPositions.reduce(
+    (acc, pos) => ({
+      totalValue: acc.totalValue + pos.marketValue,
+      totalCost: acc.totalCost + pos.costBasis,
+      unrealizedPnl: acc.unrealizedPnl + pos.unrealizedPnl,
+      unrealizedPnlPercent: 0, // Will calculate after
+    }),
+    { totalValue: 0, totalCost: 0, unrealizedPnl: 0, unrealizedPnlPercent: 0 }
+  );
+
+  // Calculate percentage from totals
+  if (calculatedTotals.totalCost > 0) {
+    calculatedTotals.unrealizedPnlPercent = (calculatedTotals.unrealizedPnl / calculatedTotals.totalCost) * 100;
+  }
+
   const transformed = {
-    positions: rawData.positions.map(transformPosition),
-    totals: rawData.totals,
+    positions: transformedPositions,
+    totals: calculatedTotals,
   };
 
   console.log("[Vaulto Trading API] Transformed positions:", JSON.stringify(transformed, null, 2));
+  console.log("[Vaulto Trading API] Calculated totals:", calculatedTotals);
 
   return transformed;
 }

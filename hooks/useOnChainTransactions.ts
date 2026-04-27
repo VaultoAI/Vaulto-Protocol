@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export interface OnChainTransaction {
   id: string;
-  type: "deposit" | "withdrawal" | "buy" | "sell" | "prediction_long" | "prediction_short";
+  type: "deposit" | "withdrawal" | "buy" | "sell" | "buy_long" | "buy_short" | "sell_long" | "sell_short";
   amount: number;
   status: string;
   txHash: string | null;
@@ -22,6 +22,7 @@ export interface OnChainTransaction {
   company?: string;
   shares?: number;
   averagePrice?: number;
+  actualCostBasis?: number;
 }
 
 interface OnChainTransactionsResponse {

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { buyPosition, prepareFundsForBuy, type BuyPositionResponse } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
+import { triggerBackgroundSnapshot } from "@/lib/trading-wallet/portfolio-snapshot";
 
 // Map event slugs to company names for logging
 const EVENT_TO_COMPANY: Record<string, string> = {
@@ -169,8 +170,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total shares from orders
-    const totalShares = result.orders?.reduce((sum, o) => sum + o.size, 0) || 0;
+    // Log full response structure for debugging
+    console.log("[Trading Buy] Full API response:", JSON.stringify(result, null, 2));
+    console.log("[Trading Buy] Response keys:", Object.keys(result));
+
+    // Check for nested position object (common Vaulto API pattern)
+    const position = result.position || result;
+
+    // Extract shares - check nested position first, then orders array
+    const totalShares = result.orders?.reduce((sum, o) => sum + o.size, 0)
+      || position.totalShares
+      || position.shares
+      || result.totalShares
+      || result.shares
+      || 0;
+
+    // Extract price - check nested position first
+    const avgPrice = position.entryPrice
+      || position.averagePrice
+      || result.averagePrice
+      || result.entryPrice
+      || result.avgPrice
+      || null;
+
+    // Extract cost basis:
+    // 1. Check nested position costBasis/totalCost
+    // 2. Use top-level totalCost if available
+    // 3. Calculate from shares × averagePrice
+    // 4. Fall back to intended amount
+    const actualCostBasis = position.costBasis
+      || position.totalCost
+      || result.totalCost
+      || (totalShares && avgPrice ? totalShares * avgPrice : null)
+      || amount;
+
+    console.log("[Trading Buy] Extracted values:", {
+      totalShares,
+      avgPrice,
+      actualCostBasis,
+      hasNestedPosition: !!result.position,
+      fromTotalCost: !!(position.costBasis || position.totalCost || result.totalCost),
+    });
 
     // Log successful trade to database
     await db.predictionMarketTrade.create({
@@ -180,14 +220,23 @@ export async function POST(request: NextRequest) {
         eventName: `${EVENT_TO_COMPANY[eventId] || eventId} IPO`,
         company: EVENT_TO_COMPANY[eventId] || null,
         side,
-        amount,
-        shares: totalShares,
-        averagePrice: result.averagePrice || null,
+        amount,           // Keep original intended amount
+        shares: totalShares || null,
+        averagePrice: avgPrice,
+        actualCostBasis,  // Store actual cost from API or calculated
         positionId: result.positionId ? String(result.positionId) : null,
         status: "FILLED",
         filledAt: new Date(),
       },
     });
+
+    // Trigger portfolio snapshot in background (non-blocking)
+    triggerBackgroundSnapshot(
+      user.tradingWallet.id,
+      user.tradingWallet.address,
+      user.tradingWallet.safeAddress,
+      user.tradingWallet.chainId
+    );
 
     return NextResponse.json(result);
   } catch (error) {

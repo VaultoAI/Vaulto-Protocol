@@ -526,14 +526,15 @@ model TradingWallet {
   serverSignerId    String?
 
   // Relations
-  deposits           Deposit[]
-  withdrawals        Withdrawal[]
-  etfOrders          EtfOrder[]
-  etfPositions       EtfPosition[]
-  cachedTransactions CachedTransaction[]
-  syncState          WalletSyncState?
-  predictionTrades   PredictionMarketTrade[]
-  predictionSales    PredictionMarketSale[]
+  deposits            Deposit[]
+  withdrawals         Withdrawal[]
+  etfOrders           EtfOrder[]
+  etfPositions        EtfPosition[]
+  cachedTransactions  CachedTransaction[]
+  syncState           WalletSyncState?
+  predictionTrades    PredictionMarketTrade[]
+  predictionSales     PredictionMarketSale[]
+  portfolioSnapshots  PortfolioSnapshot[]
 
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -726,6 +727,28 @@ model WalletSyncState {
   updatedAt         DateTime      @updatedAt
 }
 
+model PortfolioSnapshot {
+  id              String        @id @default(cuid())
+  tradingWalletId String
+  tradingWallet   TradingWallet @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  timestamp       DateTime      @default(now())
+
+  // Balance breakdown
+  eoaUsdcBalance     Decimal    @db.Decimal(20, 2)   // EOA native USDC
+  safeUsdceBalance   Decimal    @db.Decimal(20, 2)   // Safe USDC.e (bridged)
+  positionsValue     Decimal    @db.Decimal(20, 2)   // Market value of open positions
+  totalValue         Decimal    @db.Decimal(20, 2)   // Total portfolio value
+
+  // Optional: store position details for reference/audit
+  positionsSnapshot  Json?      // Array of position details at snapshot time
+
+  createdAt       DateTime      @default(now())
+
+  @@index([tradingWalletId])
+  @@index([tradingWalletId, timestamp])
+}
+
 // ============================================
 // PREDICTION MARKET TRADING
 // ============================================
@@ -739,9 +762,10 @@ model PredictionMarketTrade {
   eventName         String?       // Human-readable name
   company           String?       // e.g., "SpaceX"
   side              String        // "LONG" | "SHORT"
-  amount            Decimal       @db.Decimal(20, 2) // USD amount invested
+  amount            Decimal       @db.Decimal(20, 2) // USD amount invested (intended)
   shares            Decimal?      @db.Decimal(20, 8) // Shares received
   averagePrice      Decimal?      @db.Decimal(20, 6) // Average entry price
+  actualCostBasis   Decimal?      @db.Decimal(20, 2) // Actual cost: shares × averagePrice
   positionId        String?       // From Vaulto API response
 
   status            String        @default("PENDING") // PENDING, FILLED, FAILED
@@ -763,6 +787,7 @@ model PredictionMarketSale {
   positionId        String        // Position being sold
   eventId           String        // e.g., "spacex-ipo-closing-market-cap"
   eventName         String?       // Human-readable name
+  company           String?       // e.g., "SpaceX"
   side              String        // "LONG" | "SHORT"
 
   // Sale details

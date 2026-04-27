@@ -6,9 +6,9 @@ import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
+import { usePredictionTrading } from "@/hooks/usePredictionTrading";
 import { usePortfolioHistory } from "@/hooks/usePortfolioHistory";
 import { useOnChainTransactions, OnChainTransaction } from "@/hooks/useOnChainTransactions";
-import { useWalletNetWorth } from "@/hooks/useWalletNetWorth";
 import { useExternalUsdcBalance } from "@/hooks/useExternalUsdcBalance";
 import { useReferralStats } from "@/hooks/useReferralStats";
 import { useProfile } from "@/hooks/useProfile";
@@ -41,9 +41,6 @@ export function DepositPageClient() {
   const { ready, authenticated } = usePrivy();
   const { chain, address: connectedAddress } = useAccount();
 
-  // Fetch connected wallet total net worth across all chains
-  const { formattedNetWorth, isLoading: isLoadingNetWorth } = useWalletNetWorth(connectedAddress);
-
   // Fetch external wallet USDC balance for max deposit
   const { formattedBalance: externalUsdcBalance, isLoading: isLoadingExternalBalance } = useExternalUsdcBalance();
 
@@ -57,13 +54,16 @@ export function DepositPageClient() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
-  const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("all");
+  const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("trades");
 
   const {
     tradingWallet,
     formattedBalance,
     balance,
+    polymarketBalance,
+    totalAvailable,
     isLoadingWallet,
+    isLoadingBalance,
     walletsReady,
     needsCreation,
     createWallet,
@@ -74,6 +74,9 @@ export function DepositPageClient() {
     isInitiatingDeposit,
     invalidateAll,
   } = useTradingWallet();
+
+  // Fetch prediction positions for market value
+  const { positionsTotals, isLoadingPositions } = usePredictionTrading();
 
   const {
     sendTransaction,
@@ -477,43 +480,69 @@ export function DepositPageClient() {
             </div>
           </div>
 
-          {/* Portfolio Value - mobile inline */}
+          {/* Available Balance - mobile inline */}
           <div className="text-right sm:hidden">
             <span className="text-2xl font-semibold tracking-tight text-foreground">
-              ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : formattedBalance}
+              ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (parseFloat(totalAvailable) + (positionsTotals?.totalValue || 0)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <p className="text-xs text-muted">
               {chartHover
                 ? new Date(chartHover.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                : "Portfolio"}
+                : "Total Balance"}
             </p>
           </div>
         </div>
 
-        {/* Portfolio Value - desktop */}
+        {/* Available Balance - desktop */}
         <div className="hidden border-l border-border pl-8 sm:block">
           <span className="text-4xl font-semibold tracking-tight text-foreground">
-            ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : formattedBalance}
+            ${chartHover ? chartHover.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (parseFloat(totalAvailable) + (positionsTotals?.totalValue || 0)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <p className="mt-1 text-sm text-muted">
             {chartHover
               ? new Date(chartHover.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
-              : "Portfolio Value"}
+              : "Total Balance"}
           </p>
         </div>
 
-        {/* Wallet Total - hidden on mobile */}
-        <div className="ml-auto hidden border-l border-border pl-8 md:block">
+        {/* Active Positions - hidden on mobile */}
+        <div className="hidden border-l border-border pl-8 md:block">
           <span className="text-4xl font-semibold tracking-tight text-muted">
-            {isLoadingNetWorth ? (
+            {isLoadingPositions ? (
               <span className="inline-block h-10 w-32 animate-pulse rounded bg-foreground/10" />
-            ) : formattedNetWorth ? (
-              `$${formattedNetWorth}`
             ) : (
-              "—"
+              `$${(positionsTotals?.totalValue || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             )}
           </span>
-          <p className="mt-1 text-sm text-muted">Wallet Total</p>
+          <p className="mt-1 text-sm text-muted">Active Positions</p>
+        </div>
+
+        {/* Trading P&L - hidden on mobile */}
+        <div className="hidden border-l border-border pl-8 md:block">
+          {isLoadingPositions ? (
+            <>
+              <span className="inline-block h-10 w-24 animate-pulse rounded bg-foreground/10" />
+              <p className="mt-1 text-sm text-muted">&nbsp;</p>
+            </>
+          ) : (positionsTotals?.unrealizedPnl ?? 0) >= 0 ? (
+            <>
+              <span className="text-4xl font-semibold tracking-tight text-green">
+                ${Math.abs(positionsTotals?.unrealizedPnl ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <p className="mt-1 text-sm text-green">
+                +{Math.abs(positionsTotals?.unrealizedPnlPercent ?? 0).toFixed(2)}% P&L
+              </p>
+            </>
+          ) : (
+            <>
+              <span className="text-4xl font-semibold tracking-tight text-red">
+                ${Math.abs(positionsTotals?.unrealizedPnl ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <p className="mt-1 text-sm text-red">
+                -{Math.abs(positionsTotals?.unrealizedPnlPercent ?? 0).toFixed(2)}% P&L
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -607,8 +636,10 @@ export function DepositPageClient() {
             ? transactions.filter((tx) =>
                 tx.type === "buy" ||
                 tx.type === "sell" ||
-                tx.type === "prediction_long" ||
-                tx.type === "prediction_short"
+                tx.type === "buy_long" ||
+                tx.type === "buy_short" ||
+                tx.type === "sell_long" ||
+                tx.type === "sell_short"
               )
             : transactions;
 
@@ -628,22 +659,32 @@ export function DepositPageClient() {
               const isSell = tx.type === "sell";
               const isDeposit = tx.type === "deposit";
               const isWithdrawal = tx.type === "withdrawal";
-              const isPredictionLong = tx.type === "prediction_long";
-              const isPredictionShort = tx.type === "prediction_short";
+              const isBuyLong = tx.type === "buy_long";
+              const isBuyShort = tx.type === "buy_short";
+              const isSellLong = tx.type === "sell_long";
+              const isSellShort = tx.type === "sell_short";
               const isEtfOrder = isBuy || isSell;
-              const isPrediction = isPredictionLong || isPredictionShort;
+              const isPredictionBuy = isBuyLong || isBuyShort;
+              const isPredictionSell = isSellLong || isSellShort;
+              const isPrediction = isPredictionBuy || isPredictionSell;
 
-              const iconBgClass = isDeposit || isBuy || isPredictionLong
+              // Buy long = green (positive), Buy short = blue, Sell = red (exiting)
+              const iconBgClass = isDeposit || isBuy || isBuyLong
                 ? "bg-green-500/10 text-green-500"
-                : isPredictionShort
+                : isBuyShort
                   ? "bg-blue-500/10 text-blue-500"
-                  : "bg-red-500/10 text-red-500";
+                  : isSellLong || isSellShort
+                    ? "bg-orange-500/10 text-orange-500"
+                    : "bg-red-500/10 text-red-500";
 
-              const amountColorClass = isDeposit || isBuy || isPredictionLong
+              // Amount colors: deposits/buys = green, sells = green (proceeds), withdrawals = red
+              const amountColorClass = isDeposit || isBuy || isBuyLong
                 ? "text-green-500"
-                : isPredictionShort
+                : isBuyShort
                   ? "text-blue-500"
-                  : "text-red-500";
+                  : isSellLong || isSellShort
+                    ? "text-green-500" // Sells return proceeds (positive)
+                    : "text-red-500";
 
               const getStatusLabel = (status: string) => {
                 if (status === "COMPLETED" || status === "FILLED") return "Completed";
@@ -663,8 +704,10 @@ export function DepositPageClient() {
               const getTypeLabel = () => {
                 if (isBuy) return `Buy ${tx.symbol}`;
                 if (isSell) return `Sell ${tx.symbol}`;
-                if (isPredictionLong) return `Long ${tx.company || tx.eventId}`;
-                if (isPredictionShort) return `Short ${tx.company || tx.eventId}`;
+                if (isBuyLong) return `Buy Long ${tx.company || tx.eventId}`;
+                if (isBuyShort) return `Buy Short ${tx.company || tx.eventId}`;
+                if (isSellLong) return `Sell Long ${tx.company || tx.eventId}`;
+                if (isSellShort) return `Sell Short ${tx.company || tx.eventId}`;
                 // Show asset name for deposits/withdrawals (e.g., "Deposit USDC", "Withdrawal MATIC")
                 const assetLabel = tx.asset ? ` ${tx.asset}` : "";
                 if (isDeposit) return `Deposit${assetLabel}`;
@@ -676,12 +719,12 @@ export function DepositPageClient() {
               // Determine company page URL for trades
               const companyUrl = isEtfOrder && tx.symbol
                 ? `/explore/${getCompanySlugFromSymbol(tx.symbol)}`
-                : isPrediction && tx.company
+                : (isPredictionBuy || isPredictionSell) && tx.company
                   ? `/explore/${getCompanySlug(tx.company)}`
                   : null;
 
               // Use company URL for trades, Polygonscan for deposits/withdrawals
-              const isInternalLink = (isEtfOrder || isPrediction) && companyUrl;
+              const isInternalLink = (isEtfOrder || isPredictionBuy || isPredictionSell) && companyUrl;
               const hasLink = isInternalLink || polygonUrl;
 
               const rowContent = (
@@ -704,7 +747,7 @@ export function DepositPageClient() {
                           className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
                         />
                       </div>
-                    ) : isPrediction && tx.company ? (
+                    ) : (isPredictionBuy || isPredictionSell) && tx.company ? (
                       <CompanyLogo
                         name={tx.company}
                         size={28}
@@ -736,7 +779,7 @@ export function DepositPageClient() {
                         {getTypeLabel()}
                       </p>
                       {/* Show shares and price for prediction trades */}
-                      {isPrediction && typeof tx.shares === 'number' && tx.shares > 0 && tx.averagePrice && (
+                      {(isPredictionBuy || isPredictionSell) && typeof tx.shares === 'number' && tx.shares > 0 && tx.averagePrice && (
                         <p className="text-xs text-muted">
                           {tx.shares.toFixed(2)} shares @ ${tx.averagePrice.toFixed(3)}
                         </p>
@@ -760,12 +803,18 @@ export function DepositPageClient() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <span className={`text-base font-semibold sm:text-lg ${amountColorClass}`}>
-                      {isDeposit || isBuy ? "+" : isPrediction ? "-" : "-"}${tx.amount.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
+                    {tx.amount > 0 ? (
+                      <span className={`text-base font-semibold sm:text-lg ${amountColorClass}`}>
+                        {isDeposit || isBuy || isPredictionSell ? "+" : "-"}${tx.amount.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    ) : (
+                      <span className="text-base font-medium sm:text-lg text-muted">
+                        Pending
+                      </span>
+                    )}
                     {polygonUrl && !isInternalLink && (
                       <ExternalLink className="h-4 w-4 text-muted" />
                     )}

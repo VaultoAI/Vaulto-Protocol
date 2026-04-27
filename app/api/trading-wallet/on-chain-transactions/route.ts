@@ -5,7 +5,7 @@ import { fetchWalletTransactions } from "@/lib/alchemy/transactions";
 
 interface Transaction {
   id: string;
-  type: "deposit" | "withdrawal" | "buy" | "sell" | "prediction_long" | "prediction_short";
+  type: "deposit" | "withdrawal" | "buy" | "sell" | "buy_long" | "buy_short" | "sell_long" | "sell_short";
   amount: number;
   status: string;
   txHash: string | null;
@@ -23,6 +23,7 @@ interface Transaction {
   company?: string;
   shares?: number;
   averagePrice?: number;
+  actualCostBasis?: number;
 }
 
 export async function GET() {
@@ -67,9 +68,29 @@ export async function GET() {
                 amount: true,
                 shares: true,
                 averagePrice: true,
+                actualCostBasis: true,
                 status: true,
                 createdAt: true,
                 filledAt: true,
+              },
+              orderBy: { createdAt: "desc" },
+              take: 50,
+            },
+            predictionSales: {
+              select: {
+                id: true,
+                eventId: true,
+                eventName: true,
+                company: true,
+                side: true,
+                sharesSold: true,
+                proceeds: true,
+                costBasis: true,
+                avgEntryPrice: true,
+                exitPrice: true,
+                status: true,
+                createdAt: true,
+                completedAt: true,
               },
               orderBy: { createdAt: "desc" },
               take: 50,
@@ -143,12 +164,29 @@ export async function GET() {
       });
     }
 
-    // Add prediction market trades from database
+    // Add prediction market trades (buys) from database
     for (const trade of tradingWallet.predictionTrades) {
+      const shares = trade.shares ? Number(trade.shares) : 0;
+      const avgPrice = trade.averagePrice ? Number(trade.averagePrice) : 0;
+
+      // Determine the actual cost basis:
+      // 1. Use actualCostBasis from DB if available (new field)
+      // 2. Otherwise calculate from shares × averagePrice
+      // 3. Only fall back to intended amount if we have no share/price data
+      let displayAmount: number;
+      if (trade.actualCostBasis) {
+        displayAmount = Number(trade.actualCostBasis);
+      } else if (shares > 0 && avgPrice > 0) {
+        displayAmount = shares * avgPrice;
+      } else {
+        // No share/price data available, use intended amount as last resort
+        displayAmount = Number(trade.amount);
+      }
+
       allTransactions.push({
         id: trade.id,
-        type: trade.side === "LONG" ? "prediction_long" : "prediction_short",
-        amount: Number(trade.amount),
+        type: trade.side === "LONG" ? "buy_long" : "buy_short",
+        amount: displayAmount,
         status: trade.status,
         txHash: null,
         timestamp: (trade.filledAt ?? trade.createdAt).toISOString(),
@@ -156,8 +194,27 @@ export async function GET() {
         eventId: trade.eventId,
         eventName: trade.eventName ?? undefined,
         company: trade.company ?? undefined,
-        shares: trade.shares ? Number(trade.shares) : undefined,
-        averagePrice: trade.averagePrice ? Number(trade.averagePrice) : undefined,
+        shares: shares > 0 ? shares : undefined,
+        averagePrice: avgPrice > 0 ? avgPrice : undefined,
+        actualCostBasis: displayAmount,
+      });
+    }
+
+    // Add prediction market sales from database
+    for (const sale of tradingWallet.predictionSales) {
+      allTransactions.push({
+        id: sale.id,
+        type: sale.side === "LONG" ? "sell_long" : "sell_short",
+        amount: Number(sale.proceeds),
+        status: sale.status,
+        txHash: null,
+        timestamp: (sale.completedAt ?? sale.createdAt).toISOString(),
+        address: tradingWallet.address,
+        eventId: sale.eventId,
+        eventName: sale.eventName ?? undefined,
+        company: sale.company ?? undefined,
+        shares: sale.sharesSold ? Number(sale.sharesSold) : undefined,
+        averagePrice: sale.exitPrice ? Number(sale.exitPrice) : undefined,
       });
     }
 
