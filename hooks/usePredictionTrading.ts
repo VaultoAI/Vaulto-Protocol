@@ -59,11 +59,33 @@ export interface BuyPositionResponse {
 export interface SellPositionParams {
   positionId: string;
   shares?: number;
+  percentage?: number;
+  totalShares?: number;
 }
 
 export interface SellPositionResponse {
   success: boolean;
   proceeds?: number;
+  sharesSold?: number;
+  percentageSold?: number;
+  remainingShares?: number;
+  error?: string;
+}
+
+export interface CloseAndWithdrawParams {
+  positionId: string;
+  withdrawToAddress?: string;
+}
+
+export interface CloseAndWithdrawResponse {
+  success: boolean;
+  sellProceeds?: number;
+  newBalance?: number;
+  withdrawalId?: string;
+  withdrawalStatus?: string;
+  txHash?: string;
+  withdrawalPending?: boolean;
+  message?: string;
   error?: string;
 }
 
@@ -112,7 +134,7 @@ interface SellPositionWithAuthParams extends SellPositionParams {
 }
 
 async function sellPosition(params: SellPositionWithAuthParams): Promise<SellPositionResponse> {
-  const { privyToken, ...sellParams } = params;
+  const { privyToken, positionId, shares, percentage, totalShares } = params;
 
   const res = await fetch("/api/trading/sell", {
     method: "POST",
@@ -120,13 +142,40 @@ async function sellPosition(params: SellPositionWithAuthParams): Promise<SellPos
       "Content-Type": "application/json",
       "x-privy-token": privyToken,
     },
-    body: JSON.stringify(sellParams),
+    body: JSON.stringify({ positionId, shares, percentage, totalShares }),
   });
 
   const data = await res.json();
 
   if (!res.ok) {
     throw new Error(data.error || "Failed to sell position");
+  }
+
+  return data;
+}
+
+interface CloseAndWithdrawWithAuthParams extends CloseAndWithdrawParams {
+  privyToken: string;
+}
+
+async function closeAndWithdrawPosition(
+  params: CloseAndWithdrawWithAuthParams
+): Promise<CloseAndWithdrawResponse> {
+  const { privyToken, positionId, withdrawToAddress } = params;
+
+  const res = await fetch("/api/trading/close-and-withdraw", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-privy-token": privyToken,
+    },
+    body: JSON.stringify({ positionId, withdrawToAddress }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to close position");
   }
 
   return data;
@@ -234,6 +283,9 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
   const credentialsSetupAttemptedRef = useRef(false);
 
+  // Track fund preparation state (shown when preparing funds before buy)
+  const [isPreparingFunds, setIsPreparingFunds] = useState(false);
+
   // Ensure credentials are set up before trading
   const ensureCredentials = useCallback(async (): Promise<boolean> => {
     console.log("[usePredictionTrading] Checking credentials status...");
@@ -327,6 +379,16 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
     },
   });
 
+  // Close and withdraw mutation
+  const closeAndWithdrawMutation = useMutation({
+    mutationFn: closeAndWithdrawPosition,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prediction-positions"] });
+      queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["on-chain-transactions"] });
+    },
+  });
+
   // Convenience functions for buying long/short (ensures credentials, then uses Privy auth)
   const buyLong = async (eventId: string, amount: number): Promise<BuyPositionResponse> => {
     // Ensure credentials are set up before trading
@@ -363,7 +425,11 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
   };
 
   // Sell helper (ensures credentials, then uses Privy auth)
-  const sell = async (positionId: string, shares?: number): Promise<SellPositionResponse> => {
+  // Accepts either shares (with totalShares) or percentage
+  const sell = async (
+    positionId: string,
+    options?: { shares?: number; percentage?: number; totalShares?: number }
+  ): Promise<SellPositionResponse> => {
     // Ensure credentials are set up before trading
     const credentialsReady = await ensureCredentials();
     if (!credentialsReady) {
@@ -376,8 +442,50 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
       throw new Error("Failed to get authentication token. Please try logging in again.");
     }
 
-    const params = { positionId, shares };
+    const params = {
+      positionId,
+      shares: options?.shares,
+      percentage: options?.percentage,
+      totalShares: options?.totalShares,
+    };
     return sellMutation.mutateAsync({ ...params, privyToken });
+  };
+
+  // Convenience method: sell by percentage (1-100)
+  const sellPercentage = async (
+    positionId: string,
+    percentage: number
+  ): Promise<SellPositionResponse> => {
+    return sell(positionId, { percentage });
+  };
+
+  // Convenience method: sell all (100%)
+  const sellAll = async (positionId: string): Promise<SellPositionResponse> => {
+    return sell(positionId, { percentage: 100 });
+  };
+
+  // Close position and optionally withdraw to external address
+  const closeAndWithdraw = async (
+    positionId: string,
+    withdrawToAddress?: string
+  ): Promise<CloseAndWithdrawResponse> => {
+    // Ensure credentials are set up before trading
+    const credentialsReady = await ensureCredentials();
+    if (!credentialsReady) {
+      throw new Error(credentialsError || "Trading credentials not configured. Please try again.");
+    }
+
+    // Get Privy token for authentication
+    const privyToken = await getAccessToken();
+    if (!privyToken) {
+      throw new Error("Failed to get authentication token. Please try logging in again.");
+    }
+
+    return closeAndWithdrawMutation.mutateAsync({
+      positionId,
+      withdrawToAddress,
+      privyToken,
+    });
   };
 
   // Helper to get ALL positions for a specific event (may have multiple bands)
@@ -453,14 +561,22 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
 
       return buyMutation.mutateAsync({ ...params, privyToken });
     },
-    isBuying: buyMutation.isPending || isSettingUpCredentials,
+    isBuying: buyMutation.isPending || isSettingUpCredentials || isPreparingFunds,
+    isPreparingFunds,
     buyError: buyMutation.error,
     buyMutation,
 
     sell,
+    sellPercentage,
+    sellAll,
     isSelling: sellMutation.isPending || isSettingUpCredentials,
     sellError: sellMutation.error,
     sellMutation,
+
+    closeAndWithdraw,
+    isClosingAndWithdrawing: closeAndWithdrawMutation.isPending || isSettingUpCredentials,
+    closeAndWithdrawError: closeAndWithdrawMutation.error,
+    closeAndWithdrawMutation,
 
     // Helpers
     getPositionForEvent,

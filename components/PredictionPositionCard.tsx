@@ -1,22 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { usePredictionTrading } from "@/hooks/usePredictionTrading";
 
 interface PredictionPositionCardProps {
   eventSlug: string;
+  onCloseAndWithdraw?: (positionId: string) => void;
 }
+
+const SELL_PERCENTAGES = [25, 50, 75, 100] as const;
 
 /**
  * Displays the user's current prediction market position.
  * Shows shares, market value, entry price, and unrealized P&L.
- * Styled to match EtfPositionCard.
+ * Supports partial sells via percentage selector (25%, 50%, 75%, 100%).
  */
-export function PredictionPositionCard({ eventSlug }: PredictionPositionCardProps) {
+export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: PredictionPositionCardProps) {
   const { authenticated } = usePrivy();
-  const { getPositionForEvent, sell, isSelling, isLoadingPositions } = usePredictionTrading({
+  const { getPositionForEvent, sellPercentage, isSelling, isLoadingPositions } = usePredictionTrading({
     fetchPositions: true,
   });
+
+  const [selectedPercentage, setSelectedPercentage] = useState<number>(100);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const position = getPositionForEvent(eventSlug);
 
@@ -32,6 +39,25 @@ export function PredictionPositionCard({ eventSlug }: PredictionPositionCardProp
   const unrealizedPnlPercent = position.unrealizedPnlPercent;
   const isPositive = unrealizedPnl >= 0;
   const isLong = position.side === "LONG";
+
+  // Calculate estimated proceeds for selected percentage
+  const estimatedProceeds = (marketValue * selectedPercentage) / 100;
+  const sharesToSell = (position.shares * selectedPercentage) / 100;
+
+  const handleSell = async () => {
+    if (!showConfirm) {
+      setShowConfirm(true);
+      return;
+    }
+
+    try {
+      await sellPercentage(position.id, selectedPercentage);
+      setShowConfirm(false);
+      setSelectedPercentage(100);
+    } catch (error) {
+      console.error("Failed to sell:", error);
+    }
+  };
 
   return (
     <div className="w-full rounded-xl border border-border bg-card-bg p-4">
@@ -79,15 +105,65 @@ export function PredictionPositionCard({ eventSlug }: PredictionPositionCardProp
         </div>
       </div>
 
-      {/* Sell button */}
-      <div className="mt-3 pt-3 border-t border-border">
+      {/* Sell controls */}
+      <div className="mt-3 pt-3 border-t border-border space-y-3">
+        {/* Percentage selector */}
+        <div className="flex gap-2">
+          {SELL_PERCENTAGES.map((pct) => (
+            <button
+              key={pct}
+              onClick={() => {
+                setSelectedPercentage(pct);
+                setShowConfirm(false);
+              }}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                selectedPercentage === pct
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {pct}%
+            </button>
+          ))}
+        </div>
+
+        {/* Estimated proceeds */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted">
+            Sell {sharesToSell.toFixed(2)} shares
+          </span>
+          <span className="font-medium text-foreground">
+            ≈ ${estimatedProceeds.toFixed(2)}
+          </span>
+        </div>
+
+        {/* Sell button */}
         <button
-          onClick={() => sell(position.id)}
+          onClick={handleSell}
           disabled={isSelling}
-          className="w-full rounded-xl bg-red py-2.5 text-sm font-bold text-white hover:bg-red/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className={`w-full rounded-xl py-2.5 text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            showConfirm
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-red hover:bg-red/90"
+          }`}
         >
-          {isSelling ? "Selling..." : "Sell Position"}
+          {isSelling
+            ? "Selling..."
+            : showConfirm
+            ? `Confirm Sell ${selectedPercentage}%`
+            : `Sell ${selectedPercentage}%`}
         </button>
+
+        {/* Close & Withdraw button (if handler provided) */}
+        {onCloseAndWithdraw && selectedPercentage === 100 && (
+          <button
+            onClick={() => onCloseAndWithdraw(position.id)}
+            disabled={isSelling}
+            className="w-full rounded-xl border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            Close & Withdraw
+          </button>
+        )}
       </div>
     </div>
   );
