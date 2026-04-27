@@ -134,7 +134,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 isVaultoEmployee,
               },
               update: {
-                name: user.name,
+                // Don't update name - preserve user's custom username
                 // Only update isVaultoEmployee if true (don't downgrade manually-set employees)
                 ...(isVaultoEmployee ? { isVaultoEmployee: true } : {}),
               },

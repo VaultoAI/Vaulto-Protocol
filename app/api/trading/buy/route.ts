@@ -194,22 +194,23 @@ export async function POST(request: NextRequest) {
       || null;
 
     // Extract cost basis:
-    // 1. Check nested position costBasis/totalCost
+    // 1. Check nested position costBasis/totalCost (use "in" to narrow union type)
     // 2. Use top-level totalCost if available
     // 3. Calculate from shares × averagePrice
     // 4. Fall back to intended amount
-    const actualCostBasis = position.costBasis
-      || position.totalCost
-      || result.totalCost
-      || (totalShares && avgPrice ? totalShares * avgPrice : null)
-      || amount;
+    const actualCostBasis =
+      ("costBasis" in position ? position.costBasis : undefined) ??
+      ("totalCost" in position ? position.totalCost : undefined) ??
+      result.totalCost ??
+      (totalShares && avgPrice ? totalShares * avgPrice : null) ??
+      amount;
 
     console.log("[Trading Buy] Extracted values:", {
       totalShares,
       avgPrice,
       actualCostBasis,
       hasNestedPosition: !!result.position,
-      fromTotalCost: !!(position.costBasis || position.totalCost || result.totalCost),
+      fromTotalCost: !!(("costBasis" in position && position.costBasis) || ("totalCost" in position && position.totalCost) || result.totalCost),
     });
 
     // Log successful trade to database
