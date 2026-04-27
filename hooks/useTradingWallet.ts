@@ -175,10 +175,30 @@ async function executeWithdrawal(withdrawalId: string): Promise<{
   return data;
 }
 
-async function fetchBalance(privyToken?: string): Promise<{
+export interface BalanceResponse {
   balance: string;
   balanceUsd: string;
-}> {
+  usdc?: {
+    balance: string;
+    balanceUsd: string;
+    raw: string;
+  };
+  matic?: {
+    balance: string;
+    raw: string;
+    low: boolean;
+  };
+  polymarket?: {
+    address: string;
+    usdceBalance: string;
+    usdceRaw: string;
+  } | null;
+  totalAvailable?: string;
+  address?: string;
+  chainId?: number;
+}
+
+async function fetchBalance(privyToken?: string): Promise<BalanceResponse> {
   const headers: HeadersInit = {};
   if (privyToken) {
     headers["x-privy-token"] = privyToken;
@@ -488,6 +508,10 @@ export function useTradingWallet() {
   // Computed values
   const balance = balanceData?.balance ?? tradingWallet?.balance ?? "0";
   const balanceUsd = balanceData?.balanceUsd ?? tradingWallet?.balanceUsd ?? "0";
+  const maticBalance = balanceData?.matic?.balance ?? "0";
+  const maticLow = balanceData?.matic?.low ?? false;
+  const polymarketBalance = balanceData?.polymarket?.usdceBalance ?? "0";
+  const totalAvailable = balanceData?.totalAvailable ?? balance;
   const isActive = tradingWallet?.status === "ACTIVE";
   // Only show creation prompt when auto-creation failed (so manual prompt shows as fallback)
   const needsCreation =
@@ -523,6 +547,10 @@ export function useTradingWallet() {
     balance,
     balanceUsd,
     formattedBalance,
+    maticBalance,
+    maticLow,
+    polymarketBalance,
+    totalAvailable,
     isActive,
     needsCreation,
     isAutoCreating,

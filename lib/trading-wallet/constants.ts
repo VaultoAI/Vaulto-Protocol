@@ -56,6 +56,16 @@ export const DEPOSIT_CONFIRMATIONS = {
   ETHEREUM: 12, // ~2.5 minutes on Ethereum
 } as const;
 
+// Uniswap V3 Addresses on Polygon
+export const POLYGON_UNISWAP = {
+  SWAP_ROUTER_02: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" as const,
+  QUOTER_V2: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e" as const,
+  FEE_TIER: 100, // 0.01% fee tier for stablecoins
+} as const;
+
+// Slippage tolerance for stablecoin swaps (in basis points)
+export const SWAP_SLIPPAGE_BPS = 50; // 0.5%
+
 // ERC20 ABI for USDC operations (minimal subset needed)
 export const ERC20_ABI = [
   {
@@ -101,5 +111,58 @@ export const ERC20_ABI = [
     inputs: [],
     outputs: [{ name: "", type: "uint8" }],
     stateMutability: "view",
+  },
+] as const;
+
+// Uniswap V3 SwapRouter02 ABI (minimal subset for exactInputSingle)
+export const SWAP_ROUTER_ABI = [
+  {
+    name: "exactInputSingle",
+    type: "function",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "fee", type: "uint24" },
+          { name: "recipient", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+          { name: "sqrtPriceLimitX96", type: "uint160" },
+        ],
+      },
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+    stateMutability: "payable",
+  },
+] as const;
+
+// Uniswap V3 QuoterV2 ABI (for getting quotes)
+export const QUOTER_V2_ABI = [
+  {
+    name: "quoteExactInputSingle",
+    type: "function",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "fee", type: "uint24" },
+          { name: "sqrtPriceLimitX96", type: "uint160" },
+        ],
+      },
+    ],
+    outputs: [
+      { name: "amountOut", type: "uint256" },
+      { name: "sqrtPriceX96After", type: "uint160" },
+      { name: "initializedTicksCrossed", type: "uint32" },
+      { name: "gasEstimate", type: "uint256" },
+    ],
+    stateMutability: "nonpayable",
   },
 ] as const;
