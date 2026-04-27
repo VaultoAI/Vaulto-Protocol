@@ -1,11 +1,6 @@
 export default function CompanyDetailLoading() {
   return (
     <div>
-      {/* Back navigation skeleton */}
-      <div className="mb-6">
-        <div className="h-5 w-28 animate-pulse rounded bg-badge-bg/50" />
-      </div>
-
       {/* Main content: Chart + Trade Widget */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left side: Company info + Chart */}
@@ -42,10 +37,25 @@ export default function CompanyDetailLoading() {
             {/* Chart area */}
             <div className="h-64 w-full animate-pulse rounded-lg bg-badge-bg/30" />
           </div>
+
+          {/* Mobile trading widget */}
+          <div className="lg:hidden mt-6">
+            <div className="rounded-xl border border-border bg-card-bg p-6 space-y-4">
+              <div className="flex gap-2">
+                <div className="h-10 flex-1 animate-pulse rounded-lg bg-badge-bg/50" />
+                <div className="h-10 flex-1 animate-pulse rounded-lg bg-badge-bg/50" />
+              </div>
+              <div className="space-y-3">
+                <div className="h-12 w-full animate-pulse rounded-lg bg-badge-bg/50" />
+                <div className="h-12 w-full animate-pulse rounded-lg bg-badge-bg/50" />
+              </div>
+              <div className="h-12 w-full animate-pulse rounded-lg bg-badge-bg/50" />
+            </div>
+          </div>
         </div>
 
         {/* Right side: Trade Widget skeleton */}
-        <div className="w-full lg:w-[340px] shrink-0">
+        <div className="hidden lg:block w-full lg:w-[340px] shrink-0">
           <div className="lg:sticky lg:top-8">
             <div className="rounded-xl border border-border bg-card-bg p-6 space-y-4">
               {/* Tab buttons */}
@@ -91,7 +101,7 @@ export default function CompanyDetailLoading() {
           </div>
 
           {/* Company info grid skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8 md:gap-x-16 lg:gap-x-48">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i}>
                 <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/50 mb-1" />
@@ -101,49 +111,11 @@ export default function CompanyDetailLoading() {
           </div>
 
           {/* Key facts grid skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8 md:gap-x-16 lg:gap-x-48 mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6 mt-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i}>
                 <div className="h-4 w-20 animate-pulse rounded bg-badge-bg/50 mb-1" />
                 <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/30" />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Products skeleton */}
-        <section>
-          <div className="h-6 w-24 animate-pulse rounded bg-badge-bg/50 mb-1" />
-          <div className="border-t border-border mb-4" />
-
-          <div className="flex gap-2 md:gap-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="h-10 w-24 animate-pulse rounded-lg bg-badge-bg/50 flex-shrink-0"
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* News skeleton */}
-        <section>
-          <div className="h-6 w-32 animate-pulse rounded bg-badge-bg/50 mb-1" />
-          <div className="border-t border-border mb-4" />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-border bg-card-bg p-4 space-y-3"
-              >
-                <div className="h-4 w-3/4 animate-pulse rounded bg-badge-bg/50" />
-                <div className="h-4 w-full animate-pulse rounded bg-badge-bg/30" />
-                <div className="h-4 w-1/2 animate-pulse rounded bg-badge-bg/30" />
-                <div className="flex gap-2 pt-2">
-                  <div className="h-3 w-20 animate-pulse rounded bg-badge-bg/30" />
-                  <div className="h-3 w-16 animate-pulse rounded bg-badge-bg/30" />
-                </div>
               </div>
             ))}
           </div>
@@ -175,6 +147,44 @@ export default function CompanyDetailLoading() {
                 <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/30 flex-1 ml-auto hidden md:block" />
                 <div className="h-4 w-14 animate-pulse rounded bg-badge-bg/30 flex-1 ml-auto hidden lg:block" />
               </div>
+            ))}
+          </div>
+        </section>
+
+        {/* News skeleton */}
+        <section>
+          <div className="h-6 w-32 animate-pulse rounded bg-badge-bg/50 mb-1" />
+          <div className="border-t border-border mb-4" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-border bg-card-bg p-4 space-y-3"
+              >
+                <div className="h-4 w-3/4 animate-pulse rounded bg-badge-bg/50" />
+                <div className="h-4 w-full animate-pulse rounded bg-badge-bg/30" />
+                <div className="h-4 w-1/2 animate-pulse rounded bg-badge-bg/30" />
+                <div className="flex gap-2 pt-2">
+                  <div className="h-3 w-20 animate-pulse rounded bg-badge-bg/30" />
+                  <div className="h-3 w-16 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Products skeleton */}
+        <section>
+          <div className="h-6 w-24 animate-pulse rounded bg-badge-bg/50 mb-1" />
+          <div className="border-t border-border mb-4" />
+
+          <div className="flex gap-2 md:gap-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="h-10 w-24 animate-pulse rounded-lg bg-badge-bg/50 flex-shrink-0"
+              />
             ))}
           </div>
         </section>

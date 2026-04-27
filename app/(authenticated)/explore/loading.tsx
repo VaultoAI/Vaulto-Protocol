@@ -1,6 +1,11 @@
 export default function ExploreLoading() {
   return (
     <div>
+      {/* Mobile-only search at top */}
+      <div className="md:hidden mb-4">
+        <div className="h-10 w-full animate-pulse rounded-lg bg-badge-bg/50" />
+      </div>
+
       {/* Index Products section */}
       <div className="py-6">
         {/* Title with NEW badge */}
@@ -10,7 +15,7 @@ export default function ExploreLoading() {
         </div>
 
         {/* Index items in 2 columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-0">
           {[1, 2].map((i) => (
             <div
               key={i}
@@ -45,7 +50,7 @@ export default function ExploreLoading() {
       </div>
 
       {/* Divider */}
-      <div className="border-b border-border" />
+      <div className="hidden md:block border-b border-border" />
 
       {/* Top section: 3 columns like ExploreTopSection */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
@@ -118,7 +123,7 @@ export default function ExploreLoading() {
       </div>
 
       {/* Divider */}
-      <div className="border-b border-border" />
+      <div className="hidden md:block border-b border-border" />
 
       {/* Explore Assets section */}
       <div className="mt-12">
@@ -134,8 +139,8 @@ export default function ExploreLoading() {
           </div>
         </div>
 
-        {/* Search + Filters row */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 mb-6">
+        {/* Search + Filters row (desktop only) */}
+        <div className="hidden md:flex flex-col lg:flex-row items-start lg:items-center gap-4 mb-6">
           {/* Search bar */}
           <div className="h-10 w-full lg:w-[320px] animate-pulse rounded-lg bg-badge-bg/50 shrink-0" />
 
