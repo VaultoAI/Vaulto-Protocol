@@ -49,42 +49,72 @@ export default function ExploreLoading() {
 
       {/* Top section: 3 columns like ExploreTopSection */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-        {[1, 2, 3].map((colIndex) => (
-          <div
-            key={colIndex}
-            className={`py-6 ${colIndex > 1 ? "md:pl-8 md:pr-6 md:border-l md:border-border" : "md:pr-8"}`}
-          >
-            {/* Column title */}
-            <div className="flex items-center gap-2 mb-5">
-              <div className="h-5 w-24 animate-pulse rounded bg-badge-bg/50" />
-              {colIndex === 2 && (
-                <div className="h-5 w-8 animate-pulse rounded-md bg-badge-bg/50" />
-              )}
-            </div>
-
-            {/* 3 company items per column */}
-            <div className="flex flex-col gap-4">
-              {[1, 2, 3].map((itemIndex) => (
-                <div key={itemIndex} className="flex items-center gap-3">
-                  {/* Logo skeleton */}
-                  <div className="h-9 w-9 animate-pulse rounded-full bg-badge-bg/50 shrink-0" />
-
-                  {/* Name + symbol */}
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="h-4 w-12 animate-pulse rounded bg-badge-bg/50" />
-                    <div className="h-3 w-24 animate-pulse rounded bg-badge-bg/30" />
-                  </div>
-
-                  {/* Price + metric */}
-                  <div className="flex flex-col items-end shrink-0 w-[90px] space-y-1">
-                    <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/50" />
-                    <div className="h-3 w-12 animate-pulse rounded bg-badge-bg/30" />
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Column 1: Top Gainers - always visible */}
+        <div className="py-6 md:pr-8">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="h-5 w-24 animate-pulse rounded bg-badge-bg/50" />
           </div>
-        ))}
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3].map((itemIndex) => (
+              <div key={itemIndex} className="flex items-center gap-3">
+                <div className="h-9 w-9 animate-pulse rounded-full bg-badge-bg/50 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="h-4 w-12 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-24 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+                <div className="flex flex-col items-end shrink-0 w-[90px] space-y-1">
+                  <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-12 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Column 2: Trending - hidden on mobile */}
+        <div className="hidden md:block py-6 md:pl-8 md:pr-6 md:border-l md:border-border">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="h-5 w-24 animate-pulse rounded bg-badge-bg/50" />
+            <div className="h-5 w-8 animate-pulse rounded-md bg-badge-bg/50" />
+          </div>
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3].map((itemIndex) => (
+              <div key={itemIndex} className="flex items-center gap-3">
+                <div className="h-9 w-9 animate-pulse rounded-full bg-badge-bg/50 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="h-4 w-12 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-24 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+                <div className="flex flex-col items-end shrink-0 w-[90px] space-y-1">
+                  <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-12 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Column 3: Newly Added - hidden on mobile */}
+        <div className="hidden md:block py-6 md:pl-8 md:pr-6 md:border-l md:border-border">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="h-5 w-24 animate-pulse rounded bg-badge-bg/50" />
+          </div>
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3].map((itemIndex) => (
+              <div key={itemIndex} className="flex items-center gap-3">
+                <div className="h-9 w-9 animate-pulse rounded-full bg-badge-bg/50 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="h-4 w-12 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-24 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+                <div className="flex flex-col items-end shrink-0 w-[90px] space-y-1">
+                  <div className="h-4 w-16 animate-pulse rounded bg-badge-bg/50" />
+                  <div className="h-3 w-12 animate-pulse rounded bg-badge-bg/30" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Divider */}

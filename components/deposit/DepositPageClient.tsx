@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
@@ -17,6 +18,7 @@ import { CompanyLogo } from "@/components/CompanyLogo";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
+import { getCompanySlug, getCompanySlugFromSymbol } from "@/lib/vaulto/companies";
 import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { PredictionPositions } from "@/components/PredictionPositions";
 
@@ -304,6 +306,46 @@ export function DepositPageClient() {
         {/* Chart Skeleton */}
         <div className="mt-6 -mx-5 border-t border-border pt-6 pb-4 px-5 sm:mt-8 sm:pt-8">
           <div className="h-[140px] w-full animate-pulse rounded bg-foreground/10" />
+        </div>
+
+        {/* Transactions Skeleton */}
+        <div className="pt-4 border-t border-border">
+          <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+            <div className="h-4 w-24 animate-pulse rounded bg-foreground/10" />
+            <div className="flex items-center rounded-lg border border-border p-0.5 bg-foreground/5">
+              <div className="h-6 w-10 animate-pulse rounded-md bg-foreground/10 sm:w-12" />
+              <div className="h-6 w-12 animate-pulse rounded-md bg-foreground/5 sm:w-14" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center justify-between py-3 sm:py-4">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="h-7 w-7 animate-pulse rounded-full bg-foreground/10 sm:h-8 sm:w-8" />
+                  <div className="space-y-1">
+                    <div className="h-3 w-16 animate-pulse rounded bg-foreground/10 sm:h-4 sm:w-20" />
+                    <div className="h-3 w-20 animate-pulse rounded bg-foreground/5 sm:w-24" />
+                  </div>
+                </div>
+                <div className="h-5 w-16 animate-pulse rounded bg-foreground/10 sm:h-6 sm:w-20" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Prediction Positions Skeleton - desktop only */}
+        <div className="mt-8 hidden sm:block">
+          <div className="h-5 w-28 animate-pulse rounded bg-foreground/10 mb-4" />
+          <div className="rounded-lg border border-border p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 animate-pulse rounded-full bg-foreground/10" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 animate-pulse rounded bg-foreground/10" />
+                <div className="h-3 w-24 animate-pulse rounded bg-foreground/5" />
+              </div>
+              <div className="h-8 w-20 animate-pulse rounded bg-foreground/10" />
+            </div>
+          </div>
         </div>
 
         {/* Referral Skeleton */}
@@ -631,16 +673,19 @@ export function DepositPageClient() {
 
               const polygonUrl = tx.txHash ? `https://polygonscan.com/tx/${tx.txHash}` : null;
 
-              return (
-                <a
-                  key={tx.id}
-                  href={polygonUrl || undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center justify-between py-3 sm:py-4 -mx-3 px-3 rounded-lg transition-colors ${
-                    polygonUrl ? "hover:bg-foreground/[0.08] cursor-pointer" : "cursor-default"
-                  }`}
-                >
+              // Determine company page URL for trades
+              const companyUrl = isEtfOrder && tx.symbol
+                ? `/explore/${getCompanySlugFromSymbol(tx.symbol)}`
+                : isPrediction && tx.company
+                  ? `/explore/${getCompanySlug(tx.company)}`
+                  : null;
+
+              // Use company URL for trades, Polygonscan for deposits/withdrawals
+              const isInternalLink = (isEtfOrder || isPrediction) && companyUrl;
+              const hasLink = isInternalLink || polygonUrl;
+
+              const rowContent = (
+                <>
                   <div className="flex items-center gap-2.5 sm:gap-3">
                     {/* Show asset logo for USDC/MATIC transactions, otherwise show icon */}
                     {(tx.asset === "USDC" || tx.asset === "USDC.e" || tx.asset === "USDCE") ? (
@@ -662,6 +707,12 @@ export function DepositPageClient() {
                     ) : isPrediction && tx.company ? (
                       <CompanyLogo
                         name={tx.company}
+                        size={28}
+                        className="sm:w-8 sm:h-8"
+                      />
+                    ) : isEtfOrder && tx.symbol ? (
+                      <CompanyLogo
+                        name={tx.symbol.replace(/^v/, "")}
                         size={28}
                         className="sm:w-8 sm:h-8"
                       />
@@ -715,10 +766,35 @@ export function DepositPageClient() {
                         maximumFractionDigits: 2,
                       })}
                     </span>
-                    {polygonUrl && (
+                    {polygonUrl && !isInternalLink && (
                       <ExternalLink className="h-4 w-4 text-muted" />
                     )}
                   </div>
+                </>
+              );
+
+              const rowClassName = `flex items-center justify-between py-3 sm:py-4 -mx-3 px-3 rounded-lg transition-colors ${
+                hasLink ? "hover:bg-foreground/[0.08] cursor-pointer" : "cursor-default"
+              }`;
+
+              // Use Link for internal navigation, anchor for external
+              if (isInternalLink && companyUrl) {
+                return (
+                  <Link key={tx.id} href={companyUrl} className={rowClassName}>
+                    {rowContent}
+                  </Link>
+                );
+              }
+
+              return (
+                <a
+                  key={tx.id}
+                  href={polygonUrl || undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={rowClassName}
+                >
+                  {rowContent}
                 </a>
               );
               })}
