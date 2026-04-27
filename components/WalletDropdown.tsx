@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { usePrivy, useFundWallet } from "@privy-io/react-auth";
 import { polygon } from "viem/chains";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
+import { usePredictionTrading } from "@/hooks/usePredictionTrading";
 import { useLogout } from "@/hooks/useLogout";
 
 const DepositModal = dynamic(
@@ -35,12 +36,17 @@ export function WalletDropdown() {
     tradingWallet,
     embeddedWallet,
     formattedBalance,
+    totalAvailable,
     isActive,
     externalWallet,
     detectDeposits,
     refetchBalance,
   } = useTradingWallet();
+  const { positionsTotals } = usePredictionTrading();
   const { name: profileName } = useProfile();
+
+  // Calculate total balance: EOA + Safe + Positions
+  const totalBalance = (parseFloat(totalAvailable) || 0) + (positionsTotals?.totalValue || 0);
 
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -253,8 +259,8 @@ export function WalletDropdown() {
               />
             </div>
             <div className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white sm:mt-2 sm:text-lg">
-              ${formattedBalance}{" "}
-              <span className="text-base font-normal text-gray-500 sm:text-sm">USDC</span>
+              ${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+              <span className="text-base font-normal text-gray-500 sm:text-sm">Total</span>
             </div>
           </Link>
 
