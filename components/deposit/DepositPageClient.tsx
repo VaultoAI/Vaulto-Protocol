@@ -54,7 +54,14 @@ export function DepositPageClient() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
+  // Default to "trades" on mobile (< 640px), "all" on desktop
   const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("trades");
+
+  // Set default filter based on screen size on mount
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640;
+    setTransactionFilter(isMobile ? "trades" : "all");
+  }, []);
 
   const {
     tradingWallet,
