@@ -512,6 +512,7 @@ model TradingWallet {
   chainId           Int                 @default(137) // Polygon
 
   // Safe wallet address (used for Polymarket trading)
+  // This is the Polymarket wallet where USDC.e is held for trading
   safeAddress       String?
 
   // Status
@@ -532,6 +533,7 @@ model TradingWallet {
   cachedTransactions CachedTransaction[]
   syncState          WalletSyncState?
   predictionTrades   PredictionMarketTrade[]
+  predictionSales    PredictionMarketSale[]
 
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -749,6 +751,39 @@ model PredictionMarketTrade {
   filledAt          DateTime?
 
   @@index([tradingWalletId])
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+model PredictionMarketSale {
+  id                String        @id @default(cuid())
+  tradingWalletId   String
+  tradingWallet     TradingWallet @relation(fields: [tradingWalletId], references: [id], onDelete: Cascade)
+
+  positionId        String        // Position being sold
+  eventId           String        // e.g., "spacex-ipo-closing-market-cap"
+  eventName         String?       // Human-readable name
+  side              String        // "LONG" | "SHORT"
+
+  // Sale details
+  sharesSold        Decimal       @db.Decimal(20, 8)
+  percentage        Int           // 1-100
+  proceeds          Decimal       @db.Decimal(20, 2)
+  realizedPnl       Decimal       @db.Decimal(20, 2) // Profit/loss
+
+  // Cost basis tracking for P&L calculation
+  costBasis         Decimal?      @db.Decimal(20, 2)
+  avgEntryPrice     Decimal?      @db.Decimal(20, 6)
+  exitPrice         Decimal?      @db.Decimal(20, 6)
+
+  status            String        @default("PENDING") // PENDING, COMPLETED, FAILED
+  errorMessage      String?
+
+  createdAt         DateTime      @default(now())
+  completedAt       DateTime?
+
+  @@index([tradingWalletId])
+  @@index([positionId])
   @@index([eventId])
   @@index([createdAt])
 }
