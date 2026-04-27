@@ -185,6 +185,26 @@ const SYMBOL_OVERRIDES: Record<string, string> = {
   "Safe Superintelligence": "vSSI",
 };
 
+/** Reverse mapping from symbol to company slug (for overrides). */
+const SYMBOL_TO_SLUG: Record<string, string> = {
+  vAnduril: "anduril-industries",
+  vFanatics: "fanatics-holdings",
+  vMercury: "mercury-technologies",
+  vTML: "thinking-machines-lab",
+  vSSI: "safe-superintelligence",
+};
+
+/** Convert a token symbol to company slug for URL routing. */
+export function getCompanySlugFromSymbol(symbol: string): string {
+  // Check for explicit override mapping first
+  if (SYMBOL_TO_SLUG[symbol]) {
+    return SYMBOL_TO_SLUG[symbol];
+  }
+  // Default: strip 'v' prefix and convert to slug format
+  const name = symbol.startsWith("v") ? symbol.slice(1) : symbol;
+  return name.toLowerCase();
+}
+
 /** Generate synthetic token symbol from company name (e.g., SpaceX -> vSpaceX). */
 export function getSyntheticSymbol(companyName: string): string {
   // Check for explicit override first
