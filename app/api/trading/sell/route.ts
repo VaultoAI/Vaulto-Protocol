@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
-import { sellPosition } from "@/lib/vaulto-api/trading";
+import { sellPosition, returnFundsAfterSell } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
 
 /**
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { positionId, shares } = body;
+    const { positionId, shares, percentage, totalShares } = body;
 
     // Validate positionId
     if (!positionId || typeof positionId !== "string") {
@@ -58,10 +58,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate percentage (optional, 1-100)
+    if (percentage !== undefined) {
+      if (typeof percentage !== "number" || percentage < 1 || percentage > 100) {
+        return NextResponse.json(
+          { error: "Percentage must be between 1 and 100" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Validate shares (optional)
     if (shares !== undefined && (typeof shares !== "number" || shares <= 0)) {
       return NextResponse.json(
         { error: "Invalid shares amount" },
+        { status: 400 }
+      );
+    }
+
+    // Validate totalShares (optional, required if shares is provided)
+    if (shares !== undefined && totalShares === undefined) {
+      return NextResponse.json(
+        { error: "totalShares required when selling by shares" },
+        { status: 400 }
+      );
+    }
+
+    if (totalShares !== undefined && (typeof totalShares !== "number" || totalShares <= 0)) {
+      return NextResponse.json(
+        { error: "Invalid totalShares amount" },
         { status: 400 }
       );
     }
@@ -88,7 +113,7 @@ export async function POST(request: NextRequest) {
       : { walletSignature: { nonce: walletNonce!, signature: walletSignature! } };
 
     const result = await sellPosition(
-      { positionId, shares },
+      { positionId, shares, percentage, totalShares },
       apiKey,
       userId,
       tradeAuth
@@ -99,6 +124,23 @@ export async function POST(request: NextRequest) {
         { error: result.error || "Sell failed" },
         { status: 400 }
       );
+    }
+
+    // Optionally return funds from Safe to EOA (non-blocking)
+    // Funds will remain in Safe for subsequent trades if this is skipped
+    if (privyToken && result.proceeds && result.proceeds > 0) {
+      // Fire and forget - don't block the response
+      returnFundsAfterSell(apiKey, privyToken, userId, false)
+        .then((fundResult) => {
+          if (fundResult.success) {
+            console.log("[Trading Sell] Funds returned successfully:", fundResult.amountReturned);
+          } else {
+            console.warn("[Trading Sell] Fund return failed (non-blocking):", fundResult.error);
+          }
+        })
+        .catch((err) => {
+          console.error("[Trading Sell] Fund return error (non-blocking):", err);
+        });
     }
 
     return NextResponse.json(result);

@@ -67,10 +67,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Save the Safe wallet address to the database if returned
+    if (result.polymarketAddress && user.tradingWallet) {
+      await db.tradingWallet.update({
+        where: { id: user.tradingWallet.id },
+        data: { safeAddress: result.polymarketAddress },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       walletId: result.walletId,
       walletAddress: result.walletAddress,
+      polymarketAddress: result.polymarketAddress,
     });
   } catch (error) {
     console.error("[Setup Wallet] Error:", error);

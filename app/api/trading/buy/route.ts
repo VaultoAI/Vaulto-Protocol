@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
-import { buyPosition, type BuyPositionResponse } from "@/lib/vaulto-api/trading";
+import { buyPosition, prepareFundsForBuy, type BuyPositionResponse } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
 
 // Map event slugs to company names for logging
@@ -115,6 +115,27 @@ export async function POST(request: NextRequest) {
     const apiKey = getVaultoApiToken();
     const userId = user.tradingWallet.address;
 
+    // Prepare funds for the trade (swap USDC to USDC.e and transfer to Safe)
+    if (privyToken) {
+      console.log("[Trading Buy] Preparing funds for trade...");
+      const fundResult = await prepareFundsForBuy(
+        amount,
+        apiKey,
+        privyToken,
+        userId
+      );
+
+      if (!fundResult.ready) {
+        console.error("[Trading Buy] Fund preparation failed:", fundResult.error);
+        return NextResponse.json(
+          { error: fundResult.error || "Failed to prepare funds for trade" },
+          { status: 400 }
+        );
+      }
+
+      console.log("[Trading Buy] Funds prepared successfully:", fundResult.transactions);
+    }
+
     // Build auth object based on available credentials
     const tradeAuth = privyToken
       ? { privyToken }
@@ -162,7 +183,7 @@ export async function POST(request: NextRequest) {
         amount,
         shares: totalShares,
         averagePrice: result.averagePrice || null,
-        positionId: result.positionId || null,
+        positionId: result.positionId ? String(result.positionId) : null,
         status: "FILLED",
         filledAt: new Date(),
       },

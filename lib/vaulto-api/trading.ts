@@ -65,12 +65,17 @@ export interface PositionsResponse {
 
 export interface SellPositionParams {
   positionId: string;
-  shares?: number; // Optional: sell specific amount, otherwise sell all
+  shares?: number; // Optional: sell specific share count
+  percentage?: number; // Optional: sell percentage (1-100)
+  totalShares?: number; // Required to calculate % from shares
 }
 
 export interface SellPositionResponse {
   success: boolean;
   proceeds?: number;
+  sharesSold?: number;
+  percentageSold?: number;
+  remainingShares?: number;
   error?: string;
 }
 
@@ -79,6 +84,7 @@ export interface SetupWalletResponse {
   success: boolean;
   walletId?: string;
   walletAddress?: string;
+  polymarketAddress?: string; // Safe wallet address for trading
   error?: string;
 }
 
@@ -89,6 +95,57 @@ export interface DeriveCredentialsResponse {
 
 export interface CredentialsStatusResponse {
   hasCredentials: boolean;
+  error?: string;
+}
+
+// Fund transfer types
+export interface PrepareFundsResponse {
+  success: boolean;
+  ready: boolean;
+  transactions?: {
+    swapTxHash?: string;
+    transferTxHash?: string;
+  };
+  balances?: {
+    privyUsdcNative: string;
+    privyUsdcBridged: string;
+    safeUsdcBridged: string;
+  };
+  error?: string;
+}
+
+export interface ReturnFundsResponse {
+  success: boolean;
+  transactions?: {
+    transferTxHash?: string;
+    swapTxHash?: string;
+  };
+  amountReturned?: string;
+  error?: string;
+}
+
+export interface WalletInfoResponse {
+  success: boolean;
+  eoaAddress?: string;
+  safeAddress?: string;
+  polymarketAddress?: string;
+  safeDeployed?: boolean;
+  balances?: {
+    eoaUsdcNative: string;
+    eoaUsdcBridged: string;
+    safeUsdcBridged: string;
+  };
+  error?: string;
+}
+
+export interface CombinedBalanceResponse {
+  success: boolean;
+  available?: string;
+  breakdown?: {
+    eoaUsdcNative: string;
+    eoaUsdcBridged: string;
+    safeUsdcBridged: string;
+  };
   error?: string;
 }
 
@@ -167,6 +224,9 @@ async function handleResponse<T>(response: Response, url: string): Promise<T> {
     });
     throw new Error(errorMsg);
   }
+
+  // Log successful response for debugging
+  console.log(`[Vaulto Trading API] Success response from ${url}:`, JSON.stringify(data, null, 2));
 
   return data as T;
 }
@@ -335,16 +395,29 @@ export async function sellPosition(
 
   // Map frontend params to Vaulto API expected params
   // Vaulto API expects: positionId (int), percentage (1-100)
-  // Frontend sends: positionId (string), shares (optional)
-  // If shares is undefined, sell 100% (all shares)
+  // Priority: direct percentage > calculated from shares > 100% (sell all)
+  let percentage = 100;
+
+  if (params.percentage !== undefined) {
+    // Direct percentage provided
+    percentage = Math.min(100, Math.max(1, Math.round(params.percentage)));
+  } else if (params.shares !== undefined && params.totalShares !== undefined && params.totalShares > 0) {
+    // Calculate percentage from shares
+    percentage = Math.min(100, Math.max(1, Math.round((params.shares / params.totalShares) * 100)));
+  }
+  // Otherwise default to 100% (sell all)
+
   const apiParams = {
     positionId: parseInt(params.positionId, 10) || params.positionId,
-    percentage: params.shares ? 100 : 100, // TODO: Calculate percentage from shares if needed
+    percentage,
   };
 
   console.log(`[Vaulto Trading API] Selling position:`, {
     positionId: apiParams.positionId,
     percentage: apiParams.percentage,
+    requestedShares: params.shares,
+    requestedPercentage: params.percentage,
+    totalShares: params.totalShares,
   });
 
   // Use Privy auth if available, otherwise fall back to wallet signature
@@ -447,4 +520,99 @@ export async function checkCredentialsStatus(
   });
 
   return handleResponse<CredentialsStatusResponse>(response, url);
+}
+
+// ============================================
+// FUND TRANSFER FUNCTIONS
+// ============================================
+
+/**
+ * Get wallet info including EOA, Safe addresses and balances
+ */
+export async function getWalletInfo(
+  apiKey: string,
+  privyAuthToken: string,
+  walletAddress?: string
+): Promise<WalletInfoResponse> {
+  const url = `${getBaseUrl()}/api/trading/wallet-info`;
+
+  console.log(`[Vaulto Trading API] Getting wallet info`);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: getAuthHeaders(apiKey, privyAuthToken, walletAddress),
+  });
+
+  return handleResponse<WalletInfoResponse>(response, url);
+}
+
+/**
+ * Get combined trading balance across EOA and Safe wallets
+ */
+export async function getCombinedBalance(
+  apiKey: string,
+  privyAuthToken: string,
+  walletAddress?: string
+): Promise<CombinedBalanceResponse> {
+  const url = `${getBaseUrl()}/api/trading/combined-balance`;
+
+  console.log(`[Vaulto Trading API] Getting combined balance`);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: getAuthHeaders(apiKey, privyAuthToken, walletAddress),
+  });
+
+  return handleResponse<CombinedBalanceResponse>(response, url);
+}
+
+/**
+ * Prepare funds for a buy order
+ *
+ * This will:
+ * 1. Check if Safe wallet has enough USDC.e
+ * 2. If not, swap USDC to USDC.e if needed
+ * 3. Transfer USDC.e from EOA to Safe wallet
+ */
+export async function prepareFundsForBuy(
+  amountUsd: number,
+  apiKey: string,
+  privyAuthToken: string,
+  walletAddress?: string
+): Promise<PrepareFundsResponse> {
+  const url = `${getBaseUrl()}/api/trading/prepare-funds`;
+
+  console.log(`[Vaulto Trading API] Preparing $${amountUsd} for buy`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: getAuthHeaders(apiKey, privyAuthToken, walletAddress),
+    body: JSON.stringify({ amountUsd }),
+  });
+
+  return handleResponse<PrepareFundsResponse>(response, url);
+}
+
+/**
+ * Return funds from Safe to EOA wallet after selling
+ *
+ * @param swapToNative Whether to swap USDC.e back to USDC
+ */
+export async function returnFundsAfterSell(
+  apiKey: string,
+  privyAuthToken: string,
+  walletAddress?: string,
+  swapToNative: boolean = false
+): Promise<ReturnFundsResponse> {
+  const url = `${getBaseUrl()}/api/trading/return-funds`;
+
+  console.log(`[Vaulto Trading API] Returning funds, swapToNative=${swapToNative}`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: getAuthHeaders(apiKey, privyAuthToken, walletAddress),
+    body: JSON.stringify({ swapToNative }),
+  });
+
+  return handleResponse<ReturnFundsResponse>(response, url);
 }
