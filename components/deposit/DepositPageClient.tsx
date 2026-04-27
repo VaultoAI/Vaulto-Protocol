@@ -55,6 +55,7 @@ export function DepositPageClient() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
+  const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("all");
 
   const {
     tradingWallet,
@@ -526,20 +527,60 @@ export function DepositPageClient() {
 
       {/* Transactions Section */}
       <div className="pt-4 border-t border-border">
-        <div className="flex items-center gap-2 mb-3 sm:mb-4">
-          <h3 className="text-sm font-medium text-foreground">Transactions</h3>
-          {isLoadingHistory && (
-            <span className="flex items-center gap-1 text-xs text-muted">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Loading...
-            </span>
-          )}
+        <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-foreground">Transactions</h3>
+            {isLoadingHistory && (
+              <span className="flex items-center gap-1 text-xs text-muted">
+                <Loader2 className="h-3 w-3 animate-spin" />
+              </span>
+            )}
+          </div>
+          {/* Filter Toggle */}
+          <div className="flex items-center rounded-lg border border-border p-0.5 bg-foreground/5">
+            <button
+              onClick={() => setTransactionFilter("all")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
+                transactionFilter === "all"
+                  ? "bg-foreground text-background"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setTransactionFilter("trades")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
+                transactionFilter === "trades"
+                  ? "bg-foreground text-background"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Trades
+            </button>
+          </div>
         </div>
-        {transactions.length === 0 ? (
-          <p className="text-sm text-muted">No transactions yet</p>
-        ) : (
-          <div className="space-y-1">
-            {transactions.map((tx) => {
+        {(() => {
+          const filteredTransactions = transactionFilter === "trades"
+            ? transactions.filter((tx) =>
+                tx.type === "buy" ||
+                tx.type === "sell" ||
+                tx.type === "prediction_long" ||
+                tx.type === "prediction_short"
+              )
+            : transactions;
+
+          if (filteredTransactions.length === 0) {
+            return (
+              <p className="text-sm text-muted">
+                {transactionFilter === "trades" ? "No trades yet" : "No transactions yet"}
+              </p>
+            );
+          }
+
+          return (
+            <div className="space-y-1">
+              {filteredTransactions.map((tx) => {
               // Determine icon and colors based on transaction type
               const isBuy = tx.type === "buy";
               const isSell = tx.type === "sell";
@@ -680,9 +721,10 @@ export function DepositPageClient() {
                   </div>
                 </a>
               );
-            })}
-          </div>
-        )}
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Prediction Market Positions - hidden on mobile */}

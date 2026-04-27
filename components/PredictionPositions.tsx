@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { usePredictionTrading, type PredictionPosition } from "@/hooks/usePredictionTrading";
 import { useSortableTable, type SortableColumn } from "@/hooks/useSortableTable";
 import { SortableTableHeader } from "@/components/SortableHeader";
+import { getCompanySlug } from "@/lib/vaulto/companies";
 
 export function PredictionPositions() {
   const { positions, isLoadingPositions } = usePredictionTrading();
@@ -48,11 +50,12 @@ export function PredictionPositions() {
           const currentValue = position.shares * position.currentPrice;
           const isLong = position.side === "LONG";
           const isProfitable = position.unrealizedPnl >= 0;
-          return (
-            <div
-              key={position.id}
-              className="rounded-md border border-border bg-background p-4"
-            >
+          const companyHref = position.company
+            ? `/explore/${getCompanySlug(position.company)}`
+            : null;
+
+          const cardContent = (
+            <>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-medium text-sm line-clamp-2">
@@ -97,6 +100,23 @@ export function PredictionPositions() {
                   </dd>
                 </div>
               </dl>
+            </>
+          );
+
+          return companyHref ? (
+            <Link
+              key={position.id}
+              href={companyHref}
+              className="block rounded-md border border-border bg-background p-4 hover:bg-badge-bg transition-colors"
+            >
+              {cardContent}
+            </Link>
+          ) : (
+            <div
+              key={position.id}
+              className="rounded-md border border-border bg-background p-4"
+            >
+              {cardContent}
             </div>
           );
         })}
@@ -153,15 +173,31 @@ export function PredictionPositions() {
               const currentValue = position.shares * position.currentPrice;
               const isLong = position.side === "LONG";
               const isProfitable = position.unrealizedPnl >= 0;
+              const companyHref = position.company
+                ? `/explore/${getCompanySlug(position.company)}`
+                : null;
 
               return (
                 <tr key={position.id} className="border-b border-border last:border-0">
                   <td className="py-3 px-4">
-                    <p className="font-medium text-sm line-clamp-1">
-                      {position.eventName || position.eventId}
-                    </p>
-                    {position.company && (
-                      <p className="text-xs text-muted mt-0.5">{position.company}</p>
+                    {companyHref ? (
+                      <Link href={companyHref} className="block hover:opacity-80 transition-opacity">
+                        <p className="font-medium text-sm line-clamp-1">
+                          {position.eventName || position.eventId}
+                        </p>
+                        {position.company && (
+                          <p className="text-xs text-muted mt-0.5">{position.company}</p>
+                        )}
+                      </Link>
+                    ) : (
+                      <>
+                        <p className="font-medium text-sm line-clamp-1">
+                          {position.eventName || position.eventId}
+                        </p>
+                        {position.company && (
+                          <p className="text-xs text-muted mt-0.5">{position.company}</p>
+                        )}
+                      </>
                     )}
                   </td>
                   <td className="py-3 px-4">
