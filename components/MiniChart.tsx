@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import { useChartInteraction } from "@/hooks/useChartInteraction";
 
 export interface MiniChartHoverData {
@@ -45,14 +45,7 @@ export function MiniChart({
   disableTouch = false,
   disableHover = false,
 }: MiniChartProps) {
-  const [isMounted, setIsMounted] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
-  const reactId = useId();
-
-  // Only render after mount to avoid hydration mismatch with useId
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Compute chart data - all hooks must be called before any early returns
   const chartData = useMemo(() => {
@@ -97,8 +90,17 @@ export function MiniChart({
     return { points, linePath, gradientPath, padding };
   }, [data, history, width, height]);
 
-  const gradientId = `chart-grad-${isPositive ? "g" : "r"}-${reactId.replace(/:/g, "")}`;
-  const clipId = `chart-clip-${reactId.replace(/:/g, "")}`;
+  // Generate deterministic IDs based on data fingerprint to avoid hydration mismatches
+  const dataFingerprint = useMemo(() => {
+    if (!data || data.length < 2) return "empty";
+    // Create a simple fingerprint from first, last, and length
+    const first = Math.round(data[0] * 100);
+    const last = Math.round(data[data.length - 1] * 100);
+    return `${data.length}-${first}-${last}`;
+  }, [data]);
+
+  const gradientId = `chart-grad-${isPositive ? "g" : "r"}-${dataFingerprint}`;
+  const clipId = `chart-clip-${dataFingerprint}`;
   const color = isPositive ? "#3b82f6" : "#ef4444";
 
   // Wrap onHover to handle missing history - must be called before early returns
@@ -128,11 +130,8 @@ export function MiniChart({
     disableTouch,
   });
 
-  // Early returns after all hooks
+  // Early return after all hooks
   if (!chartData) return null;
-  if (!isMounted) {
-    return <div style={{ width: "100%", height }} />;
-  }
 
   const { points, linePath, gradientPath, padding } = chartData;
   const hoverPoint = !disableHover && hoverIndex !== null ? points[hoverIndex] : null;

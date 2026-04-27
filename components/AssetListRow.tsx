@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol, formatValuation, getCompanySlug } from "@/lib/vaulto/companies";
@@ -19,44 +18,10 @@ import {
   hasImpliedValuationData,
   getImpliedValuationSlug,
 } from "@/lib/polymarket/implied-valuations";
+import { useImpliedValuationHistory } from "@/hooks/useImpliedValuationHistory";
 
 interface AssetListRowProps {
   company: PrivateCompany;
-}
-
-/**
- * Convert IPO history data to sparkline format (array of values)
- */
-function historyToSparkline(history: { value: number }[], numPoints: number = 30): number[] | null {
-  if (!history || history.length < 2) return null;
-
-  const values = history.map(h => h.value);
-
-  // If we have exactly the number of points we need, return them directly
-  if (values.length === numPoints) return values;
-
-  // If we have fewer points, interpolate
-  if (values.length < numPoints) {
-    const result: number[] = [];
-    for (let i = 0; i < numPoints; i++) {
-      const t = i / (numPoints - 1);
-      const scaledT = t * (values.length - 1);
-      const idx = Math.floor(scaledT);
-      const frac = scaledT - idx;
-      const v0 = values[idx];
-      const v1 = values[Math.min(idx + 1, values.length - 1)];
-      result.push(v0 + (v1 - v0) * frac);
-    }
-    return result;
-  }
-
-  // If we have more points, sample evenly
-  const result: number[] = [];
-  for (let i = 0; i < numPoints; i++) {
-    const idx = Math.round((i / (numPoints - 1)) * (values.length - 1));
-    result.push(values[idx]);
-  }
-  return result;
 }
 
 /**
@@ -78,31 +43,9 @@ export function AssetListRow({ company }: AssetListRowProps) {
   const needsIpoData = !fundingSparkline && hasIpoData;
   const ipoSlug = needsIpoData ? getImpliedValuationSlug(company.name) : null;
 
-  // State for IPO sparkline data and current valuation
-  const [ipoSparkline, setIpoSparkline] = useState<number[] | null>(null);
-  const [ipoCurrentValuation, setIpoCurrentValuation] = useState<number | null>(null);
-  const [ipoLoading, setIpoLoading] = useState(false);
-
-  // Fetch IPO sparkline data if needed
-  useEffect(() => {
-    if (!needsIpoData || !ipoSlug || ipoSparkline || ipoLoading) return;
-
-    setIpoLoading(true);
-    fetch(`/api/implied-valuations/${ipoSlug}/history?range=ALL`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.history) {
-          const sparkline = historyToSparkline(data.history, 30);
-          setIpoSparkline(sparkline);
-          // Get the current (latest) valuation from the history
-          if (data.history.length > 0) {
-            setIpoCurrentValuation(data.history[data.history.length - 1].value);
-          }
-        }
-        setIpoLoading(false);
-      })
-      .catch(() => setIpoLoading(false));
-  }, [needsIpoData, ipoSlug, ipoSparkline, ipoLoading]);
+  // Fetch IPO sparkline data with React Query (cached across navigation)
+  const { sparkline: ipoSparkline, currentValuation: ipoCurrentValuation } =
+    useImpliedValuationHistory(ipoSlug, { numPoints: 30, enabled: needsIpoData });
 
   // Always prioritize funding sparkline, fall back to IPO sparkline only if no funding data
   const sparklineData = fundingSparkline ?? ipoSparkline;
