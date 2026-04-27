@@ -13,6 +13,7 @@ import { useReferralStats } from "@/hooks/useReferralStats";
 import { useProfile } from "@/hooks/useProfile";
 import { MiniChart, MiniChartHoverData } from "@/components/MiniChart";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { CompanyLogo } from "@/components/CompanyLogo";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
@@ -254,7 +255,7 @@ export function DepositPageClient() {
   const isDepositing = depositStatus === "initiating" || depositStatus === "pending" || depositStatus === "confirming" || isInitiatingDeposit || isSending || isConfirmingTx;
 
   // Fetch portfolio history for chart data
-  const { chartData, history, isSyncing } = usePortfolioHistory(tradingWallet?.address);
+  const { chartData, history, isLoading: isLoadingHistory } = usePortfolioHistory(tradingWallet?.address);
 
   // Hover state for portfolio chart
   const [chartHover, setChartHover] = useState<MiniChartHoverData | null>(null);
@@ -527,10 +528,10 @@ export function DepositPageClient() {
       <div className="pt-4 border-t border-border">
         <div className="flex items-center gap-2 mb-3 sm:mb-4">
           <h3 className="text-sm font-medium text-foreground">Transactions</h3>
-          {isSyncing && (
+          {isLoadingHistory && (
             <span className="flex items-center gap-1 text-xs text-muted">
               <Loader2 className="h-3 w-3 animate-spin" />
-              Syncing...
+              Loading...
             </span>
           )}
         </div>
@@ -601,7 +602,7 @@ export function DepositPageClient() {
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3">
                     {/* Show asset logo for USDC/MATIC transactions, otherwise show icon */}
-                    {(tx.asset === "USDC" || tx.asset === "USDC.e") ? (
+                    {(tx.asset === "USDC" || tx.asset === "USDC.e" || tx.asset === "USDCE") ? (
                       <div className="flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
                         <img
                           src={getProxiedFaviconUrl("usdc.com")}
@@ -617,13 +618,19 @@ export function DepositPageClient() {
                           className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
                         />
                       </div>
+                    ) : isPrediction && tx.company ? (
+                      <CompanyLogo
+                        name={tx.company}
+                        size={28}
+                        className="sm:w-8 sm:h-8"
+                      />
                     ) : (
                       <div
                         className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${iconBgClass}`}
                       >
-                        {isBuy || isPredictionLong ? (
+                        {isBuy ? (
                           <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        ) : isSell || isPredictionShort ? (
+                        ) : isSell ? (
                           <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         ) : isDeposit ? (
                           <ArrowDownLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -637,7 +644,7 @@ export function DepositPageClient() {
                         {getTypeLabel()}
                       </p>
                       {/* Show shares and price for prediction trades */}
-                      {isPrediction && tx.shares && tx.averagePrice && (
+                      {isPrediction && typeof tx.shares === 'number' && tx.shares > 0 && tx.averagePrice && (
                         <p className="text-xs text-muted">
                           {tx.shares.toFixed(2)} shares @ ${tx.averagePrice.toFixed(3)}
                         </p>
@@ -678,8 +685,8 @@ export function DepositPageClient() {
         )}
       </div>
 
-      {/* Prediction Market Positions */}
-      <div className="mt-8">
+      {/* Prediction Market Positions - hidden on mobile */}
+      <div className="mt-8 hidden sm:block">
         <PredictionPositions />
       </div>
 
