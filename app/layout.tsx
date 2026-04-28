@@ -42,10 +42,17 @@ export const viewport: Viewport = {
 
 const themeScript = `
 (function(){
-  var t=localStorage.getItem('theme');
-  var d=document.documentElement;
-  if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){d.classList.add('dark');}
-  else{d.classList.remove('dark');}
+  var path = window.location.pathname;
+  var isPublicRoute = path === '/' || path === '/waitlist';
+  if (isPublicRoute) return;
+
+  var t = localStorage.getItem('theme');
+  var d = document.documentElement;
+  if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){
+    d.classList.add('dark');
+  } else {
+    d.classList.remove('dark');
+  }
 })();
 `;
 
