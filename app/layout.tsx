@@ -8,6 +8,12 @@ export const metadata: Metadata = {
     "Trade, earn, and invest in tokenized private company stocks. Access pre-IPO companies like SpaceX, Stripe, and more.",
   icons: {
     icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Vaulto",
   },
   metadataBase: new URL("https://protocol.vaulto.ai"),
   openGraph: {
