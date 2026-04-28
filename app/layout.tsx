@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeColorMeta } from "@/components/ThemeColorMeta";
 
 export const metadata: Metadata = {
-  title: "Vaulto — The Future of Private Investing",
+  title: "Vaulto",
   description:
     "Trade, earn, and invest in tokenized private company stocks. Access pre-IPO companies like SpaceX, Stripe, and more.",
   icons: {
