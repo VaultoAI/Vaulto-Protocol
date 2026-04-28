@@ -13,7 +13,7 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
   };
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pt-[8vh] sm:pt-0 pb-[8vh] sm:pb-[14vh] lg:pb-[17vh]">
+    <section className="relative flex h-screen sm:min-h-screen flex-col items-center justify-start pt-24 sm:justify-center sm:pt-0 overflow-hidden px-6 pb-[8vh] sm:pb-[14vh] lg:pb-[17vh]">
       {/* Mobile radial gradient backdrop */}
       <div className="sm:hidden absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
 
@@ -51,7 +51,7 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
       {/* Content */}
       <div className="animate-fade-in-up relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center max-w-7xl mx-auto w-full">
         {/* Left: Text content */}
-        <div className="text-center lg:text-left pt-4 sm:pt-4 lg:pt-0">
+        <div className="text-center lg:text-left sm:pt-4 lg:pt-0">
           {/* Badge - above logo */}
           <div className="animate-fade-in-up animation-delay-100 mb-4 sm:mb-5 flex justify-center lg:justify-start">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600">
