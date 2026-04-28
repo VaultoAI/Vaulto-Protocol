@@ -5,7 +5,7 @@ export function LandingFooter() {
 
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12">
+      <div className="mx-auto max-w-6xl px-6 py-8 sm:py-12">
         {/* Mobile Layout - Centered and simplified */}
         <div className="flex flex-col items-center text-center md:hidden">
           {/* Logo */}
@@ -14,11 +14,8 @@ export function LandingFooter() {
             alt="Vaulto"
             width={120}
             height={32}
-            className="mb-3 h-8 w-auto"
+            className="mb-5 h-8 w-auto"
           />
-          <p className="text-sm text-[var(--muted)] mb-5">
-            The future of private company investing.
-          </p>
 
           {/* Social Icons */}
           <div className="flex items-center gap-5 mb-6">

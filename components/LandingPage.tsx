@@ -202,8 +202,9 @@ export function LandingPage() {
             Ready to Get Started?
           </h2>
           <p className="mb-8 text-lg text-[var(--muted)]">
-            Join the waitlist to be among the first to trade pre-IPO synthetic
-            tokens.
+            Join the waitlist to be among the first
+            <br />
+            to trade pre-IPO tokens.
           </p>
           <button
             onClick={handleJoinWaitlist}
