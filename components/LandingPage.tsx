@@ -119,7 +119,7 @@ export function LandingPage() {
             highlight: true,
           },
           {
-            title: "Trade From $1",
+            title: "Trade From $10",
             description: "Own fractional shares of SpaceX, Anthropic, and other unicorns",
             highlight: true,
           },
