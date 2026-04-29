@@ -5,12 +5,13 @@ import { LandingPage } from "@/components/LandingPage";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; logout?: string }>;
 }) {
   const params = await searchParams;
 
   // Allow preview mode to bypass auth redirects (for testing landing page)
-  if (params.preview === "landing") {
+  // Also bypass when coming from logout to avoid race condition with session clearing
+  if (params.preview === "landing" || params.logout === "true") {
     return <LandingPage />;
   }
 

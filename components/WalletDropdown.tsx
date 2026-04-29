@@ -157,7 +157,8 @@ export function WalletDropdown() {
     setIsOpen(false);
     await logout();
     // Redirect to landing page after logout
-    window.location.href = "/";
+    // Use logout=true param to bypass auth redirect race condition
+    window.location.href = "/?logout=true";
   };
 
   const handleThemeToggle = () => {
