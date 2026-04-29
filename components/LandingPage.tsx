@@ -20,6 +20,7 @@ function isEmbeddedBrowser(): boolean {
 }
 
 export function LandingPage() {
+  const [isLoading, setIsLoading] = useState(true);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [isEmbedded, setIsEmbedded] = useState(false);
   const [isReturningEmployee, setIsReturningEmployee] = useState(false);
@@ -38,6 +39,7 @@ export function LandingPage() {
     setIsEmbedded(isEmbeddedBrowser());
     // Check if user is a returning Vaulto employee
     setIsReturningEmployee(localStorage.getItem("vaulto-employee-returning") === "true");
+    setIsLoading(false);
   }, []);
 
   const handleEmailSignup = useCallback(
@@ -101,17 +103,19 @@ export function LandingPage() {
     setError(null);
   };
 
+  // Prevent flash of incorrect content while checking localStorage
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <>
-      {/* Mobile sign-in - only for returning Vaulto employees */}
-      {isReturningEmployee && (
-        <div className="sm:hidden">
-          <MobileSignIn />
-        </div>
-      )}
+      {/* Sign-in page for returning Vaulto employees */}
+      {isReturningEmployee && <MobileSignIn />}
 
-      {/* Landing page - always visible on desktop, only for non-returning users on mobile */}
-      <div className={`landing-page-light min-h-screen bg-[var(--background)] ${isReturningEmployee ? "hidden sm:block" : ""}`} style={{ zoom: 0.9 }}>
+      {/* Landing page - only for non-returning users */}
+      {!isReturningEmployee && (
+      <div className="landing-page-light min-h-screen bg-[var(--background)]" style={{ zoom: 0.9 }}>
         {/* Hidden form for Google sign-in */}
         <form ref={googleFormRef} action={signInWithGoogle} className="hidden" />
 
@@ -299,6 +303,7 @@ export function LandingPage() {
         </div>
       )}
       </div>
+      )}
     </>
   );
 }
