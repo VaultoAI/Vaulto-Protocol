@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
-import { signInAsEmployee } from "@/app/actions/auth";
+import { usePrivy } from "@privy-io/react-auth";
 
 export function MobileSignIn() {
+  const { login, ready } = usePrivy();
+
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
       {/* Centered icon */}
@@ -21,14 +25,13 @@ export function MobileSignIn() {
         className="relative z-10 px-6"
         style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
       >
-        <form action={signInAsEmployee}>
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-[var(--foreground)] py-4 text-base font-medium text-[var(--background)] transition-opacity"
-          >
-            Sign in with Google
-          </button>
-        </form>
+        <button
+          onClick={() => ready && login()}
+          disabled={!ready}
+          className="w-full rounded-xl bg-[var(--foreground)] py-4 text-base font-medium text-[var(--background)] transition-opacity disabled:opacity-50"
+        >
+          Sign in
+        </button>
         <p className="mt-4 text-center text-xs text-gray-500">
           By signing in, you agree to our{" "}
           <a
