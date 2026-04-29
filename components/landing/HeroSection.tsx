@@ -13,7 +13,7 @@ export function HeroSection({ onJoinWaitlist }: HeroSectionProps) {
   };
 
   return (
-    <section className="relative flex min-h-[112dvh] sm:min-h-screen flex-col items-center justify-start pt-[20vh] sm:justify-center sm:pt-0 overflow-hidden px-6 pb-[8vh] sm:pb-[14vh] lg:pb-[17vh]">
+    <section className="relative flex min-h-[112dvh] sm:min-h-[111.2vh] flex-col items-center justify-start pt-[20vh] sm:justify-center sm:pt-0 overflow-hidden px-6 pb-[8vh] sm:pb-[14vh] lg:pb-[17vh]">
       {/* Mobile radial gradient backdrop */}
       <div className="sm:hidden absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
 
