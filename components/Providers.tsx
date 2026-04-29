@@ -14,9 +14,20 @@ import { privyConfig, smartWalletConfig } from "@/lib/privy";
  * This ensures stale user data doesn't persist across sessions.
  */
 function AuthStateListener({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
   const queryClient = useQueryClient();
   const wasAuthenticated = useRef<boolean | null>(null);
+
+  // Set returning employee flag for Vaulto employees when they sign in
+  useEffect(() => {
+    if (!ready || !authenticated || !user) return;
+
+    // Check if user has Vaulto email via Privy
+    const email = user.email?.address || user.google?.email;
+    if (email?.endsWith("@vaulto.ai")) {
+      localStorage.setItem("vaulto-employee-returning", "true");
+    }
+  }, [ready, authenticated, user]);
 
   useEffect(() => {
     // Only react after Privy is ready and we have a previous state to compare
@@ -43,7 +54,12 @@ function AuthStateListener({ children }: { children: React.ReactNode }) {
             keysToRemove.push(key);
           }
         }
-        keysToRemove.forEach((key) => localStorage.removeItem(key));
+        keysToRemove.forEach((key) => {
+          // Preserve the returning employee flag so Vaulto employees see MobileSignIn
+          if (key !== "vaulto-employee-returning") {
+            localStorage.removeItem(key);
+          }
+        });
       } catch (e) {
         console.warn("[AuthStateListener] Failed to clear localStorage:", e);
       }
