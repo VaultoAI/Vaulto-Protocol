@@ -25,7 +25,7 @@ export function MobileSignIn() {
           width={192}
           height={192}
           priority
-          className="h-[120px] w-[120px]"
+          className="h-[200px] w-[200px]"
         />
       </div>
 
