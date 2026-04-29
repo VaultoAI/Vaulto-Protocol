@@ -5,6 +5,128 @@
 
 import { unstable_cache } from "next/cache";
 
+// ============================================================================
+// Valuation Validation Utilities
+// ============================================================================
+
+/**
+ * Absolute bounds for implied valuations.
+ * Values outside this range are definitely invalid.
+ */
+export const VALUATION_BOUNDS = {
+  /** Minimum valid valuation: $1M */
+  MIN: 1_000_000,
+  /** Maximum valid valuation: $5T (above any realistic IPO) */
+  MAX: 5_000_000_000_000,
+} as const;
+
+/**
+ * IQR multiplier for outlier detection.
+ * Standard box plot uses 1.5, we use 1.5 for aggressive filtering.
+ */
+const IQR_MULTIPLIER = 1.5;
+
+/**
+ * Check if a valuation is valid (finite and within absolute bounds).
+ * This is a basic check - use filterValidHistoryPoints for outlier detection.
+ */
+export function isValidValuation(value: unknown): value is number {
+  if (value === null || value === undefined) return false;
+  if (typeof value !== "number") return false;
+  if (!Number.isFinite(value)) return false;
+  if (value <= 0) return false;
+  if (value < VALUATION_BOUNDS.MIN || value > VALUATION_BOUNDS.MAX) return false;
+  return true;
+}
+
+/**
+ * Calculate quartiles (Q1, Q2/median, Q3) and IQR for an array of numbers.
+ */
+function calculateQuartiles(values: number[]): {
+  q1: number;
+  median: number;
+  q3: number;
+  iqr: number;
+} {
+  if (values.length === 0) return { q1: 0, median: 0, q3: 0, iqr: 0 };
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+
+  const median =
+    n % 2 !== 0 ? sorted[Math.floor(n / 2)] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+
+  const q1Index = Math.floor(n / 4);
+  const q3Index = Math.floor((3 * n) / 4);
+
+  const q1 = sorted[q1Index];
+  const q3 = sorted[q3Index];
+  const iqr = q3 - q1;
+
+  return { q1, median, q3, iqr };
+}
+
+/**
+ * Filter an array of history points to remove invalid and outlier valuations.
+ * Uses IQR-based outlier detection (standard box plot method):
+ * 1. Remove values outside absolute bounds ($1M - $5T)
+ * 2. Remove statistical outliers outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR]
+ */
+export function filterValidHistoryPoints(
+  history: ImpliedValuationHistoryPoint[],
+  options?: { logWarnings?: boolean; companySlug?: string }
+): ImpliedValuationHistoryPoint[] {
+  if (!history || history.length === 0) return [];
+
+  // Step 1: Filter by absolute bounds
+  const boundFiltered = history.filter((point) => isValidValuation(point.value));
+
+  if (boundFiltered.length < 4) {
+    // Not enough data for IQR analysis (need at least 4 points for quartiles)
+    // Apply basic mean deviation check for small datasets
+    if (boundFiltered.length >= 2) {
+      const values = boundFiltered.map((p) => p.value);
+      const mean = values.reduce((a, b) => a + b, 0) / values.length;
+      // Remove points that deviate more than 100% from mean
+      return boundFiltered.filter((p) => Math.abs(p.value - mean) / mean <= 1.0);
+    }
+    return boundFiltered;
+  }
+
+  // Step 2: Calculate IQR and filter outliers
+  const values = boundFiltered.map((p) => p.value);
+  const { q1, median, q3, iqr } = calculateQuartiles(values);
+
+  // Use IQR method: outliers are outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR]
+  const lowerBound = q1 - IQR_MULTIPLIER * iqr;
+  const upperBound = q3 + IQR_MULTIPLIER * iqr;
+
+  const filtered = boundFiltered.filter(
+    (point) => point.value >= lowerBound && point.value <= upperBound
+  );
+
+  // Log warnings if filtering occurred
+  if (options?.logWarnings && filtered.length !== history.length) {
+    const removedCount = history.length - filtered.length;
+    const outlierValues = history
+      .filter((point) => {
+        if (!isValidValuation(point.value)) return true;
+        return point.value < lowerBound || point.value > upperBound;
+      })
+      .map((point) => point.value);
+
+    console.warn(
+      `[implied-valuations] Filtered ${removedCount} outliers` +
+        (options.companySlug ? ` for ${options.companySlug}` : "") +
+        `. IQR bounds: $${(lowerBound / 1e9).toFixed(1)}B - $${(upperBound / 1e9).toFixed(1)}B` +
+        `. Removed: ${outlierValues.slice(0, 3).map((v) => `$${(v / 1e9).toFixed(1)}B`).join(", ")}` +
+        (outlierValues.length > 3 ? ` +${outlierValues.length - 3} more` : "")
+    );
+  }
+
+  return filtered;
+}
+
 /** Band breakdown for display */
 export interface BandBreakdown {
   label: string;
@@ -109,12 +231,29 @@ async function fetchImpliedValuationHistoryUncached(
       return null;
     }
 
-    return (await res.json()) as ImpliedValuationHistoryResponse;
+    const data = (await res.json()) as ImpliedValuationHistoryResponse;
+
+    // Filter out invalid/outlier values before returning
+    const filteredHistory = filterValidHistoryPoints(data.history ?? [], {
+      logWarnings: true,
+      companySlug,
+    });
+
+    return {
+      ...data,
+      history: filteredHistory,
+      dataPoints: filteredHistory.length,
+    };
   } catch (error) {
     console.error("Failed to fetch implied valuation history:", error);
     return null;
   }
 }
+
+/**
+ * Cache version - increment to invalidate stale unfiltered data
+ */
+const HISTORY_CACHE_VERSION = "v2";
 
 /**
  * Cached fetch for implied valuation history (5 min cache)
@@ -125,7 +264,7 @@ export async function getImpliedValuationHistory(
 ): Promise<ImpliedValuationHistoryResponse | null> {
   return unstable_cache(
     () => fetchImpliedValuationHistoryUncached(companySlug, range),
-    [`implied-valuation-history-${companySlug}-${range}`],
+    [`implied-valuation-history-${companySlug}-${range}-${HISTORY_CACHE_VERSION}`],
     { revalidate: 300 }
   )();
 }
@@ -285,25 +424,25 @@ export const COMPANY_SLUG_MAP: Record<string, string> = {
 
 /**
  * Map of company slugs to their Polymarket IPO market expiry dates
- * These are the resolution dates for the "Will X IPO by end of 2025?" markets
+ * These are the resolution dates for the "Will X IPO by end of June 2026?" markets
  */
 export const IPO_MARKET_END_DATES: Record<string, string> = {
-  spacex: "2026-01-01",
-  openai: "2026-01-01",
-  anthropic: "2026-01-01",
-  perplexity: "2026-01-01",
-  stripe: "2026-01-01",
-  discord: "2026-01-01",
-  databricks: "2026-01-01",
-  strava: "2026-01-01",
-  "fannie-mae": "2026-01-01",
-  "freddie-mac": "2026-01-01",
-  "clear-street-group": "2026-01-01",
-  "liftoff-mobile": "2026-01-01",
-  kraken: "2026-01-01",
-  consensys: "2026-01-01",
-  ledger: "2026-01-01",
-  megaeth: "2026-01-01",
+  spacex: "2026-06-30",
+  openai: "2026-06-30",
+  anthropic: "2026-06-30",
+  perplexity: "2026-06-30",
+  stripe: "2026-06-30",
+  discord: "2026-06-30",
+  databricks: "2026-06-30",
+  strava: "2026-06-30",
+  "fannie-mae": "2026-06-30",
+  "freddie-mac": "2026-06-30",
+  "clear-street-group": "2026-06-30",
+  "liftoff-mobile": "2026-06-30",
+  kraken: "2026-06-30",
+  consensys: "2026-06-30",
+  ledger: "2026-06-30",
+  megaeth: "2026-06-30",
 };
 
 /**
@@ -354,14 +493,19 @@ export type PriceChangesMap = Record<string, PriceChange24h>;
 /**
  * Calculate 24hr change from valuation history.
  * Uses the first and last data points from the 1D history.
+ * Filters out invalid values before calculating.
  */
 function calculate24hChange(
   history: ImpliedValuationHistoryPoint[]
 ): { changePercent: number; isPositive: boolean } | null {
   if (!history || history.length < 2) return null;
 
-  const oldest = history[0].value;
-  const latest = history[history.length - 1].value;
+  // Filter to only valid valuations
+  const validHistory = filterValidHistoryPoints(history);
+  if (validHistory.length < 2) return null;
+
+  const oldest = validHistory[0].value;
+  const latest = validHistory[validHistory.length - 1].value;
 
   if (oldest <= 0) return null;
 

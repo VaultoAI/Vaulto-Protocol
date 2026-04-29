@@ -9,6 +9,7 @@ import {
   formatProbability,
   formatVolume,
   formatIPOExpiryDate,
+  filterValidHistoryPoints,
 } from "@/lib/polymarket/implied-valuations";
 import { useChartInteraction } from "@/hooks/useChartInteraction";
 
@@ -131,7 +132,14 @@ export function ImpliedValuationChart({
   hasLiveData,
   hasFundingData = true,
 }: ImpliedValuationChartProps) {
-  const [data, setData] = useState<ImpliedValuationHistoryResponse | null>(initialData ?? null);
+  // Filter outliers on initial state to prevent hydration flash on mobile
+  const [data, setData] = useState<ImpliedValuationHistoryResponse | null>(() => {
+    if (!initialData) return null;
+    return {
+      ...initialData,
+      history: filterValidHistoryPoints(initialData.history ?? []),
+    };
+  });
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +204,11 @@ export function ImpliedValuationChart({
     }
   }, [companySlug, activeRange, initialData, hasUserChangedRange]);
 
-  const history = useMemo(() => data?.history ?? [], [data]);
+  // Defensive filtering: remove any invalid/extreme values that may have slipped through
+  const history = useMemo(
+    () => filterValidHistoryPoints(data?.history ?? []),
+    [data]
+  );
 
   // Calculate market age from history for current range
   const currentMarketAgeHours = useMemo(() => {
@@ -281,9 +293,10 @@ export function ImpliedValuationChart({
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
-  // Calculate points
+  // Calculate points - history is already filtered by filterValidHistoryPoints above
   const { points, min, max } = useMemo(() => {
     if (history.length < 2) return { points: [], min: 0, max: 0 };
+
     const values = history.map((h) => h.value);
     const mn = Math.min(...values);
     const mx = Math.max(...values);
@@ -296,8 +309,9 @@ export function ImpliedValuationChart({
       value: h.value,
       noIpoProbability: h.noIpoProbability,
     }));
+
     return { points: pts, min: mn, max: mx };
-  }, [history, innerWidth, innerHeight]);
+  }, [history, innerWidth, innerHeight, padding.left, padding.top]);
 
   // Build smooth path
   const linePath = useMemo(() => {
