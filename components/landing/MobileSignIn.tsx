@@ -7,10 +7,10 @@ export function MobileSignIn() {
       {/* Centered icon */}
       <div className="relative z-10 flex flex-1 items-center justify-center">
         <Image
-          src="/icon-192.png"
+          src="/vaulto-logo-mobile.png"
           alt="Vaulto"
-          width={192}
-          height={192}
+          width={200}
+          height={200}
           priority
           className="h-[200px] w-[200px]"
         />
