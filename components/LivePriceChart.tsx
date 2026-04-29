@@ -54,6 +54,20 @@ export function LivePriceChart({
   const [activeRange, setActiveRange] = useState<PrestockTimeRange>("1D");
   const svgRef = useRef<SVGSVGElement>(null);
 
+  // Snap away from 1H/4H on mobile, since those buttons are hidden there.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 639px)");
+    const sync = () => {
+      if (mql.matches) {
+        setActiveRange((prev) => (prev === "1H" || prev === "4H" ? "1D" : prev));
+      }
+    };
+    sync();
+    mql.addEventListener("change", sync);
+    return () => mql.removeEventListener("change", sync);
+  }, []);
+
   // Fetch price history
   const {
     data: historyResponse,
@@ -169,21 +183,26 @@ export function LivePriceChart({
           </div>
         </div>
         {/* Time range selector skeleton */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+        <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-3 border-t border-border pt-3">
           <div className="flex items-center gap-1 flex-wrap">
-            {timeRanges.map((range) => (
-              <button
-                key={range}
-                onClick={() => setActiveRange(range)}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  activeRange === range
-                    ? "text-accent bg-accent/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                {range}
-              </button>
-            ))}
+            {timeRanges.map((range) => {
+              const mobileHidden = range === "1H" || range === "4H";
+              return (
+                <button
+                  key={range}
+                  onClick={() => setActiveRange(range)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    mobileHidden ? "hidden sm:inline-block" : ""
+                  } ${
+                    activeRange === range
+                      ? "text-accent bg-accent/10"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {range}
+                </button>
+              );
+            })}
           </div>
           {onChartTypeChange && (
             <div className="flex items-center gap-1">
@@ -358,21 +377,26 @@ export function LivePriceChart({
       </div>
 
       {/* Time range selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-3 border-t border-border pt-3">
         <div className="flex items-center gap-1 flex-wrap">
-          {timeRanges.map((range) => (
-            <button
-              key={range}
-              onClick={() => setActiveRange(range)}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                activeRange === range
-                  ? "text-accent bg-accent/10"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              {range}
-            </button>
-          ))}
+          {timeRanges.map((range) => {
+            const mobileHidden = range === "1H" || range === "4H";
+            return (
+              <button
+                key={range}
+                onClick={() => setActiveRange(range)}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  mobileHidden ? "hidden sm:inline-block" : ""
+                } ${
+                  activeRange === range
+                    ? "text-accent bg-accent/10"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                {range}
+              </button>
+            );
+          })}
         </div>
         {onChartTypeChange && (
           <div className="flex items-center gap-1">

@@ -624,7 +624,7 @@ export function ImpliedValuationChart({
       </div>
 
       {/* Time range selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 border-t border-border pt-3">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-3 border-t border-border pt-3">
         <div className="flex items-center gap-1 flex-wrap">
           {timeRanges.map((range) => {
             const isSelected = activeRange === range;
