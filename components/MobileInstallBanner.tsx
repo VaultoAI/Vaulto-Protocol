@@ -18,6 +18,12 @@ export function MobileInstallBanner() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js", { scope: "/" })
+        .catch(() => {});
+    }
+
     const ua = navigator.userAgent;
     const isIOS =
       /iPhone|iPad|iPod/i.test(ua) &&
