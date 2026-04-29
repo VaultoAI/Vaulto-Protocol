@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeColorMeta } from "@/components/ThemeColorMeta";
+import { MobileInstallBanner } from "@/components/MobileInstallBanner";
 
 export const metadata: Metadata = {
   title: "Vaulto",
@@ -76,6 +77,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeColorMeta />
+        <MobileInstallBanner />
         {children}
       </body>
     </html>
