@@ -1,20 +1,7 @@
-"use client";
-
-import { useEffect } from "react";
 import Image from "next/image";
-import { usePrivy } from "@privy-io/react-auth";
+import { signInAsEmployee } from "@/app/actions/auth";
 
 export function MobileSignIn() {
-  const { login, ready, authenticated } = usePrivy();
-
-  // Redirect to explore after successful sign-in and mark as returning employee
-  useEffect(() => {
-    if (ready && authenticated) {
-      localStorage.setItem("vaulto-employee-returning", "true");
-      window.location.href = "/explore";
-    }
-  }, [ready, authenticated]);
-
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
       {/* Centered icon */}
@@ -34,13 +21,14 @@ export function MobileSignIn() {
         className="relative z-10 px-6"
         style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
       >
-        <button
-          onClick={() => ready && login()}
-          disabled={!ready}
-          className="w-full rounded-xl bg-[var(--foreground)] py-4 text-base font-medium text-[var(--background)] transition-opacity disabled:opacity-50"
-        >
-          Sign in with Privy
-        </button>
+        <form action={signInAsEmployee}>
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-[var(--foreground)] py-4 text-base font-medium text-[var(--background)] transition-opacity"
+          >
+            Sign in with Google
+          </button>
+        </form>
         <p className="mt-4 text-center text-xs text-gray-500">
           By signing in, you agree to our{" "}
           <a
