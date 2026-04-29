@@ -44,16 +44,18 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   const [searchValue, setSearchValue] = useState(searchParams?.get("q") || "");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced URL update - only updates URL after user stops typing
+  // Debounced URL update - only updates URL after user stops typing.
+  // Read params from window.location to avoid re-creating this callback on every
+  // URL change, which would churn the debounce timer.
   const updateUrlWithSearch = useCallback((value: string) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
+    const params = new URLSearchParams(window.location.search);
     if (value.trim()) {
       params.set("q", value);
     } else {
       params.delete("q");
     }
     router.push(`/explore${params.toString() ? `?${params}` : ""}`, { scroll: false });
-  }, [router, searchParams]);
+  }, [router]);
 
   // Handle search change - immediate local state, debounced URL
   const handleSearchChange = useCallback((value: string) => {
@@ -79,14 +81,17 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
     };
   }, []);
 
-  // Sync local state with URL when URL changes externally (e.g., browser back/forward)
+  // Sync local state with URL only on real browser navigation (back/forward).
+  // Subscribing to searchParams would also fire after our own debounced router.push,
+  // racing with in-flight keystrokes and clobbering characters the user just typed.
   useEffect(() => {
-    const urlSearch = searchParams?.get("q") || "";
-    if (urlSearch !== searchValue) {
-      setSearchValue(urlSearch);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setSearchValue(params.get("q") || "");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Read category from URL params, fallback to state for ExploreAssetsNav compatibility
   const categoryParam = searchParams?.get("category");
@@ -119,16 +124,33 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   const filteredCompanies = useMemo(() => {
     let result = [...companies];
 
-    // Search filter - use local searchValue for immediate filtering
-    if (searchValue.trim()) {
-      const q = searchValue.toLowerCase().trim();
+    // Search filter - use local searchValue for immediate filtering.
+    // Score each match so that closer matches (name/symbol prefix) rank above
+    // weaker ones (substring, industry). Within a score band, fall back to the
+    // active sort.
+    const q = searchValue.toLowerCase().trim();
+    let scoreMap: Map<PrivateCompany, number> | null = null;
+    if (q) {
+      scoreMap = new Map();
       result = result.filter((c) => {
+        const name = c.name.toLowerCase();
         const symbol = getSyntheticSymbol(c.name).toLowerCase();
-        return (
-          c.name.toLowerCase().includes(q) ||
-          symbol.includes(q) ||
-          c.industry.toLowerCase().includes(q)
-        );
+        // Symbols typically start with "v" (e.g. vANTH); compare the bare form too.
+        const symbolBare = symbol.startsWith("v") ? symbol.slice(1) : symbol;
+        const industry = c.industry.toLowerCase();
+
+        let score = 0;
+        if (name === q || symbol === q || symbolBare === q) score = 100;
+        else if (name.startsWith(q) || symbolBare.startsWith(q)) score = 80;
+        else if (symbol.startsWith(q)) score = 70;
+        else if (name.split(/\s+/).some((w) => w.startsWith(q))) score = 60;
+        else if (name.includes(q)) score = 40;
+        else if (symbol.includes(q) || symbolBare.includes(q)) score = 30;
+        else if (industry.includes(q)) score = 10;
+
+        if (score === 0) return false;
+        scoreMap!.set(c, score);
+        return true;
       });
     }
 
@@ -141,23 +163,28 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
     }
 
     // Sort
-    switch (sortBy) {
-      case "Most Popular":
-        result.sort((a, b) => b.valuationUsd - a.valuationUsd);
-        break;
-      case "Price: High to Low":
-        result.sort((a, b) =>
-          (b.lastFundingEstPricePerShareUsd ?? 0) - (a.lastFundingEstPricePerShareUsd ?? 0)
-        );
-        break;
-      case "Price: Low to High":
-        result.sort((a, b) =>
-          (a.lastFundingEstPricePerShareUsd ?? 0) - (b.lastFundingEstPricePerShareUsd ?? 0)
-        );
-        break;
-      case "Name: A-Z":
-        result.sort((a, b) => a.name.localeCompare(b.name));
-        break;
+    const tieBreaker = (a: PrivateCompany, b: PrivateCompany) => {
+      switch (sortBy) {
+        case "Price: High to Low":
+          return (b.lastFundingEstPricePerShareUsd ?? 0) - (a.lastFundingEstPricePerShareUsd ?? 0);
+        case "Price: Low to High":
+          return (a.lastFundingEstPricePerShareUsd ?? 0) - (b.lastFundingEstPricePerShareUsd ?? 0);
+        case "Name: A-Z":
+          return a.name.localeCompare(b.name);
+        case "Most Popular":
+        default:
+          return b.valuationUsd - a.valuationUsd;
+      }
+    };
+
+    if (scoreMap) {
+      result.sort((a, b) => {
+        const diff = (scoreMap!.get(b) ?? 0) - (scoreMap!.get(a) ?? 0);
+        if (diff !== 0) return diff;
+        return tieBreaker(a, b);
+      });
+    } else {
+      result.sort(tieBreaker);
     }
 
     return result;
