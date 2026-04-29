@@ -4,6 +4,7 @@ import { HeroSection } from "./landing/HeroSection";
 import { FeatureSection } from "./landing/FeatureSection";
 import { TokenTicker, CodeBlock, ChainDiagram } from "./landing/FeatureVisuals";
 import { LandingFooter } from "./landing/LandingFooter";
+import { MobileSignIn } from "./landing/MobileSignIn";
 import { signInWithGoogle } from "@/app/actions/auth";
 import { useState, useEffect, useCallback, useRef } from "react";
 
@@ -21,6 +22,7 @@ function isEmbeddedBrowser(): boolean {
 export function LandingPage() {
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const [isReturningEmployee, setIsReturningEmployee] = useState(false);
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,8 @@ export function LandingPage() {
 
   useEffect(() => {
     setIsEmbedded(isEmbeddedBrowser());
+    // Check if user is a returning Vaulto employee
+    setIsReturningEmployee(localStorage.getItem("vaulto-employee-returning") === "true");
   }, []);
 
   const handleEmailSignup = useCallback(
@@ -98,9 +102,18 @@ export function LandingPage() {
   };
 
   return (
-    <div className="landing-page-light min-h-screen bg-[var(--background)]" style={{ zoom: 0.9 }}>
-      {/* Hidden form for Google sign-in */}
-      <form ref={googleFormRef} action={signInWithGoogle} className="hidden" />
+    <>
+      {/* Mobile sign-in - only for returning Vaulto employees */}
+      {isReturningEmployee && (
+        <div className="sm:hidden">
+          <MobileSignIn />
+        </div>
+      )}
+
+      {/* Landing page - always visible on desktop, only for non-returning users on mobile */}
+      <div className={`landing-page-light min-h-screen bg-[var(--background)] ${isReturningEmployee ? "hidden sm:block" : ""}`} style={{ zoom: 0.9 }}>
+        {/* Hidden form for Google sign-in */}
+        <form ref={googleFormRef} action={signInWithGoogle} className="hidden" />
 
       {/* Hero Section */}
       <HeroSection onJoinWaitlist={handleJoinWaitlist} />
@@ -285,6 +298,7 @@ export function LandingPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

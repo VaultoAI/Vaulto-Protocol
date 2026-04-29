@@ -26,12 +26,15 @@ function clearUserStorage(): void {
   });
 
   // Clear any items with common user-related prefixes
+  // Preserve vaulto-employee-returning so returning employees see simplified sign-in
   try {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && (key.startsWith("vaulto-") || key.startsWith("privy-"))) {
-        keysToRemove.push(key);
+        if (key !== "vaulto-employee-returning") {
+          keysToRemove.push(key);
+        }
       }
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key));

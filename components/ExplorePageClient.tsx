@@ -35,6 +35,11 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Mark user as returning Vaulto employee (only employees can access /explore)
+  useEffect(() => {
+    localStorage.setItem("vaulto-employee-returning", "true");
+  }, []);
+
   // Local search state for immediate filtering (no lag)
   const [searchValue, setSearchValue] = useState(searchParams?.get("q") || "");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
