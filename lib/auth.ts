@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 import type { PrismaClient } from "@prisma/client";
+import { verifyPrivyTokenAndGetUserWithWallet } from "@/lib/trading-wallet/privy-server";
 
 // Onboarding status type (defined locally to avoid import issues when DB not configured)
 type OnboardingStatus =
@@ -85,6 +87,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       token: "https://oauth2.googleapis.com/token",
       userinfo: "https://openidconnect.googleapis.com/v1/userinfo",
+    }),
+    Credentials({
+      id: "privy",
+      name: "Privy",
+      credentials: {
+        privyToken: { label: "Privy Token", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.privyToken) {
+          console.error("[Auth] No Privy token provided");
+          return null;
+        }
+
+        try {
+          const privyUser = await verifyPrivyTokenAndGetUserWithWallet(
+            credentials.privyToken as string
+          );
+
+          if (!privyUser) {
+            console.error("[Auth] Privy token verification failed");
+            return null;
+          }
+
+          console.log("[Auth] Privy user verified:", privyUser.email);
+
+          return {
+            id: privyUser.userId,
+            email: privyUser.email,
+            name: privyUser.email.split("@")[0],
+          };
+        } catch (error) {
+          console.error("[Auth] Privy authorization error:", error);
+          return null;
+        }
+      },
     }),
   ],
   secret: process.env.AUTH_SECRET,
