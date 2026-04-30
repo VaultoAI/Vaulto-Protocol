@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  filterValidHistoryPoints,
+  type ImpliedValuationHistoryResponse,
+} from "@/lib/polymarket/implied-valuations";
 
 export const revalidate = 300; // 5 minutes
 
@@ -53,8 +57,22 @@ export async function GET(
       );
     }
 
-    const data = await res.json();
-    return NextResponse.json(data);
+    const data = (await res.json()) as ImpliedValuationHistoryResponse;
+
+    // Filter out invalid/extreme valuations before returning to client
+    const originalCount = data.history?.length ?? 0;
+    const filteredHistory = filterValidHistoryPoints(data.history ?? [], {
+      logWarnings: true,
+      companySlug,
+    });
+
+    // Return filtered data with updated dataPoints count
+    return NextResponse.json({
+      ...data,
+      history: filteredHistory,
+      dataPoints: filteredHistory.length,
+      _filteredCount: originalCount - filteredHistory.length, // For debugging
+    });
   } catch (err) {
     console.error("Failed to fetch implied valuation history:", err);
     return NextResponse.json(
