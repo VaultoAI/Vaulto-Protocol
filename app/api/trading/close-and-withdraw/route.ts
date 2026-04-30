@@ -94,6 +94,41 @@ export async function POST(request: NextRequest) {
 
     console.log(`${LOG_PREFIX} Closing position ${positionId}`);
 
+    // Step 0: Fetch position data to get metadata before selling
+    let positionMetadata: {
+      eventId: string;
+      eventName?: string;
+      company?: string;
+      side: "LONG" | "SHORT";
+      shares: number;
+      costBasis: number;
+      entryPrice: number;
+    } | null = null;
+
+    try {
+      const positionsResponse = await fetchPositions(apiKey, userId);
+      const position = positionsResponse.positions.find(
+        (p) => p.id === positionId || p.id === String(positionId)
+      );
+      if (position) {
+        positionMetadata = {
+          eventId: position.eventId,
+          eventName: position.eventName,
+          company: position.company,
+          side: position.side,
+          shares: position.shares,
+          costBasis: position.costBasis,
+          entryPrice: position.entryPrice,
+        };
+        console.log(`${LOG_PREFIX} Found position metadata:`, positionMetadata);
+      } else {
+        console.warn(`${LOG_PREFIX} Position ${positionId} not found in current positions, will use default metadata`);
+      }
+    } catch (fetchError) {
+      console.warn(`${LOG_PREFIX} Failed to fetch position metadata:`, fetchError);
+      // Continue with sell - we'll use default metadata
+    }
+
     // Step 1: Sell the position at 100%
     const sellResult = await sellPosition(
       { positionId, percentage: 100 },
@@ -113,22 +148,33 @@ export async function POST(request: NextRequest) {
     console.log(`${LOG_PREFIX} Position closed, proceeds: ${sellResult.proceeds}`);
 
     // Record the sale in the database
-    if (sellResult.proceeds) {
+    if (sellResult.success) {
       try {
+        const proceeds = sellResult.proceeds ?? 0;
+        const sharesSold = sellResult.sharesSold ?? positionMetadata?.shares ?? 0;
+        const costBasis = positionMetadata?.costBasis ?? null;
+        const realizedPnl = costBasis !== null ? proceeds - costBasis : 0;
+
         await db.predictionMarketSale.create({
           data: {
             tradingWalletId: user.tradingWallet.id,
             positionId,
-            eventId: "", // Will be populated by the caller if needed
-            side: "LONG", // Default, will be updated
-            sharesSold: sellResult.sharesSold ?? 0,
+            eventId: positionMetadata?.eventId ?? "",
+            eventName: positionMetadata?.eventName ?? null,
+            company: positionMetadata?.company ?? null,
+            side: positionMetadata?.side ?? "LONG",
+            sharesSold,
             percentage: 100,
-            proceeds: sellResult.proceeds,
-            realizedPnl: 0, // Would need cost basis to calculate
+            proceeds,
+            realizedPnl,
+            costBasis,
+            avgEntryPrice: positionMetadata?.entryPrice ?? null,
+            exitPrice: sellResult.exitPrice ?? null,
             status: "COMPLETED",
             completedAt: new Date(),
           },
         });
+        console.log(`${LOG_PREFIX} Sale recorded: proceeds=${proceeds}, realizedPnl=${realizedPnl}`);
       } catch (dbError) {
         // Log but don't fail - sale already completed
         console.error(`${LOG_PREFIX} Failed to record sale:`, dbError);
