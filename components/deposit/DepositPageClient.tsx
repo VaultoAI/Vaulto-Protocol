@@ -18,7 +18,7 @@ import { CompanyLogo } from "@/components/CompanyLogo";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
-import { getCompanySlug, getCompanySlugFromSymbol } from "@/lib/vaulto/companies";
+import { getCompanySlugFromSymbol } from "@/lib/vaulto/companies";
 import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { PredictionPositions } from "@/components/PredictionPositions";
 
@@ -29,6 +29,24 @@ const WithdrawModal = dynamic(
 );
 
 type DepositStatus = "idle" | "initiating" | "pending" | "confirming" | "success" | "error";
+
+// Maps company name (as stored on prediction trades/sales) to its Polymarket event slug.
+// Used so every row in the transactions table links to the right Polymarket event,
+// even when the trade record has an empty eventId.
+const COMPANY_TO_EVENT_SLUG: Record<string, string> = {
+  SpaceX: "spacex-ipo-closing-market-cap",
+  OpenAI: "openai-ipo-closing-market-cap",
+  Anthropic: "anthropic-ipo-closing-market-cap",
+  Stripe: "stripe-ipo-closing-market-cap",
+  Databricks: "databricks-ipo-closing-market-cap",
+  Discord: "discord-ipo-closing-market-cap",
+  "Fannie Mae": "fannie-mae-ipo-closing-market-cap",
+  "Freddie Mac": "freddie-mac-ipo-closing-market-cap",
+  MegaETH: "megaeth-market-cap-fdv-one-day-after-launch",
+  Kraken: "kraken-ipo-closing-market-cap-above",
+  "Clear Street": "clear-street-group-ipo-closing-market-cap",
+  Strava: "strava-ipo-closing-market-cap",
+};
 
 export function DepositPageClient() {
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
@@ -54,14 +72,7 @@ export function DepositPageClient() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
-  // Default to "trades" on mobile (< 640px), "all" on desktop
   const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("trades");
-
-  // Set default filter based on screen size on mount
-  useEffect(() => {
-    const isMobile = window.innerWidth < 640;
-    setTransactionFilter(isMobile ? "trades" : "all");
-  }, []);
 
   const {
     tradingWallet,
@@ -723,16 +734,24 @@ export function DepositPageClient() {
 
               const polygonUrl = tx.txHash ? `https://polygonscan.com/tx/${tx.txHash}` : null;
 
-              // Determine company page URL for trades
+              // Prediction trades link out to the Polymarket event; ETF trades link to the company page.
+              // eventId is usually the Polymarket slug, but some sells persist an empty eventId —
+              // fall back to a company-name lookup so every prediction row stays clickable.
+              const eventSlug = tx.eventId && tx.eventId.includes("-")
+                ? tx.eventId
+                : tx.company
+                  ? COMPANY_TO_EVENT_SLUG[tx.company] ?? null
+                  : null;
+              const polymarketUrl = isPrediction && eventSlug
+                ? `https://polymarket.com/event/${eventSlug}`
+                : null;
               const companyUrl = isEtfOrder && tx.symbol
                 ? `/explore/${getCompanySlugFromSymbol(tx.symbol)}`
-                : (isPredictionBuy || isPredictionSell) && tx.company
-                  ? `/explore/${getCompanySlug(tx.company)}`
-                  : null;
+                : null;
 
-              // Use company URL for trades, Polygonscan for deposits/withdrawals
-              const isInternalLink = (isEtfOrder || isPredictionBuy || isPredictionSell) && companyUrl;
-              const hasLink = isInternalLink || polygonUrl;
+              const isInternalLink = isEtfOrder && !!companyUrl;
+              const externalUrl = polymarketUrl || (!isInternalLink ? polygonUrl : null);
+              const hasLink = isInternalLink || !!externalUrl;
 
               const rowContent = (
                 <>
@@ -822,7 +841,7 @@ export function DepositPageClient() {
                         Pending
                       </span>
                     )}
-                    {polygonUrl && !isInternalLink && (
+                    {externalUrl && !isInternalLink && (
                       <ExternalLink className="h-4 w-4 text-muted" />
                     )}
                   </div>
@@ -845,7 +864,7 @@ export function DepositPageClient() {
               return (
                 <a
                   key={tx.id}
-                  href={polygonUrl || undefined}
+                  href={externalUrl || undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={rowClassName}
@@ -909,7 +928,7 @@ export function DepositPageClient() {
         <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => setIsWithdrawOpen(true)}
-            disabled={parseFloat(balance) <= 0}
+            disabled={parseFloat(totalAvailable) <= 0}
             className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 sm:py-2.5"
           >
             Withdraw
