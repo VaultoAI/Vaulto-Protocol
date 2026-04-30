@@ -19,6 +19,7 @@ import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
 import { getCompanySlug, getCompanySlugFromSymbol } from "@/lib/vaulto/companies";
+import { getCompanyFromEventSlug } from "@/lib/polymarket/implied-valuations";
 import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { PredictionPositions } from "@/components/PredictionPositions";
 
@@ -701,13 +702,18 @@ export function DepositPageClient() {
                 return "text-yellow-500";
               };
 
+              const predictionCompany = isPrediction
+                ? tx.company || getCompanyFromEventSlug(tx.eventId)
+                : null;
+
               const getTypeLabel = () => {
                 if (isBuy) return `Buy ${tx.symbol}`;
                 if (isSell) return `Sell ${tx.symbol}`;
-                if (isBuyLong) return `Buy Long ${tx.company || tx.eventId}`;
-                if (isBuyShort) return `Buy Short ${tx.company || tx.eventId}`;
-                if (isSellLong) return `Sell Long ${tx.company || tx.eventId}`;
-                if (isSellShort) return `Sell Short ${tx.company || tx.eventId}`;
+                const predictionLabel = predictionCompany || tx.eventId;
+                if (isBuyLong) return `Buy Long ${predictionLabel}`;
+                if (isBuyShort) return `Buy Short ${predictionLabel}`;
+                if (isSellLong) return `Sell Long ${predictionLabel}`;
+                if (isSellShort) return `Sell Short ${predictionLabel}`;
                 // Show asset name for deposits/withdrawals (e.g., "Deposit USDC", "Withdrawal MATIC")
                 const assetLabel = tx.asset ? ` ${tx.asset}` : "";
                 if (isDeposit) return `Deposit${assetLabel}`;
@@ -719,8 +725,8 @@ export function DepositPageClient() {
               // Both ETF trades and prediction trades link to the Vaulto company page.
               const companyUrl = isEtfOrder && tx.symbol
                 ? `/explore/${getCompanySlugFromSymbol(tx.symbol)}`
-                : isPrediction && tx.company
-                  ? `/explore/${getCompanySlug(tx.company)}`
+                : isPrediction && predictionCompany
+                  ? `/explore/${getCompanySlug(predictionCompany)}`
                   : null;
 
               const isInternalLink = !!companyUrl;
@@ -747,9 +753,9 @@ export function DepositPageClient() {
                           className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
                         />
                       </div>
-                    ) : (isPredictionBuy || isPredictionSell) && tx.company ? (
+                    ) : (isPredictionBuy || isPredictionSell) && predictionCompany ? (
                       <CompanyLogo
-                        name={tx.company}
+                        name={predictionCompany}
                         size={28}
                         className="sm:w-8 sm:h-8"
                       />

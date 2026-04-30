@@ -480,6 +480,25 @@ export function hasImpliedValuationData(companyName: string): boolean {
   return companyName in COMPANY_SLUG_MAP;
 }
 
+/**
+ * Resolve a company display name from an event slug like
+ * "discord-ipo-closing-market-cap" or "fannie-mae-ipo-closing-market-cap".
+ * Returns null if no known company prefix matches.
+ */
+export function getCompanyFromEventSlug(eventSlug: string | undefined | null): string | null {
+  if (!eventSlug) return null;
+  const slug = eventSlug.toLowerCase();
+  let bestMatch: { name: string; len: number } | null = null;
+  for (const [name, companySlug] of Object.entries(COMPANY_SLUG_MAP)) {
+    if (slug === companySlug || slug.startsWith(`${companySlug}-`)) {
+      if (!bestMatch || companySlug.length > bestMatch.len) {
+        bestMatch = { name, len: companySlug.length };
+      }
+    }
+  }
+  return bestMatch?.name ?? null;
+}
+
 /** 24hr price change data for a company */
 export interface PriceChange24h {
   companyName: string;
