@@ -525,25 +525,22 @@ export function DepositPageClient() {
               <span className="inline-block h-10 w-24 animate-pulse rounded bg-foreground/10" />
               <p className="mt-1 text-sm text-muted">&nbsp;</p>
             </>
-          ) : (positionsTotals?.unrealizedPnl ?? 0) >= 0 ? (
-            <>
-              <span className="text-4xl font-semibold tracking-tight text-green">
-                ${Math.abs(positionsTotals?.unrealizedPnl ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <p className="mt-1 text-sm text-green">
-                +{Math.abs(positionsTotals?.unrealizedPnlPercent ?? 0).toFixed(2)}% P&L
-              </p>
-            </>
-          ) : (
-            <>
-              <span className="text-4xl font-semibold tracking-tight text-red">
-                ${Math.abs(positionsTotals?.unrealizedPnl ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <p className="mt-1 text-sm text-red">
-                -{Math.abs(positionsTotals?.unrealizedPnlPercent ?? 0).toFixed(2)}% P&L
-              </p>
-            </>
-          )}
+          ) : (() => {
+            const pnl = positionsTotals?.unrealizedPnl ?? 0;
+            const totalBalance = parseFloat(totalAvailable) + (positionsTotals?.totalValue || 0);
+            const pnlPctOfBalance = totalBalance > 0 ? (pnl / totalBalance) * 100 : 0;
+            const isPositivePnl = pnl >= 0;
+            return (
+              <>
+                <span className={`text-4xl font-semibold tracking-tight ${isPositivePnl ? "text-green" : "text-red"}`}>
+                  ${Math.abs(pnl).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <p className={`mt-1 text-sm ${isPositivePnl ? "text-green" : "text-red"}`}>
+                  {isPositivePnl ? "+" : "-"}{Math.abs(pnlPctOfBalance).toFixed(2)}% P&L
+                </p>
+              </>
+            );
+          })()}
         </div>
       </div>
 

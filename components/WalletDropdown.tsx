@@ -263,15 +263,20 @@ export function WalletDropdown() {
             </div>
             <div className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white sm:mt-2 sm:text-lg">
               ${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              {positionsTotals && positionsTotals.totalCost > 0 && (
-                <span
-                  className={`ml-1.5 text-sm font-medium sm:text-xs ${
-                    positionsTotals.unrealizedPnlPercent >= 0 ? "text-green" : "text-red"
-                  }`}
-                >
-                  {positionsTotals.unrealizedPnlPercent >= 0 ? "+" : ""}
-                  {positionsTotals.unrealizedPnlPercent.toFixed(1)}%
-                </span>
+              {positionsTotals && positionsTotals.totalCost > 0 && totalBalance > 0 && (
+                (() => {
+                  const pnlPctOfBalance = (positionsTotals.unrealizedPnl / totalBalance) * 100;
+                  return (
+                    <span
+                      className={`ml-1.5 text-sm font-medium sm:text-xs ${
+                        pnlPctOfBalance >= 0 ? "text-green" : "text-red"
+                      }`}
+                    >
+                      {pnlPctOfBalance >= 0 ? "+" : ""}
+                      {pnlPctOfBalance.toFixed(1)}%
+                    </span>
+                  );
+                })()
               )}
             </div>
           </Link>
