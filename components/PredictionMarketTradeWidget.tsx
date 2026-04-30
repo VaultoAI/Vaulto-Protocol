@@ -21,6 +21,7 @@ interface PredictionMarketTradeWidgetProps {
   company: PrivateCompany;
   eventSlug: string;
   currentImpliedValuation?: number | null;
+  variant?: "default" | "mobile";
 }
 
 type TradeState = "idle" | "loading" | "success" | "error";
@@ -33,7 +34,9 @@ export function PredictionMarketTradeWidget({
   company,
   eventSlug,
   currentImpliedValuation,
+  variant = "default",
 }: PredictionMarketTradeWidgetProps) {
+  const isMobile = variant === "mobile";
   const symbol = getSyntheticSymbol(company.name);
   const { data, isLoading, error } = usePredictionMarketData(eventSlug);
   const { buyLong, buyShort, isBuying } = usePredictionTrading({ fetchPositions: false });
@@ -79,7 +82,6 @@ export function PredictionMarketTradeWidget({
 
   // Calculate trade estimates
   const sharesToReceive = positionCost > 0 ? usdcAmount / positionCost : 0;
-  const potentialPayout = sharesToReceive; // $1 per share if outcome is correct
 
   const handleAmountChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,9 +146,15 @@ export function PredictionMarketTradeWidget({
   }, []);
 
   return (
-    <div className="w-full rounded-xl border border-border bg-card-bg">
+    <div
+      className={
+        isMobile
+          ? "w-full"
+          : "w-full rounded-xl border border-border bg-card-bg"
+      }
+    >
       {/* Long/Short tabs */}
-      <div className="flex border-b border-border">
+      <div className={`flex ${isMobile ? "" : "border-b border-border"}`}>
         <button
           onClick={() => {
             setActiveTab("long");
@@ -155,7 +163,7 @@ export function PredictionMarketTradeWidget({
           className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
             activeTab === "long"
               ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
-              : "text-muted hover:text-foreground"
+              : `text-muted hover:text-foreground ${isMobile ? "border-b-2 border-border" : ""}`
           }`}
         >
           Long
@@ -168,14 +176,14 @@ export function PredictionMarketTradeWidget({
           className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
             activeTab === "short"
               ? "text-red border-b-2 border-red"
-              : "text-muted hover:text-foreground"
+              : `text-muted hover:text-foreground ${isMobile ? "border-b-2 border-border" : ""}`
           }`}
         >
           Short
         </button>
       </div>
 
-      <div className="p-5 space-y-4">
+      <div className={isMobile ? "pt-4 space-y-4" : "p-5 space-y-4"}>
         {/* Loading state */}
         {isLoading && (
           <div className="animate-pulse space-y-3">
@@ -195,29 +203,38 @@ export function PredictionMarketTradeWidget({
         {/* Market info */}
         {data && !isLoading && (
           <>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Implied Valuation</span>
-                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                  {formatValuationPrecise(impliedValuation)}
-                </span>
+            {isMobile ? (
+              <div className="flex items-center justify-between text-xs text-muted">
+                <span>Spread {formatSpreadPercent(spreadPercent)}</span>
+                <span>Volume {formatVolume(data.totalVolume)}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Current Spread</span>
-                <span className="text-sm font-medium text-foreground">
-                  {formatSpreadPercent(spreadPercent)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Market Volume</span>
-                <span className="text-sm font-medium text-foreground">
-                  {formatVolume(data.totalVolume)}
-                </span>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted">Implied Valuation</span>
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {formatValuationPrecise(impliedValuation)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted">Current Spread</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {formatSpreadPercent(spreadPercent)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted">Market Volume</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {formatVolume(data.totalVolume)}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Divider */}
-            <div className="border-t border-border" />
+                {/* Divider */}
+                <div className="border-t border-border" />
+              </>
+            )}
 
             {/* Success state */}
             {tradeState === "success" && result ? (
@@ -285,16 +302,6 @@ export function PredictionMarketTradeWidget({
                       <span className="text-sm text-muted">Shares to Receive</span>
                       <span className="text-sm font-medium text-foreground">
                         {sharesToReceive.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-border">
-                      <span className="text-sm text-muted">Potential Payout</span>
-                      <span
-                        className={`text-sm font-medium ${
-                          isLong ? "text-blue-600 dark:text-blue-400" : "text-red"
-                        }`}
-                      >
-                        ${potentialPayout.toFixed(2)}
                       </span>
                     </div>
                   </div>

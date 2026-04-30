@@ -106,7 +106,7 @@ export function CompanyDetailPage({
   // Check if company has implied valuation data
   const hasMarketData = hasImpliedValuationData(company.name);
   const impliedValuationSlug = getImpliedValuationSlug(company.name);
-  const marketEndDate = impliedValuationSlug ? getIPOMarketEndDate(impliedValuationSlug) : null;
+  const fallbackMarketEndDate = impliedValuationSlug ? getIPOMarketEndDate(impliedValuationSlug) : null;
 
   // Check if company has prestock (live) data
   const hasLiveData = hasPrestockToken(company.name);
@@ -344,7 +344,7 @@ export function CompanyDetailPage({
                 companyName={company.name}
                 initialData={impliedData}
                 initialTotalVolume={prefetchedTotalVolume}
-                marketEndDate={marketEndDate}
+                marketEndDate={impliedData?.endDate ?? fallbackMarketEndDate}
                 onHover={handleImpliedChartHover}
                 onDataChange={handleImpliedDataChange}
                 chartType={chartType}
@@ -366,13 +366,14 @@ export function CompanyDetailPage({
             )}
           </div>
 
-          {/* Mobile trading widget - show under chart for prediction markets */}
+          {/* Mobile trading widget - integrated under chart/change box */}
           {predictionMarket && (
-            <div className="lg:hidden mt-6 space-y-4">
+            <div className="lg:hidden mt-4 space-y-4">
               <PredictionMarketTradeWidget
                 company={company}
                 eventSlug={predictionMarket.eventSlug}
                 currentImpliedValuation={impliedChartData?.endValue}
+                variant="mobile"
               />
               <PredictionPositionCard eventSlug={predictionMarket.eventSlug} />
             </div>
