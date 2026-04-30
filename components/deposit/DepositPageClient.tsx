@@ -675,14 +675,8 @@ export function DepositPageClient() {
                     ? "bg-orange-500/10 text-orange-500"
                     : "bg-red-500/10 text-red-500";
 
-              // Amount colors: deposits/buys = green, sells = green (proceeds), withdrawals = red
-              const amountColorClass = isDeposit || isBuy || isBuyLong
-                ? "text-green-500"
-                : isBuyShort
-                  ? "text-blue-500"
-                  : isSellLong || isSellShort
-                    ? "text-green-500" // Sells return proceeds (positive)
-                    : "text-red-500";
+              const isPositiveAmount = isDeposit || isBuy || isPredictionSell;
+              const amountColorClass = isPositiveAmount ? "text-green" : "text-red";
 
               const getStatusLabel = (status: string) => {
                 if (status === "COMPLETED" || status === "FILLED") return "Completed";
