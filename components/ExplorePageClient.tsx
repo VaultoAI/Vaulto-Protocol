@@ -43,6 +43,9 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
   // Local search state for immediate filtering (no lag)
   const [searchValue, setSearchValue] = useState(searchParams?.get("q") || "");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Tracks the last `q` value we wrote to the URL so the searchParams listener
+  // can ignore our own echo and only adopt external pushes (e.g. header search).
+  const lastPushedQRef = useRef<string>(searchParams?.get("q") || "");
 
   // Debounced URL update - only updates URL after user stops typing.
   // Read params from window.location to avoid re-creating this callback on every
@@ -54,6 +57,7 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
     } else {
       params.delete("q");
     }
+    lastPushedQRef.current = value;
     router.push(`/explore${params.toString() ? `?${params}` : ""}`, { scroll: false });
   }, [router]);
 
@@ -81,17 +85,15 @@ export function ExplorePageClient({ companies, indexes, indexPrices = {}, newlyA
     };
   }, []);
 
-  // Sync local state with URL only on real browser navigation (back/forward).
-  // Subscribing to searchParams would also fire after our own debounced router.push,
-  // racing with in-flight keystrokes and clobbering characters the user just typed.
+  // Adopt external `q` changes (header search push, browser back/forward).
+  // Skip when the URL value matches what we last pushed ourselves — that's our
+  // own echo and adopting it would race with in-flight keystrokes.
+  const urlQ = searchParams?.get("q") || "";
   useEffect(() => {
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      setSearchValue(params.get("q") || "");
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+    if (urlQ === lastPushedQRef.current) return;
+    lastPushedQRef.current = urlQ;
+    setSearchValue(urlQ);
+  }, [urlQ]);
 
   // Read category from URL params, fallback to state for ExploreAssetsNav compatibility
   const categoryParam = searchParams?.get("category");

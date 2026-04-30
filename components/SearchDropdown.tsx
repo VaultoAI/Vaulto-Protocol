@@ -37,7 +37,7 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
   const containerRef = useRef<HTMLDivElement>(null);
   const hasFetched = useRef(false);
 
-  // Fetch companies from API if in companies mode and not provided via props
+  // Fetch companies from API if in companies mode and not provided via props.
   useEffect(() => {
     if (mode !== "companies") return;
 
@@ -96,9 +96,10 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
     return () => window.removeEventListener("scroll", handleScroll, true);
   }, [isFocused]);
 
-  // Filter companies for autocomplete (limit to 5)
+  // Filter companies for autocomplete (limit to 5). Runs in both modes so
+  // typing on explore page surfaces matching companies as suggestions.
   const matchingCompanies = useMemo(() => {
-    if (mode !== "companies" || !searchValue.trim() || companies.length === 0) return [];
+    if (!searchValue.trim() || companies.length === 0) return [];
     const q = searchValue.toLowerCase().trim();
     return companies
       .filter((c) => {
@@ -106,21 +107,23 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
         return c.name.toLowerCase().includes(q) || symbol.includes(q);
       })
       .slice(0, 5);
-  }, [companies, searchValue, mode]);
+  }, [companies, searchValue]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchValue(value);
 
     if (mode === "categories") {
-      // Update URL for grid filtering on explore page
+      // Update URL for grid filtering on explore page.
+      // scroll:false so the page doesn't jump to top on every keystroke,
+      // which would also trip the scroll-listener and close this dropdown.
       const params = new URLSearchParams(searchParams?.toString() || "");
       if (value.trim()) {
         params.set("q", value);
       } else {
         params.delete("q");
       }
-      router.push(`/explore${params.toString() ? `?${params}` : ""}`);
+      router.push(`/explore${params.toString() ? `?${params}` : ""}`, { scroll: false });
     }
   };
 
@@ -141,9 +144,15 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
     router.push(`/explore/${getCompanySlug(company.name)}`);
   };
 
-  const showDropdown = isFocused;
-  const showCategories = mode === "categories" && !searchValue.trim();
-  const showCompanies = mode === "companies" && searchValue.trim() && matchingCompanies.length > 0;
+  const isTyping = searchValue.trim() !== "";
+  const showCategories = mode === "categories" && !isTyping;
+  // Company-suggestion dropdown is only for non-explore pages. On explore the
+  // header search filters the grid directly, so suppress the dropdown when
+  // typing to avoid duplicating the grid result.
+  const showCompanies = mode === "companies" && isTyping && matchingCompanies.length > 0;
+  const showLoading = mode === "companies" && isTyping && isLoading && companies.length === 0;
+  const showNoResults = mode === "companies" && isTyping && !isLoading && matchingCompanies.length === 0 && companies.length > 0;
+  const showDropdown = isFocused && (showCategories || showCompanies || showLoading || showNoResults);
 
   return (
     <div ref={containerRef} className="relative w-[320px]">
@@ -162,9 +171,9 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
       </div>
 
       {/* Dropdown */}
-      {showDropdown && (showCategories || showCompanies || (mode === "companies" && searchValue.trim() && isLoading)) && (
+      {showDropdown && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-lg shadow-lg z-50 py-1 overflow-hidden">
-          {/* Categories section (explore page only) */}
+          {/* Categories section (empty input on explore page) */}
           {showCategories && (
             <>
               <div className="px-3 py-2 text-xs text-muted font-medium uppercase tracking-wide">
@@ -183,14 +192,14 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
             </>
           )}
 
-          {/* Loading state (companies mode only) */}
-          {mode === "companies" && searchValue.trim() && isLoading && (
+          {/* Loading state */}
+          {showLoading && (
             <div className="px-3 py-4 text-sm text-muted text-center">
               Loading...
             </div>
           )}
 
-          {/* Company suggestions (non-explore pages only) */}
+          {/* Company suggestions */}
           {showCompanies && (
             <>
               <div className="px-3 py-2 text-xs text-muted font-medium uppercase tracking-wide">
@@ -213,8 +222,8 @@ export function SearchDropdown({ companies: initialCompanies, mode = "categories
             </>
           )}
 
-          {/* No results (companies mode only) */}
-          {mode === "companies" && searchValue.trim() && !isLoading && matchingCompanies.length === 0 && (
+          {/* No results */}
+          {showNoResults && (
             <div className="px-3 py-4 text-sm text-muted text-center">
               No companies found
             </div>
