@@ -18,7 +18,7 @@ import { CompanyLogo } from "@/components/CompanyLogo";
 import { CHAIN_IDS } from "@/lib/trading-wallet/constants";
 import { generateUsername } from "@/lib/utils/username";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
-import { getCompanySlugFromSymbol } from "@/lib/vaulto/companies";
+import { getCompanySlug, getCompanySlugFromSymbol } from "@/lib/vaulto/companies";
 import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { PredictionPositions } from "@/components/PredictionPositions";
 
@@ -29,24 +29,6 @@ const WithdrawModal = dynamic(
 );
 
 type DepositStatus = "idle" | "initiating" | "pending" | "confirming" | "success" | "error";
-
-// Maps company name (as stored on prediction trades/sales) to its Polymarket event slug.
-// Used so every row in the transactions table links to the right Polymarket event,
-// even when the trade record has an empty eventId.
-const COMPANY_TO_EVENT_SLUG: Record<string, string> = {
-  SpaceX: "spacex-ipo-closing-market-cap",
-  OpenAI: "openai-ipo-closing-market-cap",
-  Anthropic: "anthropic-ipo-closing-market-cap",
-  Stripe: "stripe-ipo-closing-market-cap",
-  Databricks: "databricks-ipo-closing-market-cap",
-  Discord: "discord-ipo-closing-market-cap",
-  "Fannie Mae": "fannie-mae-ipo-closing-market-cap",
-  "Freddie Mac": "freddie-mac-ipo-closing-market-cap",
-  MegaETH: "megaeth-market-cap-fdv-one-day-after-launch",
-  Kraken: "kraken-ipo-closing-market-cap-above",
-  "Clear Street": "clear-street-group-ipo-closing-market-cap",
-  Strava: "strava-ipo-closing-market-cap",
-};
 
 export function DepositPageClient() {
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
@@ -734,23 +716,15 @@ export function DepositPageClient() {
 
               const polygonUrl = tx.txHash ? `https://polygonscan.com/tx/${tx.txHash}` : null;
 
-              // Prediction trades link out to the Polymarket event; ETF trades link to the company page.
-              // eventId is usually the Polymarket slug, but some sells persist an empty eventId —
-              // fall back to a company-name lookup so every prediction row stays clickable.
-              const eventSlug = tx.eventId && tx.eventId.includes("-")
-                ? tx.eventId
-                : tx.company
-                  ? COMPANY_TO_EVENT_SLUG[tx.company] ?? null
-                  : null;
-              const polymarketUrl = isPrediction && eventSlug
-                ? `https://polymarket.com/event/${eventSlug}`
-                : null;
+              // Both ETF trades and prediction trades link to the Vaulto company page.
               const companyUrl = isEtfOrder && tx.symbol
                 ? `/explore/${getCompanySlugFromSymbol(tx.symbol)}`
-                : null;
+                : isPrediction && tx.company
+                  ? `/explore/${getCompanySlug(tx.company)}`
+                  : null;
 
-              const isInternalLink = isEtfOrder && !!companyUrl;
-              const externalUrl = polymarketUrl || (!isInternalLink ? polygonUrl : null);
+              const isInternalLink = !!companyUrl;
+              const externalUrl = !isInternalLink ? polygonUrl : null;
               const hasLink = isInternalLink || !!externalUrl;
 
               const rowContent = (

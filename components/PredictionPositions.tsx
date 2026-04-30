@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import { usePredictionTrading, type PredictionPosition } from "@/hooks/usePredictionTrading";
 import { useSortableTable, type SortableColumn } from "@/hooks/useSortableTable";
 import { SortableTableHeader } from "@/components/SortableHeader";
-import { getCompanySlug } from "@/lib/vaulto/companies";
 
 export function PredictionPositions() {
   const { positions, isLoadingPositions } = usePredictionTrading();
@@ -50,8 +48,8 @@ export function PredictionPositions() {
           const currentValue = position.shares * position.currentPrice;
           const isLong = position.side === "LONG";
           const isProfitable = position.unrealizedPnl >= 0;
-          const companyHref = position.company
-            ? `/explore/${getCompanySlug(position.company)}`
+          const polymarketHref = position.eventId && position.eventId.includes("-")
+            ? `https://polymarket.com/event/${position.eventId}`
             : null;
 
           const cardContent = (
@@ -103,14 +101,16 @@ export function PredictionPositions() {
             </>
           );
 
-          return companyHref ? (
-            <Link
+          return polymarketHref ? (
+            <a
               key={position.id}
-              href={companyHref}
+              href={polymarketHref}
+              target="_blank"
+              rel="noopener noreferrer"
               className="block rounded-md border border-border bg-background p-4 hover:bg-badge-bg transition-colors"
             >
               {cardContent}
-            </Link>
+            </a>
           ) : (
             <div
               key={position.id}
@@ -173,22 +173,27 @@ export function PredictionPositions() {
               const currentValue = position.shares * position.currentPrice;
               const isLong = position.side === "LONG";
               const isProfitable = position.unrealizedPnl >= 0;
-              const companyHref = position.company
-                ? `/explore/${getCompanySlug(position.company)}`
+              const polymarketHref = position.eventId && position.eventId.includes("-")
+                ? `https://polymarket.com/event/${position.eventId}`
                 : null;
 
               return (
                 <tr key={position.id} className="border-b border-border last:border-0">
                   <td className="py-3 px-4">
-                    {companyHref ? (
-                      <Link href={companyHref} className="block hover:opacity-80 transition-opacity">
+                    {polymarketHref ? (
+                      <a
+                        href={polymarketHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block hover:opacity-80 transition-opacity"
+                      >
                         <p className="font-medium text-sm line-clamp-1">
                           {position.eventName || position.eventId}
                         </p>
                         {position.company && (
                           <p className="text-xs text-muted mt-0.5">{position.company}</p>
                         )}
-                      </Link>
+                      </a>
                     ) : (
                       <>
                         <p className="font-medium text-sm line-clamp-1">

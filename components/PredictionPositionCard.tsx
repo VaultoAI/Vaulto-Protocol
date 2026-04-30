@@ -141,6 +141,33 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
     }
   };
 
+  if (sellResult) {
+    return (
+      <div className="w-full rounded-xl border border-border bg-card-bg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">Your Position</h3>
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+            Sold
+          </span>
+        </div>
+        <p className="text-sm text-foreground">
+          Sold {sellResult.sharesSold.toFixed(2)} shares for{" "}
+          <span className="font-semibold text-green-600 dark:text-green-400">
+            ${sellResult.proceeds.toFixed(2)}
+          </span>
+        </p>
+        {sellResult.exitPrice !== undefined && (
+          <p className="mt-1 text-xs text-muted">
+            Exit price ${sellResult.exitPrice.toFixed(3)}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full rounded-xl border border-border bg-card-bg p-4">
       <div className="flex items-center justify-between mb-3">
@@ -237,54 +264,6 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
         )}
       </div>
 
-      {/* Success confirmation modal */}
-      {sellResult && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card-bg border border-border rounded-xl max-w-sm w-full p-6 space-y-4">
-            {/* Success icon */}
-            <div className="flex flex-col items-center py-4">
-              <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-foreground">Position Sold</h3>
-            </div>
-
-            {/* Details */}
-            <div className="rounded-xl bg-muted/50 p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Shares Sold</span>
-                <span className="font-medium text-foreground">
-                  {sellResult.sharesSold.toFixed(2)}
-                </span>
-              </div>
-              {sellResult.exitPrice && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Exit Price</span>
-                  <span className="font-medium text-foreground">
-                    ${sellResult.exitPrice.toFixed(3)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between border-t border-border pt-2 mt-2">
-                <span className="text-muted-foreground">Proceeds</span>
-                <span className="font-semibold text-green-500">
-                  ${sellResult.proceeds.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            {/* Close button */}
-            <button
-              onClick={() => setSellResult(null)}
-              className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
