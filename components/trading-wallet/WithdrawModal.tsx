@@ -5,7 +5,7 @@ import { useSendTransaction } from "@privy-io/react-auth";
 import { useWaitForTransactionReceipt } from "wagmi";
 import { decodeFunctionData } from "viem";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
-import { X, Check, ExternalLink, AlertTriangle, Loader2 } from "lucide-react";
+import { X, Check, ExternalLink, AlertTriangle, Loader2, ArrowRight } from "lucide-react";
 import { ERC20_ABI } from "@/lib/trading-wallet/constants";
 
 interface WithdrawModalProps {
@@ -13,7 +13,7 @@ interface WithdrawModalProps {
   onClose: () => void;
 }
 
-type WithdrawStep = "input" | "mfa" | "signing" | "confirming" | "success";
+type WithdrawStep = "input" | "returning_safe" | "mfa" | "signing" | "confirming" | "success";
 
 export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
@@ -27,13 +27,18 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
 
   const {
     balance,
+    polymarketBalance,
+    totalAvailable,
     requestWithdrawal,
     executeWithdrawal,
+    returnSafeFunds,
     isRequestingWithdrawal,
     isExecutingWithdrawal,
+    isReturningSafeFunds,
     externalWallet,
     embeddedWallet,
     invalidateAll,
+    refetchBalance,
   } = useTradingWallet();
 
   // Use Privy's sendTransaction to sign from embedded wallet
@@ -49,8 +54,12 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
   });
 
   const handleSetMax = () => {
-    setAmount(balance);
+    // Use total available (proxy + polymarket) for max withdrawal
+    setAmount(totalAvailable);
   };
+
+  // Check if there are funds in the Polymarket Safe wallet
+  const hasSafeFunds = parseFloat(polymarketBalance) > 0;
 
   const handleUseConnectedWallet = () => {
     if (externalWallet?.address) {
@@ -117,12 +126,48 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
     setError(null);
     setTxHash(undefined);
 
+    const amountNum = parseFloat(amount);
+    const proxyBalanceNum = parseFloat(balance);
+    const polymarketBalanceNum = parseFloat(polymarketBalance);
+
+    // Check if we need funds from the Safe wallet
+    const needsSafeFunds = amountNum > proxyBalanceNum && polymarketBalanceNum > 0;
+
     try {
       console.log(`${LOG} Starting withdrawal flow`);
       console.log(`${LOG} Amount: ${amount}, To: ${toAddress}`);
+      console.log(`${LOG} Proxy balance: ${proxyBalanceNum}, Polymarket balance: ${polymarketBalanceNum}`);
+      console.log(`${LOG} Needs Safe funds: ${needsSafeFunds}`);
+
+      // Step 0: Return funds from Safe wallet if needed
+      if (needsSafeFunds) {
+        console.log(`${LOG} Step 0: Returning funds from Safe wallet...`);
+        setStep("returning_safe");
+
+        try {
+          const safeFundsResult = await returnSafeFunds();
+          console.log(`${LOG} Safe funds result:`, safeFundsResult);
+
+          if (!safeFundsResult.success && !safeFundsResult.skipped) {
+            throw new Error(safeFundsResult.error || "Failed to return funds from Polymarket wallet");
+          }
+
+          // Refresh balance after returning Safe funds
+          await refetchBalance();
+
+          // Small delay to ensure balance is updated
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } catch (safeFundsError) {
+          console.error(`${LOG} Safe funds error:`, safeFundsError);
+          // Continue anyway - the withdrawal might still work with available balance
+          console.log(`${LOG} Continuing with available proxy balance...`);
+        }
+      }
 
       // Step 1: Request withdrawal from API
       console.log(`${LOG} Step 1: Requesting withdrawal...`);
+      setStep("input"); // Reset to input temporarily for better UX
+
       const requestResult = await requestWithdrawal({
         amount,
         toAddress,
@@ -248,7 +293,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
     onClose();
   };
 
-  const isProcessing = isRequestingWithdrawal || isExecutingWithdrawal || isSending || isConfirmingTx;
+  const isProcessing = isRequestingWithdrawal || isExecutingWithdrawal || isSending || isConfirmingTx || isReturningSafeFunds;
 
   if (!isOpen) return null;
 
@@ -285,7 +330,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                     onClick={handleSetMax}
                     className="text-xs text-muted hover:text-foreground transition-colors"
                   >
-                    Max: ${parseFloat(balance).toFixed(2)}
+                    Max: ${parseFloat(totalAvailable).toFixed(2)}
                   </button>
                 </div>
                 <div className="flex items-center rounded-lg border border-border">
@@ -325,6 +370,34 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                   className="w-full rounded-lg border border-border bg-transparent px-3 py-2.5 text-foreground font-mono text-sm placeholder:text-muted focus:outline-none"
                 />
               </div>
+
+              {/* Balance breakdown when there are Polymarket funds */}
+              {hasSafeFunds && (
+                <div className="rounded-lg border border-border bg-foreground/5 p-3">
+                  <p className="text-xs font-medium text-muted mb-2">Balance Breakdown</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted">Trading Wallet</span>
+                      <span className="text-foreground">${parseFloat(balance).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted">Polymarket Wallet</span>
+                      <span className="text-foreground">${parseFloat(polymarketBalance).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-border my-1.5" />
+                    <div className="flex items-center justify-between text-sm font-medium">
+                      <span className="text-foreground">Total Available</span>
+                      <span className="text-foreground">${parseFloat(totalAvailable).toFixed(2)}</span>
+                    </div>
+                  </div>
+                  {parseFloat(amount) > parseFloat(balance) && parseFloat(amount) <= parseFloat(totalAvailable) && (
+                    <p className="text-xs text-muted mt-2 flex items-center gap-1">
+                      <ArrowRight className="h-3 w-3" />
+                      Polymarket funds will be transferred first
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {error && (
@@ -359,6 +432,21 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
               </button>
             </div>
           </>
+        )}
+
+        {step === "returning_safe" && (
+          <div className="py-8 text-center">
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-foreground/20 border-t-foreground" />
+            <h3 className="text-lg font-medium text-foreground">
+              Consolidating Funds
+            </h3>
+            <p className="mt-2 text-sm text-muted">
+              Transferring funds from Polymarket wallet...
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              This may take a moment
+            </p>
+          </div>
         )}
 
         {step === "mfa" && (

@@ -50,6 +50,7 @@ export interface TradingWalletStatus {
   balance: string;
   balanceUsd: string;
   hasServerSigner?: boolean;
+  safeAddress?: string | null;
 }
 
 export interface DepositTransaction {
@@ -250,6 +251,33 @@ async function recoverWithdrawals(): Promise<{
   return res.json();
 }
 
+export interface ReturnSafeFundsResponse {
+  success: boolean;
+  skipped?: boolean;
+  amountReturned?: string;
+  transactions?: {
+    transferTxHash?: string;
+    swapTxHash?: string;
+  };
+  message?: string;
+  error?: string;
+}
+
+async function returnSafeFunds(privyToken: string): Promise<ReturnSafeFundsResponse> {
+  const res = await fetch("/api/trading-wallet/withdraw/return-safe-funds", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-privy-token": privyToken,
+    },
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || data.message || "Failed to return Safe funds");
+  }
+  return res.json();
+}
+
 export function useTradingWallet() {
   const queryClient = useQueryClient();
   const { ready, authenticated, user, getAccessToken } = usePrivy();
@@ -359,6 +387,22 @@ export function useTradingWallet() {
       if (data.recovered > 0) {
         queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
         queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
+      }
+    },
+  });
+
+  // Return Safe funds mutation (for withdrawing all funds including Polymarket wallet)
+  const returnSafeFundsMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+      return returnSafeFunds(token);
+    },
+    onSuccess: (data) => {
+      if (data.success && !data.skipped) {
+        queryClient.invalidateQueries({ queryKey: ["trading-wallet-balance"] });
       }
     },
   });
@@ -550,6 +594,7 @@ export function useTradingWallet() {
     maticBalance,
     maticLow,
     polymarketBalance,
+    polymarketAddress: balanceData?.polymarket?.address ?? tradingWallet?.safeAddress ?? null,
     totalAvailable,
     isActive,
     needsCreation,
@@ -582,6 +627,9 @@ export function useTradingWallet() {
 
     recoverWithdrawals: recoverWithdrawalsMutation.mutateAsync,
     isRecoveringWithdrawals: recoverWithdrawalsMutation.isPending,
+
+    returnSafeFunds: returnSafeFundsMutation.mutateAsync,
+    isReturningSafeFunds: returnSafeFundsMutation.isPending,
 
     // Refresh functions
     refetchWallet,

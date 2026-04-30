@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
       status: tradingWallet.status,
       balance,
       balanceUsd,
+      hasServerSigner: tradingWallet.hasServerSigner,
+      safeAddress: tradingWallet.safeAddress,
     });
   } catch (error) {
     console.error("[Trading Wallet] Status error:", error);
