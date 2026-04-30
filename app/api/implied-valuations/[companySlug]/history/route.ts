@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   filterValidHistoryPoints,
+  fetchPolymarketEndDate,
+  IPO_MARKET_END_DATES,
   type ImpliedValuationHistoryResponse,
 } from "@/lib/polymarket/implied-valuations";
 
@@ -66,11 +68,22 @@ export async function GET(
       companySlug,
     });
 
+    // If upstream API doesn't yet expose endDate, enrich it from Polymarket
+    // directly (and fall back to the static map as a last resort).
+    let endDate = data.endDate ?? null;
+    if (!endDate) {
+      endDate =
+        (await fetchPolymarketEndDate(companySlug)) ??
+        IPO_MARKET_END_DATES[companySlug] ??
+        null;
+    }
+
     // Return filtered data with updated dataPoints count
     return NextResponse.json({
       ...data,
       history: filteredHistory,
       dataPoints: filteredHistory.length,
+      endDate,
       _filteredCount: originalCount - filteredHistory.length, // For debugging
     });
   } catch (err) {

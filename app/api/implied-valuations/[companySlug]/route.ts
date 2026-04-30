@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  fetchPolymarketEndDate,
+  IPO_MARKET_END_DATES,
+} from "@/lib/polymarket/implied-valuations";
 
 export const revalidate = 300; // 5 minutes
 
@@ -45,8 +49,15 @@ export async function GET(
       );
     }
 
-    const data = await res.json();
-    return NextResponse.json(data);
+    const data = (await res.json()) as { endDate?: string | null };
+    let endDate = data.endDate ?? null;
+    if (!endDate) {
+      endDate =
+        (await fetchPolymarketEndDate(companySlug)) ??
+        IPO_MARKET_END_DATES[companySlug] ??
+        null;
+    }
+    return NextResponse.json({ ...data, endDate });
   } catch (err) {
     console.error("Failed to fetch implied valuation:", err);
     return NextResponse.json(
