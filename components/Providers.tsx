@@ -8,6 +8,7 @@ import { WagmiProvider } from "@privy-io/wagmi";
 import { SessionProvider, signOut as nextAuthSignOut } from "next-auth/react";
 import { wagmiConfig } from "@/lib/wagmi";
 import { privyConfig, smartWalletConfig } from "@/lib/privy";
+import { MobileAuthGate } from "./MobileAuthGate";
 
 /**
  * Component that listens for auth state changes and clears cache on logout.
@@ -85,7 +86,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <QueryClientProvider client={queryClient}>
             <WagmiProvider config={wagmiConfig}>
               <AuthStateListener>
-                {children}
+                <MobileAuthGate>{children}</MobileAuthGate>
               </AuthStateListener>
             </WagmiProvider>
           </QueryClientProvider>
