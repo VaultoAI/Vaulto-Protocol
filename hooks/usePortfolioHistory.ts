@@ -60,7 +60,9 @@ export function usePortfolioHistory(tradingWalletAddress: string | undefined) {
     queryKey: ["portfolio-history", tradingWalletAddress],
     queryFn: fetchPortfolioHistory,
     enabled: !!tradingWalletAddress,
-    staleTime: 60_000, // 60 seconds
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
   });
 
   const isSyncing = data?.syncState?.isSyncing ?? false;

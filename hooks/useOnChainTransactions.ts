@@ -50,7 +50,9 @@ export function useOnChainTransactions(tradingWalletAddress: string | undefined)
     queryKey: ["on-chain-transactions", tradingWalletAddress],
     queryFn: fetchOnChainTransactions,
     enabled: !!tradingWalletAddress,
-    staleTime: 60_000, // 60 seconds
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
   });
 
   return {

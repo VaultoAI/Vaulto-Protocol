@@ -16,6 +16,7 @@ import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-w
 import { PUSD_ADDRESS, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
 import { fetchPositions } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
+import { getPortfolioSnapshots } from "@/lib/trading-wallet/portfolio-snapshot";
 
 // Create a public client for Polygon
 const polygonClient = createPublicClient({
@@ -66,7 +67,7 @@ const BALANCE_STALE_MS = 60 * 1000; // 1 minute for balance cache
 interface HistoryPoint {
   timestamp: string;
   balance: number;
-  type: "deposit" | "withdrawal" | "initial" | "current";
+  type: "deposit" | "withdrawal" | "initial" | "current" | "snapshot";
 }
 
 interface CachedPortfolioData {
@@ -314,10 +315,13 @@ export async function syncPortfolioHistory(
   const db = getDb();
 
   try {
-    // Get cached transactions
-    const cachedTransactions = await getCachedTransactions(walletId);
+    // Prefer portfolio snapshots (richer: includes positions + Safe). Fall back to
+    // USDC tx history only when no snapshots exist yet.
+    const [cachedTransactions, snapshots] = await Promise.all([
+      getCachedTransactions(walletId),
+      getPortfolioSnapshots(walletId),
+    ]);
 
-    // Build history array
     const history: HistoryPoint[] = [];
     let runningBalance = 0;
 
@@ -328,7 +332,16 @@ export async function syncPortfolioHistory(
       type: "initial",
     });
 
-    if (cachedTransactions.length > 0) {
+    if (snapshots.length > 0) {
+      for (const snapshot of snapshots) {
+        history.push({
+          timestamp: snapshot.timestamp.toISOString(),
+          balance: snapshot.totalValue,
+          type: "snapshot",
+        });
+      }
+      runningBalance = snapshots[snapshots.length - 1].totalValue;
+    } else if (cachedTransactions.length > 0) {
       // Filter to USDC transactions only for balance chart
       const usdcTxs = filterUsdcTransactions(cachedTransactions);
 
@@ -356,27 +369,20 @@ export async function syncPortfolioHistory(
       }
     }
 
-    // Fetch current balances for total calculation
-    // 1. EOA USDC native
-    const eoaBalanceBigInt = await getUsdcBalance(
-      walletAddress as `0x${string}`,
-      chainId
-    );
+    // Fetch current balances in parallel: EOA USDC, Safe pUSD, Positions value
+    const [eoaBalanceBigInt, safeBalanceBigInt, positionTotals] = await Promise.all([
+      getUsdcBalance(walletAddress as `0x${string}`, chainId),
+      safeAddress
+        ? getPusdBalance(safeAddress as `0x${string}`)
+        : Promise.resolve(BigInt(0)),
+      fetchPositionTotals(walletAddress),
+    ]);
+
     const eoaBalance = parseFloat(formatUsdcAmount(eoaBalanceBigInt));
-
-    // 2. Safe pUSD balance (1:1 with USD)
-    let safeBalance = 0;
-    if (safeAddress) {
-      const safeBalanceBigInt = await getPusdBalance(safeAddress as `0x${string}`);
-      safeBalance = parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
-    }
-
-    // 3. Positions value from Vaulto API
-    let positionsValue = 0;
-    const positionTotals = await fetchPositionTotals(walletAddress);
-    if (positionTotals) {
-      positionsValue = positionTotals.totalValue;
-    }
+    const safeBalance = safeAddress
+      ? parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS))
+      : 0;
+    const positionsValue = positionTotals?.totalValue ?? 0;
 
     // Total = EOA USDC + Safe pUSD + Positions market value
     const currentBalance = eoaBalance + safeBalance + positionsValue;

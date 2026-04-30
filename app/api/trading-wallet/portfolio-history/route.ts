@@ -224,10 +224,21 @@ export async function GET() {
     // Try to get cached portfolio data first (instant - no RPC call)
     const cachedPortfolio = await getCachedPortfolioHistory(tradingWallet.id);
 
-    // If we have cached portfolio data and balance is fresh, update the final point
-    // with enhanced balance (Safe + positions) and return
-    if (cachedPortfolio && !balanceStale) {
-      // Trigger background refresh if transaction cache is stale
+    // Cache-first: if we have cached portfolio history, return it immediately.
+    // The last point of cachedPortfolio.history already includes EOA + Safe + Positions,
+    // computed during the previous syncPortfolioHistory run. Background-sync if stale.
+    // (Note: cachedPortfolio.balance stores EOA-only for stale-check anchoring; the
+    // chart's last point uses the full total from cachedHistory.)
+    if (cachedPortfolio) {
+      if (balanceStale && !syncState?.isSyncing) {
+        triggerBackgroundPortfolioSync(
+          tradingWallet.id,
+          tradingWallet.address,
+          tradingWallet.createdAt,
+          tradingWallet.chainId,
+          tradingWallet.safeAddress
+        );
+      }
       if (transactionsStale && !syncState?.isSyncing) {
         triggerBackgroundSync(tradingWallet.id, tradingWallet.address, {
           walletCreatedAt: tradingWallet.createdAt,
@@ -236,43 +247,8 @@ export async function GET() {
         });
       }
 
-      // Calculate enhanced current balance with Safe + positions
-      let enhancedCurrentBalance = cachedPortfolio.balance;
-      const polymarketAddress = tradingWallet.safeAddress;
-
-      if (tradingWallet.status === "ACTIVE") {
-        // Get Safe pUSD balance
-        if (polymarketAddress) {
-          const safeBalanceBigInt = await getPusdBalance(polymarketAddress as `0x${string}`);
-          enhancedCurrentBalance += parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
-        }
-
-        // Get positions value from Vaulto API
-        const positionTotals = await fetchPositionTotals(tradingWallet.address);
-        if (positionTotals) {
-          enhancedCurrentBalance += positionTotals.totalValue;
-        }
-      }
-
-      // Update the last point in history with enhanced balance
-      const enhancedHistory = [...cachedPortfolio.history];
-      if (enhancedHistory.length > 0) {
-        const lastPoint = enhancedHistory[enhancedHistory.length - 1];
-        if (lastPoint.type === "current") {
-          lastPoint.balance = enhancedCurrentBalance;
-          lastPoint.timestamp = new Date().toISOString();
-        } else {
-          // Add a new current point if the last one isn't a current type
-          enhancedHistory.push({
-            timestamp: new Date().toISOString(),
-            balance: enhancedCurrentBalance,
-            type: "current",
-          });
-        }
-      }
-
       return NextResponse.json({
-        history: enhancedHistory,
+        history: cachedPortfolio.history,
         transactions: allTransactions,
         syncState: {
           lastSyncedAt: syncState?.lastSyncedAt?.toISOString() ?? null,
@@ -285,7 +261,7 @@ export async function GET() {
       });
     }
 
-    // No cache or stale balance - need to compute history
+    // No cache yet (first sync) - compute history inline.
     // First, try to load portfolio snapshots (most accurate for total value)
     const snapshots = await getPortfolioSnapshots(tradingWallet.id);
 
@@ -410,29 +386,21 @@ export async function GET() {
     // Get current total balance including Safe pUSD and positions
     let currentBalance = runningBalance;
     if (tradingWallet.status === "ACTIVE") {
-      // 1. EOA USDC native
-      const eoaBalanceBigInt = await getUsdcBalance(
-        tradingWallet.address as `0x${string}`,
-        tradingWallet.chainId
-      );
-      const eoaBalance = parseFloat(formatUsdcAmount(eoaBalanceBigInt));
-
-      // 2. Safe pUSD (1:1 with USD)
-      let safeBalance = 0;
       const polymarketAddress = tradingWallet.safeAddress;
-      if (polymarketAddress) {
-        const safeBalanceBigInt = await getPusdBalance(polymarketAddress as `0x${string}`);
-        safeBalance = parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
-      }
+      const [eoaBalanceBigInt, safeBalanceBigInt, positionTotals] = await Promise.all([
+        getUsdcBalance(tradingWallet.address as `0x${string}`, tradingWallet.chainId),
+        polymarketAddress
+          ? getPusdBalance(polymarketAddress as `0x${string}`)
+          : Promise.resolve(BigInt(0)),
+        fetchPositionTotals(tradingWallet.address),
+      ]);
 
-      // 3. Positions value from Vaulto API
-      let positionsValue = 0;
-      const positionTotals = await fetchPositionTotals(tradingWallet.address);
-      if (positionTotals) {
-        positionsValue = positionTotals.totalValue;
-      }
+      const eoaBalance = parseFloat(formatUsdcAmount(eoaBalanceBigInt));
+      const safeBalance = polymarketAddress
+        ? parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS))
+        : 0;
+      const positionsValue = positionTotals?.totalValue ?? 0;
 
-      // Total = EOA USDC + Safe pUSD + Positions market value
       currentBalance = eoaBalance + safeBalance + positionsValue;
 
       console.log("[Portfolio History] Current balance breakdown:", {

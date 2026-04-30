@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
-import { fetchWalletTransactions } from "@/lib/alchemy/transactions";
+import {
+  getCachedTransactions,
+  getSyncState,
+  triggerBackgroundSync,
+  isSyncStale,
+} from "@/lib/trading-wallet/transaction-sync";
 
 interface Transaction {
   id: string;
@@ -112,28 +117,33 @@ export async function GET() {
     const tradingWallet = user.tradingWallet;
     const allTransactions: Transaction[] = [];
 
-    // Fetch on-chain transactions from Alchemy
-    try {
-      const onChainTxs = await fetchWalletTransactions(tradingWallet.address);
+    // Read cached on-chain transactions from DB (instant). Background-sync if stale.
+    const [syncState, cachedTxs] = await Promise.all([
+      getSyncState(tradingWallet.id),
+      getCachedTransactions(tradingWallet.id),
+    ]);
 
-      for (const tx of onChainTxs) {
-        // Only include transactions with a valid amount
-        if (tx.amount !== null && tx.amount > 0) {
-          allTransactions.push({
-            id: tx.id,
-            type: tx.type,
-            amount: tx.amount,
-            status: tx.status,
-            txHash: tx.txHash,
-            timestamp: tx.timestamp,
-            address: tx.address,
-            asset: tx.asset ?? undefined,
-          });
-        }
+    for (const tx of cachedTxs) {
+      if (tx.amount !== null && tx.amount > 0) {
+        allTransactions.push({
+          id: tx.id,
+          type: tx.type,
+          amount: tx.amount,
+          status: tx.status,
+          txHash: tx.txHash,
+          timestamp: tx.timestamp,
+          address: tx.address,
+          asset: tx.asset ?? undefined,
+        });
       }
-    } catch (alchemyError) {
-      console.error("[On-Chain Transactions] Alchemy fetch error:", alchemyError);
-      // Continue without on-chain data - ETF orders will still be returned
+    }
+
+    if (isSyncStale(syncState?.lastSyncedAt ?? null) && !syncState?.isSyncing) {
+      triggerBackgroundSync(tradingWallet.id, tradingWallet.address, {
+        walletCreatedAt: tradingWallet.createdAt,
+        chainId: tradingWallet.chainId,
+        syncPortfolio: false,
+      });
     }
 
     // Add ETF orders from database
