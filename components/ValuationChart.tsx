@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { formatValuation } from "@/lib/vaulto/companies";
 import { getValuationHistory } from "@/lib/vaulto/companyUtils";
@@ -20,6 +21,7 @@ interface ValuationChartProps {
   onChartTypeChange?: (type: ChartType) => void;
   hasMarketData?: boolean;
   hasLiveData?: boolean;
+  mobileSelectorTarget?: HTMLElement | null;
 }
 
 type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
@@ -29,7 +31,7 @@ type TimeRange = "ALL" | "5Y" | "3Y" | "1Y";
  * Plots real postMoneyValuationUsd from funding history.
  * Green line on dark-transparent background with hover tooltip.
  */
-export function ValuationChart({ company, onHover, chartType, onChartTypeChange, hasMarketData, hasLiveData }: ValuationChartProps) {
+export function ValuationChart({ company, onHover, chartType, onChartTypeChange, hasMarketData, hasLiveData, mobileSelectorTarget }: ValuationChartProps) {
   const allHistory = useMemo(() => getValuationHistory(company), [company]);
   const [activeRange, setActiveRange] = useState<TimeRange>("ALL");
   const svgRef = useRef<SVGSVGElement>(null);
@@ -225,71 +227,81 @@ export function ValuationChart({ company, onHover, chartType, onChartTypeChange,
         </svg>
       </div>
 
-      {/* Time range selector */}
-      <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-3 border-t border-border pt-3">
-        <div className="flex items-center gap-1 flex-wrap">
-          {timeRanges.map((range) => {
-            const isSelected = activeRange === range;
-            const isEffective = effectiveRange === range;
-            return (
-              <button
-                key={range}
-                onClick={() => setActiveRange(range)}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  isSelected && isEffective
-                    ? "text-accent bg-accent/10"
-                    : isSelected && !isEffective
-                    ? "text-muted bg-muted/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                {range}
-              </button>
-            );
-          })}
-        </div>
-        {(hasMarketData || hasLiveData) && onChartTypeChange && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onChartTypeChange("funding")}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                chartType === "funding"
-                  ? "text-accent bg-accent/10"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              Funding
-            </button>
-            {hasMarketData && (
-              <button
-                onClick={() => onChartTypeChange("market")}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  chartType === "market"
-                    ? "text-accent bg-accent/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                IPO
-              </button>
-            )}
-            {hasLiveData && (
-              <button
-                onClick={() => onChartTypeChange("live")}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  chartType === "live"
-                    ? "text-accent bg-accent/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                Price
-              </button>
+      {/* Time range selector — desktop inline; mobile portaled if target provided */}
+      {(() => {
+        const bar = (
+          <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1 flex-wrap">
+              {timeRanges.map((range) => {
+                const isSelected = activeRange === range;
+                const isEffective = effectiveRange === range;
+                return (
+                  <button
+                    key={range}
+                    onClick={() => setActiveRange(range)}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                      isSelected && isEffective
+                        ? "text-accent bg-accent/10"
+                        : isSelected && !isEffective
+                        ? "text-muted bg-muted/10"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {range}
+                  </button>
+                );
+              })}
+            </div>
+            {(hasMarketData || hasLiveData) && onChartTypeChange && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onChartTypeChange("funding")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    chartType === "funding"
+                      ? "text-accent bg-accent/10"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Funding
+                </button>
+                {hasMarketData && (
+                  <button
+                    onClick={() => onChartTypeChange("market")}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                      chartType === "market"
+                        ? "text-accent bg-accent/10"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                  >
+                    IPO
+                  </button>
+                )}
+                {hasLiveData && (
+                  <button
+                    onClick={() => onChartTypeChange("live")}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                      chartType === "live"
+                        ? "text-accent bg-accent/10"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                  >
+                    Price
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        );
+        return (
+          <>
+            <div className="hidden lg:block mt-3 border-t border-border pt-3">{bar}</div>
+            {mobileSelectorTarget && createPortal(bar, mobileSelectorTarget)}
+          </>
+        );
+      })()}
 
       {/* Funding vs Valuation summary */}
-      <div className="mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">
+      <div className="hidden lg:block mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-sm text-muted mb-1">Total Funding</p>

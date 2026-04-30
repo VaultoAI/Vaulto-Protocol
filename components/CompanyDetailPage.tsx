@@ -135,6 +135,9 @@ export function CompanyDetailPage({
   const [liveHoverData, setLiveHoverData] = useState<LiveHoverData | null>(null);
   const [liveChartData, setLiveChartData] = useState<LiveChartData | null>(null);
 
+  // Mobile selector portal target - charts render their range/type bar into this element on mobile
+  const [mobileSelectorEl, setMobileSelectorEl] = useState<HTMLDivElement | null>(null);
+
   // Fetch implied valuation data when switching to market view
   useEffect(() => {
     if (chartType === "market" && !impliedData && !impliedDataLoading && impliedValuationSlug) {
@@ -270,6 +273,9 @@ export function CompanyDetailPage({
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left side: Company info + Chart */}
         <div className="flex-1 min-w-0">
+          {/* Mobile-only chart range + type selector (portal target — populated by active chart) */}
+          <div ref={setMobileSelectorEl} className="lg:hidden -mt-2 mb-6" />
+
           {/* Company header */}
           <div className="flex items-center gap-3 mb-2">
             {company.website ? (
@@ -336,6 +342,7 @@ export function CompanyDetailPage({
                 onChartTypeChange={setChartType}
                 hasMarketData={hasMarketData}
                 hasLiveData={hasLiveData}
+                mobileSelectorTarget={mobileSelectorEl}
               />
             )}
             {chartType === "market" && (
@@ -351,6 +358,7 @@ export function CompanyDetailPage({
                 onChartTypeChange={setChartType}
                 hasLiveData={hasLiveData}
                 hasFundingData={hasSufficientFundingData}
+                mobileSelectorTarget={mobileSelectorEl}
               />
             )}
             {chartType === "live" && prestockAddress && (
@@ -362,6 +370,7 @@ export function CompanyDetailPage({
                 chartType={chartType}
                 onChartTypeChange={setChartType}
                 hasMarketData={hasMarketData}
+                mobileSelectorTarget={mobileSelectorEl}
               />
             )}
           </div>

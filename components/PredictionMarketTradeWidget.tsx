@@ -204,9 +204,25 @@ export function PredictionMarketTradeWidget({
         {data && !isLoading && (
           <>
             {isMobile ? (
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span>Spread {formatSpreadPercent(spreadPercent)}</span>
-                <span>Volume {formatVolume(data.totalVolume)}</span>
+              <div className="grid grid-cols-3 rounded-xl border border-border bg-badge-bg/50 divide-x divide-border overflow-hidden">
+                <div className="px-3 py-2.5 text-center">
+                  <p className="text-[11px] uppercase tracking-wider text-muted mb-0.5">Spread</p>
+                  <p className="text-sm font-semibold text-foreground tabular-nums">
+                    {formatSpreadPercent(spreadPercent)}
+                  </p>
+                </div>
+                <div className="px-3 py-2.5 text-center">
+                  <p className="text-[11px] uppercase tracking-wider text-muted mb-0.5">Volume</p>
+                  <p className="text-sm font-semibold text-foreground tabular-nums">
+                    {formatVolume(data.totalVolume)}
+                  </p>
+                </div>
+                <div className="px-3 py-2.5 text-center">
+                  <p className="text-[11px] uppercase tracking-wider text-muted mb-0.5">Balance</p>
+                  <p className="text-sm font-semibold text-foreground tabular-nums">
+                    ${usdcBalance.toFixed(2)}
+                  </p>
+                </div>
               </div>
             ) : (
               <>
@@ -272,12 +288,14 @@ export function PredictionMarketTradeWidget({
               <>
                 {/* Amount input */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground">Amount (USDC)</span>
-                    <span className="text-xs text-muted">
-                      Balance: ${usdcBalance.toFixed(2)}
-                    </span>
-                  </div>
+                  {!isMobile && (
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-foreground">Amount (USDC)</span>
+                      <span className="text-xs text-muted">
+                        Balance: ${usdcBalance.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <input
                     type="text"
                     inputMode="decimal"
