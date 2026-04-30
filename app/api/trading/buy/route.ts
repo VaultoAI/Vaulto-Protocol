@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const apiKey = getVaultoApiToken();
     const userId = user.tradingWallet.address;
 
-    // Prepare funds for the trade (swap USDC to USDC.e and transfer to Safe)
+    // Prepare funds: send USDC native to Safe, atomically swap+wrap into pUSD on the Safe
     if (privyToken) {
       console.log("[Trading Buy] Preparing funds for trade...");
       const fundResult = await prepareFundsForBuy(

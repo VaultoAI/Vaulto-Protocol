@@ -13,6 +13,10 @@ export const USDC_ADDRESSES = {
   ETHEREUM: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" as const,
 } as const;
 
+// Polymarket V2 collateral token (Polygon).
+// Wrapped 1:1 from USDC.e via the CollateralOnramp.
+export const PUSD_ADDRESS = "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb" as const;
+
 // Chain IDs
 export const CHAIN_IDS = {
   POLYGON: 137,
@@ -65,6 +69,19 @@ export const POLYGON_UNISWAP = {
 
 // Slippage tolerance for stablecoin swaps (in basis points)
 export const SWAP_SLIPPAGE_BPS = 50; // 0.5%
+
+// Polymarket V2 Migration Contract Addresses (April 2026)
+export const POLYMARKET_V2 = {
+  // CollateralOnramp for pUSD wrapping (V2 requires pUSD instead of USDC.e)
+  COLLATERAL_ONRAMP: "0x93070a847efEf7F70739046A929D47a521F5B8ee" as const,
+  // Standard CTF Exchange V2
+  CTF_EXCHANGE_V2: "0xE111180000d2663C0091e4f400237545B87B996B" as const,
+  // NegRisk CTF Exchange V2
+  NEG_RISK_EXCHANGE_V2: "0xe2222d279d744050d28e00520010520000310F59" as const,
+} as const;
+
+// Wrapped MATIC for gas funding swaps
+export const WMATIC_ADDRESS = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270" as const;
 
 // ERC20 ABI for USDC operations (minimal subset needed)
 export const ERC20_ABI = [

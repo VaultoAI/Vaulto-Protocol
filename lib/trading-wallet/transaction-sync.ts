@@ -13,7 +13,7 @@ import {
   type OnChainTransaction,
 } from "@/lib/alchemy/transactions";
 import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-withdrawal";
-import { USDC_ADDRESSES, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
+import { PUSD_ADDRESS, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
 import { fetchPositions } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
 
@@ -24,19 +24,19 @@ const polygonClient = createPublicClient({
 });
 
 /**
- * Get USDC.e (bridged) balance for an address
+ * Get pUSD balance for an address (Polymarket V2 collateral, 1:1 with USD).
  */
-async function getUsdcBridgedBalance(address: `0x${string}`): Promise<bigint> {
+async function getPusdBalance(address: `0x${string}`): Promise<bigint> {
   try {
     const balance = await polygonClient.readContract({
-      address: USDC_ADDRESSES.POLYGON_BRIDGED as `0x${string}`,
+      address: PUSD_ADDRESS as `0x${string}`,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [address],
     });
     return balance as bigint;
   } catch (error) {
-    console.error("[Transaction Sync] Failed to get USDC.e balance:", error);
+    console.error("[Transaction Sync] Failed to get pUSD balance:", error);
     return BigInt(0);
   }
 }
@@ -357,17 +357,17 @@ export async function syncPortfolioHistory(
     }
 
     // Fetch current balances for total calculation
-    // 1. EOA USDC balance (native)
+    // 1. EOA USDC native
     const eoaBalanceBigInt = await getUsdcBalance(
       walletAddress as `0x${string}`,
       chainId
     );
     const eoaBalance = parseFloat(formatUsdcAmount(eoaBalanceBigInt));
 
-    // 2. Safe USDC.e balance (if safeAddress exists)
+    // 2. Safe pUSD balance (1:1 with USD)
     let safeBalance = 0;
     if (safeAddress) {
-      const safeBalanceBigInt = await getUsdcBridgedBalance(safeAddress as `0x${string}`);
+      const safeBalanceBigInt = await getPusdBalance(safeAddress as `0x${string}`);
       safeBalance = parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
     }
 
@@ -378,7 +378,7 @@ export async function syncPortfolioHistory(
       positionsValue = positionTotals.totalValue;
     }
 
-    // Total = EOA USDC + Safe USDC.e + Positions market value
+    // Total = EOA USDC + Safe pUSD + Positions market value
     const currentBalance = eoaBalance + safeBalance + positionsValue;
 
     console.log("[Portfolio Sync] Balance breakdown:", {

@@ -4,7 +4,7 @@ import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-w
 import { getUserEmail } from "@/lib/trading-wallet/get-user-email";
 import { createPublicClient, http, formatEther, formatUnits } from "viem";
 import { polygon } from "viem/chains";
-import { USDC_ADDRESSES, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
+import { PUSD_ADDRESS, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
 
 // Create a public client for Polygon to fetch native MATIC balance
 const polygonClient = createPublicClient({
@@ -25,19 +25,19 @@ async function getMaticBalance(address: `0x${string}`): Promise<bigint> {
 }
 
 /**
- * Get USDC.e (bridged) balance for an address
+ * Get pUSD balance for an address (Polymarket V2 collateral).
  */
-async function getUsdcBridgedBalance(address: `0x${string}`): Promise<bigint> {
+async function getPusdBalance(address: `0x${string}`): Promise<bigint> {
   try {
     const balance = await polygonClient.readContract({
-      address: USDC_ADDRESSES.POLYGON_BRIDGED as `0x${string}`,
+      address: PUSD_ADDRESS as `0x${string}`,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [address],
     });
     return balance as bigint;
   } catch (error) {
-    console.error("[Trading Wallet] Failed to get USDC.e balance:", error);
+    console.error("[Trading Wallet] Failed to get pUSD balance:", error);
     return BigInt(0);
   }
 }
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch on-chain balances in parallel
-    // safeAddress is the Polymarket trading wallet (holds USDC.e)
+    // Fetch on-chain balances in parallel.
+    // safeAddress is the Polymarket trading wallet (holds pUSD).
     const polymarketAddress = tradingWallet.safeAddress;
 
     const balancePromises: Promise<bigint>[] = [
@@ -88,35 +88,30 @@ export async function GET(request: NextRequest) {
       getMaticBalance(tradingWallet.address as `0x${string}`),
     ];
 
-    // Also fetch Safe (Polymarket) USDC.e balance if we have the address
     if (polymarketAddress) {
-      balancePromises.push(
-        getUsdcBridgedBalance(polymarketAddress as `0x${string}`)
-      );
+      balancePromises.push(getPusdBalance(polymarketAddress as `0x${string}`));
     }
 
     const balanceResults = await Promise.all(balancePromises);
     const usdcBalanceBigInt = balanceResults[0];
     const maticBalanceBigInt = balanceResults[1];
-    const safeUsdceBalanceBigInt = polymarketAddress ? balanceResults[2] : BigInt(0);
+    const safePusdBalanceBigInt = polymarketAddress ? balanceResults[2] : BigInt(0);
 
     const usdcBalance = formatUsdcAmount(usdcBalanceBigInt);
     const maticBalance = formatEther(maticBalanceBigInt);
-    const safeUsdceBalance = formatUnits(safeUsdceBalanceBigInt, USDC_DECIMALS);
+    const safePusdBalance = formatUnits(safePusdBalanceBigInt, USDC_DECIMALS);
 
-    // Calculate if MATIC is low (less than 0.01 MATIC for gas)
     const maticLow = parseFloat(maticBalance) < 0.01;
 
-    // Total available for trading = EOA USDC + Safe USDC.e
+    // Total available for trading = EOA USDC + Safe pUSD (1:1 with USD)
     const totalAvailable = (
-      parseFloat(usdcBalance) + parseFloat(safeUsdceBalance)
+      parseFloat(usdcBalance) + parseFloat(safePusdBalance)
     ).toFixed(2);
 
     return NextResponse.json({
       // Legacy fields for backward compatibility
       balance: usdcBalance,
-      balanceUsd: usdcBalance, // USDC is 1:1 with USD
-      // New structured balance fields
+      balanceUsd: usdcBalance,
       usdc: {
         balance: usdcBalance,
         balanceUsd: usdcBalance,
@@ -127,13 +122,12 @@ export async function GET(request: NextRequest) {
         raw: maticBalanceBigInt.toString(),
         low: maticLow,
       },
-      // Polymarket (Safe) wallet balance
+      // Polymarket (Safe) wallet balance -- now pUSD instead of USDC.e
       polymarket: polymarketAddress ? {
         address: polymarketAddress,
-        usdceBalance: safeUsdceBalance,
-        usdceRaw: safeUsdceBalanceBigInt.toString(),
+        pusdBalance: safePusdBalance,
+        pusdRaw: safePusdBalanceBigInt.toString(),
       } : null,
-      // Combined trading balance
       totalAvailable,
       address: tradingWallet.address,
       chainId: tradingWallet.chainId,

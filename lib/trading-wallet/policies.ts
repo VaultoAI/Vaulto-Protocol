@@ -3,7 +3,7 @@
  * Defines withdrawal limits, MFA requirements, and contract allowlists
  */
 
-import { WITHDRAWAL_LIMITS, USDC_ADDRESSES, CHAIN_IDS } from "./constants";
+import { WITHDRAWAL_LIMITS, USDC_ADDRESSES, CHAIN_IDS, PUSD_ADDRESS } from "./constants";
 
 export type UserTier = "STANDARD" | "VERIFIED" | "INSTITUTIONAL";
 
@@ -98,10 +98,12 @@ export function validateWithdrawalAmount(
  * Allowlisted contract addresses for trading operations
  */
 export const ALLOWLISTED_CONTRACTS = {
-  // USDC contracts
+  // Stable tokens. USDC.e retained for residual-balance handling on legacy
+  // wallets; new flow holds only USDC native on EOA and pUSD on Safe.
   tokens: [
     USDC_ADDRESSES.POLYGON_NATIVE,
     USDC_ADDRESSES.POLYGON_BRIDGED,
+    PUSD_ADDRESS,
   ],
   // Add trading protocol contracts here as they're integrated
   trading: [] as string[],

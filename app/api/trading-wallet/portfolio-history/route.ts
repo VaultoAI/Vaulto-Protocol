@@ -4,7 +4,7 @@ import { polygon } from "viem/chains";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { getUsdcBalance, formatUsdcAmount } from "@/lib/trading-wallet/execute-withdrawal";
-import { USDC_ADDRESSES, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
+import { PUSD_ADDRESS, USDC_DECIMALS, ERC20_ABI } from "@/lib/trading-wallet/constants";
 import { filterUsdcTransactions } from "@/lib/alchemy/transactions";
 import {
   getCachedTransactions,
@@ -26,19 +26,19 @@ const polygonClient = createPublicClient({
 });
 
 /**
- * Get USDC.e (bridged) balance for an address
+ * Get pUSD balance for an address (Polymarket V2 collateral, 1:1 with USD).
  */
-async function getUsdcBridgedBalance(address: `0x${string}`): Promise<bigint> {
+async function getPusdBalance(address: `0x${string}`): Promise<bigint> {
   try {
     const balance = await polygonClient.readContract({
-      address: USDC_ADDRESSES.POLYGON_BRIDGED as `0x${string}`,
+      address: PUSD_ADDRESS as `0x${string}`,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [address],
     });
     return balance as bigint;
   } catch (error) {
-    console.error("[Portfolio History] Failed to get USDC.e balance:", error);
+    console.error("[Portfolio History] Failed to get pUSD balance:", error);
     return BigInt(0);
   }
 }
@@ -241,9 +241,9 @@ export async function GET() {
       const polymarketAddress = tradingWallet.safeAddress;
 
       if (tradingWallet.status === "ACTIVE") {
-        // Get Safe USDC.e balance
+        // Get Safe pUSD balance
         if (polymarketAddress) {
-          const safeBalanceBigInt = await getUsdcBridgedBalance(polymarketAddress as `0x${string}`);
+          const safeBalanceBigInt = await getPusdBalance(polymarketAddress as `0x${string}`);
           enhancedCurrentBalance += parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
         }
 
@@ -407,32 +407,32 @@ export async function GET() {
       }
     }
 
-    // Get current total balance including Safe USDC.e and positions
+    // Get current total balance including Safe pUSD and positions
     let currentBalance = runningBalance;
     if (tradingWallet.status === "ACTIVE") {
-      // 1. Get EOA USDC balance (native)
+      // 1. EOA USDC native
       const eoaBalanceBigInt = await getUsdcBalance(
         tradingWallet.address as `0x${string}`,
         tradingWallet.chainId
       );
       const eoaBalance = parseFloat(formatUsdcAmount(eoaBalanceBigInt));
 
-      // 2. Get Safe USDC.e balance if polymarket address exists
+      // 2. Safe pUSD (1:1 with USD)
       let safeBalance = 0;
       const polymarketAddress = tradingWallet.safeAddress;
       if (polymarketAddress) {
-        const safeBalanceBigInt = await getUsdcBridgedBalance(polymarketAddress as `0x${string}`);
+        const safeBalanceBigInt = await getPusdBalance(polymarketAddress as `0x${string}`);
         safeBalance = parseFloat(formatUnits(safeBalanceBigInt, USDC_DECIMALS));
       }
 
-      // 3. Get positions value from Vaulto API
+      // 3. Positions value from Vaulto API
       let positionsValue = 0;
       const positionTotals = await fetchPositionTotals(tradingWallet.address);
       if (positionTotals) {
         positionsValue = positionTotals.totalValue;
       }
 
-      // Total = EOA USDC + Safe USDC.e + Positions market value
+      // Total = EOA USDC + Safe pUSD + Positions market value
       currentBalance = eoaBalance + safeBalance + positionsValue;
 
       console.log("[Portfolio History] Current balance breakdown:", {

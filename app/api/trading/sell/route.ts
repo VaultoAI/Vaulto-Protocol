@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
-import { sellPosition, returnFundsAfterSell } from "@/lib/vaulto-api/trading";
+import { sellPosition } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
 import { triggerBackgroundSnapshot } from "@/lib/trading-wallet/portfolio-snapshot";
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log successful sale to database
-    if (result.proceeds !== undefined) {
+    if (result.success) {
       try {
         // Calculate the percentage sold for the record
         const percentageSold = percentage || (shares && totalShares ? Math.round((shares / totalShares) * 100) : 100);
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         // Calculate realized P&L if we have cost basis
         const realizedPnl = saleCostBasis !== null
-          ? result.proceeds - saleCostBasis
+          ? (result.proceeds ?? 0) - saleCostBasis
           : 0;
 
         await db.predictionMarketSale.create({
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
             side: side || "LONG",
             sharesSold,
             percentage: percentageSold,
-            proceeds: result.proceeds,
+            proceeds: result.proceeds ?? 0,
             realizedPnl,
             costBasis: saleCostBasis,
             avgEntryPrice: avgEntryPrice || null,
@@ -169,21 +169,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Optionally return funds from Safe to EOA (non-blocking)
-    // Funds will remain in Safe for subsequent trades if this is skipped
-    if (privyToken && result.proceeds && result.proceeds > 0) {
-      // Fire and forget - don't block the response
-      returnFundsAfterSell(apiKey, privyToken, userId, false)
-        .then((fundResult) => {
-          if (fundResult.success) {
-            console.log("[Trading Sell] Funds returned successfully:", fundResult.amountReturned);
-          } else {
-            console.warn("[Trading Sell] Fund return failed (non-blocking):", fundResult.error);
-          }
-        })
-        .catch((err) => {
-          console.error("[Trading Sell] Fund return error (non-blocking):", err);
-        });
+    // Auto-sweep is owned by the Vaulto API sell endpoint now: it returns
+    // returnFundsTxHash, usdcReturned, and returnFundsError on `result`.
+    // No frontend-side coordination needed.
+    if (result.returnFundsTxHash) {
+      console.log(
+        `[Trading Sell] Auto-sweep delivered ${result.usdcReturned} USDC to EOA: ${result.returnFundsTxHash}`,
+      );
+    } else if (result.returnFundsError) {
+      console.warn(`[Trading Sell] Auto-sweep failed: ${result.returnFundsError}`);
     }
 
     // Trigger portfolio snapshot in background (non-blocking)

@@ -191,8 +191,8 @@ export interface BalanceResponse {
   };
   polymarket?: {
     address: string;
-    usdceBalance: string;
-    usdceRaw: string;
+    pusdBalance: string;
+    pusdRaw: string;
   } | null;
   totalAvailable?: string;
   address?: string;
@@ -554,7 +554,7 @@ export function useTradingWallet() {
   const balanceUsd = balanceData?.balanceUsd ?? tradingWallet?.balanceUsd ?? "0";
   const maticBalance = balanceData?.matic?.balance ?? "0";
   const maticLow = balanceData?.matic?.low ?? false;
-  const polymarketBalance = balanceData?.polymarket?.usdceBalance ?? "0";
+  const polymarketBalance = balanceData?.polymarket?.pusdBalance ?? "0";
   const totalAvailable = balanceData?.totalAvailable ?? balance;
   const isActive = tradingWallet?.status === "ACTIVE";
   // Only show creation prompt when auto-creation failed (so manual prompt shows as fallback)

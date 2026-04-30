@@ -93,6 +93,11 @@ export interface SellPositionResponse {
   remainingShares?: number;
   exitPrice?: number;
   error?: string;
+  // Backend auto-sweep: pUSD proceeds -> USDC native delivered to EOA via
+  // atomic Safe multiSend. Populated when sell succeeds with proceeds > 0.
+  returnFundsTxHash?: string;
+  usdcReturned?: string; // formatted USDC amount delivered to EOA
+  returnFundsError?: string;
 }
 
 // Credential setup types
@@ -119,13 +124,13 @@ export interface PrepareFundsResponse {
   success: boolean;
   ready: boolean;
   transactions?: {
-    swapTxHash?: string;
-    transferTxHash?: string;
+    maticSwapTxHash?: string;        // MATIC funding for EOA gas
+    eoaTransferTxHash?: string;      // EOA -> Safe USDC native transfer
+    safeMultiSendTxHash?: string;    // Atomic Safe swap+wrap (USDC -> USDC.e -> pUSD)
   };
   balances?: {
     privyUsdcNative: string;
-    privyUsdcBridged: string;
-    safeUsdcBridged: string;
+    safePusd: string;
   };
   error?: string;
 }
@@ -133,8 +138,7 @@ export interface PrepareFundsResponse {
 export interface ReturnFundsResponse {
   success: boolean;
   transactions?: {
-    transferTxHash?: string;
-    swapTxHash?: string;
+    safeMultiSendTxHash?: string;
   };
   amountReturned?: string;
   error?: string;
@@ -148,8 +152,7 @@ export interface WalletInfoResponse {
   safeDeployed?: boolean;
   balances?: {
     eoaUsdcNative: string;
-    eoaUsdcBridged: string;
-    safeUsdcBridged: string;
+    safePusd: string;
   };
   error?: string;
 }
@@ -159,8 +162,7 @@ export interface CombinedBalanceResponse {
   available?: string;
   breakdown?: {
     eoaUsdcNative: string;
-    eoaUsdcBridged: string;
-    safeUsdcBridged: string;
+    safePusd: string;
   };
   error?: string;
 }
@@ -629,24 +631,28 @@ export async function prepareFundsForBuy(
 }
 
 /**
- * Return funds from Safe to EOA wallet after selling
+ * Return funds from Safe to EOA wallet.
  *
- * @param swapToNative Whether to swap USDC.e back to USDC
+ * Atomically unwraps pUSD -> USDC.e and swaps to USDC native delivered to the
+ * EOA via a Safe multiSend. USDC.e is a transient hop, never held.
+ *
+ * The legacy `swapToNative` boolean is accepted for backward compat but
+ * ignored: the reverse path always lands USDC native on the EOA.
  */
 export async function returnFundsAfterSell(
   apiKey: string,
   privyAuthToken: string,
   walletAddress?: string,
-  swapToNative: boolean = false
+  _swapToNative: boolean = false
 ): Promise<ReturnFundsResponse> {
   const url = `${getBaseUrl()}/api/trading/return-funds`;
 
-  console.log(`[Vaulto Trading API] Returning funds, swapToNative=${swapToNative}`);
+  console.log(`[Vaulto Trading API] Returning funds`);
 
   const response = await fetch(url, {
     method: "POST",
     headers: getAuthHeaders(apiKey, privyAuthToken, walletAddress),
-    body: JSON.stringify({ swapToNative }),
+    body: JSON.stringify({}),
   });
 
   return handleResponse<ReturnFundsResponse>(response, url);
