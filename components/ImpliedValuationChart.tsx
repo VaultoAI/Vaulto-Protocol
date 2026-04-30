@@ -300,11 +300,24 @@ export function ImpliedValuationChart({
     const values = history.map((h) => h.value);
     const mn = Math.min(...values);
     const mx = Math.max(...values);
-    const range = mx - mn || 1;
+
+    // Enforce a minimum visual range so tiny real movements don't get
+    // stretched across the full chart height and look like wild swings.
+    const MIN_RANGE_PCT = 0.02;
+    const PADDING_PCT = 0.08;
+    const mid = (mn + mx) / 2;
+    const dataRange = mx - mn;
+    const minRange = Math.abs(mid) * MIN_RANGE_PCT;
+    const effectiveRange = Math.max(dataRange, minRange) || 1;
+    const half = effectiveRange / 2;
+    const pad = effectiveRange * PADDING_PCT;
+    const domainMin = mid - half - pad;
+    const domainMax = mid + half + pad;
+    const domainRange = domainMax - domainMin || 1;
 
     const pts = history.map((h, i) => ({
       x: padding.left + (i / (history.length - 1)) * innerWidth,
-      y: padding.top + innerHeight - ((h.value - mn) / range) * innerHeight,
+      y: padding.top + innerHeight - ((h.value - domainMin) / domainRange) * innerHeight,
       timestamp: h.timestamp,
       value: h.value,
       noIpoProbability: h.noIpoProbability,
