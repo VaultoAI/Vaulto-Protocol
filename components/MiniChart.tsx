@@ -27,6 +27,8 @@ interface MiniChartProps {
   disableTouch?: boolean;
   /** Disable all hover interactions (mouse and touch) */
   disableHover?: boolean;
+  /** Disable the left-to-right reveal animation on mount */
+  disableAnimation?: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ export function MiniChart({
   onHover,
   disableTouch = false,
   disableHover = false,
+  disableAnimation = false,
 }: MiniChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -154,22 +157,24 @@ export function MiniChart({
           <stop offset="0%" stopColor={color} stopOpacity={0.15} />
           <stop offset="100%" stopColor={color} stopOpacity={0.02} />
         </linearGradient>
-        <clipPath id={clipId}>
-          <rect x="0" y="0" width={width} height={height}>
-            <animate
-              attributeName="width"
-              from="0"
-              to={width}
-              dur="1.2s"
-              fill="freeze"
-              calcMode="spline"
-              keyTimes="0;1"
-              keySplines="0.25 0.1 0.25 1"
-            />
-          </rect>
-        </clipPath>
+        {!disableAnimation && (
+          <clipPath id={clipId}>
+            <rect x="0" y="0" width={width} height={height}>
+              <animate
+                attributeName="width"
+                from="0"
+                to={width}
+                dur="1.2s"
+                fill="freeze"
+                calcMode="spline"
+                keyTimes="0;1"
+                keySplines="0.25 0.1 0.25 1"
+              />
+            </rect>
+          </clipPath>
+        )}
       </defs>
-      <g clipPath={`url(#${clipId})`}>
+      <g clipPath={disableAnimation ? undefined : `url(#${clipId})`}>
         {showGradient && (
           <path d={gradientPath} fill={`url(#${gradientId})`} />
         )}

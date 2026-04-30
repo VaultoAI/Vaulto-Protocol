@@ -122,6 +122,7 @@ export function AssetCard({ company }: AssetCardProps) {
               strokeWidth={1.5}
               disableTouch
               disableHover
+              disableAnimation
             />
           ) : (
             <div className="h-[90px] flex items-center justify-center">
