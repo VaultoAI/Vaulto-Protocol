@@ -85,7 +85,7 @@ export function MobileInstallBanner() {
     <div
       role="dialog"
       aria-label="Install Vaulto"
-      className="sticky top-0 z-[60] flex items-center gap-3 border-b border-neutral-800 bg-neutral-950 px-3 py-2 text-white shadow-lg sm:hidden"
+      className="sticky top-0 z-[60] flex h-16 items-center gap-3 border-b border-neutral-800 bg-neutral-950 px-3 text-white shadow-lg sm:hidden"
     >
       <img
         src="/icon-192.png"
