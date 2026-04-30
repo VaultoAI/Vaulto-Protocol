@@ -161,6 +161,7 @@ export interface ImpliedValuationHistoryResponse {
   category: string;
   metadata?: ImpliedValuationMetadata;
   totalVolume?: number | null;
+  endDate?: string | null;
 }
 
 /** Response from /api/implied-valuations/:companySlug */
@@ -175,6 +176,7 @@ export interface ImpliedValuationResponse {
   timestamp: string;
   category: string;
   marketType: string;
+  endDate?: string | null;
 }
 
 /** Company summary from /api/implied-valuations */
@@ -186,6 +188,7 @@ export interface ImpliedValuationSummary {
   totalVolume: number | null;
   timestamp: string;
   category: string;
+  endDate?: string | null;
 }
 
 /** Response from /api/implied-valuations */
@@ -196,6 +199,46 @@ export interface AllImpliedValuationsResponse {
 }
 
 export type TimeRange = "1D" | "1W" | "1M" | "3M" | "ALL";
+
+/**
+ * Map of vaulto company slug → canonical Polymarket event slug.
+ * Used as a fallback path to fetch endDate directly from Polymarket when the
+ * vaulto-api response is missing it.
+ */
+const POLYMARKET_EVENT_SLUG_MAP: Record<string, string> = {
+  spacex: "spacex-ipo-closing-market-cap",
+  openai: "openai-ipo-closing-market-cap",
+  anthropic: "anthropic-ipo-closing-market-cap-119",
+  perplexity: "perplexity-ipo-closing-market-cap",
+  stripe: "stripe-ipo-closing-market-cap",
+  discord: "discord-ipo-closing-market-cap",
+  databricks: "databricks-ipo-closing-market-cap",
+  strava: "strava-ipo-closing-market-cap",
+  "fannie-mae": "fannie-mae-ipo-closing-market-cap",
+  "freddie-mac": "freddie-mac-ipo-closing-market-cap",
+  "clear-street-group": "clear-street-group-ipo-closing-market-cap",
+  "liftoff-mobile": "liftoff-mobile-ipo-closing-market-cap",
+  kraken: "kraken-ipo-closing-market-cap-above",
+  megaeth: "megaeth-market-cap-fdv-one-day-after-launch",
+};
+
+export async function fetchPolymarketEndDate(
+  companySlug: string
+): Promise<string | null> {
+  const eventSlug = POLYMARKET_EVENT_SLUG_MAP[companySlug];
+  if (!eventSlug) return null;
+  try {
+    const res = await fetch(
+      `https://gamma-api.polymarket.com/events/slug/${eventSlug}`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { endDate?: string | null };
+    return data.endDate ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const IMPLIED_VALUATIONS_API_URL =
   process.env.NEXT_PUBLIC_IMPLIED_VALUATIONS_API_URL ||
@@ -239,10 +282,19 @@ async function fetchImpliedValuationHistoryUncached(
       companySlug,
     });
 
+    let endDate = data.endDate ?? null;
+    if (!endDate) {
+      endDate =
+        (await fetchPolymarketEndDate(companySlug)) ??
+        IPO_MARKET_END_DATES[companySlug] ??
+        null;
+    }
+
     return {
       ...data,
       history: filteredHistory,
       dataPoints: filteredHistory.length,
+      endDate,
     };
   } catch (error) {
     console.error("Failed to fetch implied valuation history:", error);
@@ -253,7 +305,7 @@ async function fetchImpliedValuationHistoryUncached(
 /**
  * Cache version - increment to invalidate stale unfiltered data
  */
-const HISTORY_CACHE_VERSION = "v2";
+const HISTORY_CACHE_VERSION = "v3";
 
 /**
  * Cached fetch for implied valuation history (5 min cache)
@@ -297,7 +349,15 @@ async function fetchImpliedValuationUncached(
       return null;
     }
 
-    return (await res.json()) as ImpliedValuationResponse;
+    const data = (await res.json()) as ImpliedValuationResponse;
+    let endDate = data.endDate ?? null;
+    if (!endDate) {
+      endDate =
+        (await fetchPolymarketEndDate(companySlug)) ??
+        IPO_MARKET_END_DATES[companySlug] ??
+        null;
+    }
+    return { ...data, endDate };
   } catch (error) {
     console.error("Failed to fetch implied valuation:", error);
     return null;
@@ -423,26 +483,25 @@ export const COMPANY_SLUG_MAP: Record<string, string> = {
 };
 
 /**
- * Map of company slugs to their Polymarket IPO market expiry dates
- * These are the resolution dates for the "Will X IPO by end of June 2026?" markets
+ * Fallback map of company slugs to their Polymarket IPO market resolution
+ * dates. Used only when the vaulto-api response (which mirrors Polymarket's
+ * authoritative `endDate`) does not include one. Values mirror Polymarket as
+ * of the last manual sync; the API is the source of truth.
  */
 export const IPO_MARKET_END_DATES: Record<string, string> = {
-  spacex: "2026-06-30",
-  openai: "2026-06-30",
-  anthropic: "2026-06-30",
-  perplexity: "2026-06-30",
+  openai: "2026-12-31",
+  anthropic: "2027-12-31",
+  perplexity: "2027-12-31",
   stripe: "2026-06-30",
   discord: "2026-06-30",
   databricks: "2026-06-30",
-  strava: "2026-06-30",
+  strava: "2027-12-31",
   "fannie-mae": "2026-06-30",
   "freddie-mac": "2026-06-30",
-  "clear-street-group": "2026-06-30",
-  "liftoff-mobile": "2026-06-30",
-  kraken: "2026-06-30",
-  consensys: "2026-06-30",
-  ledger: "2026-06-30",
-  megaeth: "2026-06-30",
+  "clear-street-group": "2026-03-31",
+  "liftoff-mobile": "2026-03-31",
+  kraken: "2027-01-01",
+  megaeth: "2026-07-01",
 };
 
 /**
@@ -453,17 +512,28 @@ export function getIPOMarketEndDate(companySlug: string): string | null {
 }
 
 /**
- * Format the IPO market expiry date for display
+ * Format the IPO market expiry date for display.
+ * Renders the calendar date in UTC so an ISO timestamp at midnight UTC does
+ * not display as the previous day for users west of UTC.
  */
-export function formatIPOExpiryDate(dateStr: string | null): string {
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+export function formatIPOExpiryDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "—";
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  } catch {
-    return "—";
-  }
+  // Parse the calendar date directly from the leading YYYY-MM-DD portion of
+  // the ISO string. This sidesteps timezone conversion entirely so a
+  // midnight-UTC resolution date does not display as the previous day for
+  // users west of UTC. The Polymarket resolution date is the calendar date.
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+  if (!match) return "—";
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12) return "—";
+  return `${MONTH_ABBR[month - 1]} ${day}, ${year}`;
 }
 
 /**
