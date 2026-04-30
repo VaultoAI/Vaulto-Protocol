@@ -781,9 +781,9 @@ export function DepositPageClient() {
                       <p className="text-xs font-medium text-foreground sm:text-sm">
                         {getTypeLabel()}
                       </p>
-                      {/* Show shares and price for prediction trades */}
+                      {/* Show shares and price for prediction trades (hidden on mobile) */}
                       {(isPredictionBuy || isPredictionSell) && typeof tx.shares === 'number' && tx.shares > 0 && tx.averagePrice && (
-                        <p className="text-xs text-muted">
+                        <p className="hidden text-xs text-muted sm:block">
                           {tx.shares.toFixed(2)} shares @ ${tx.averagePrice.toFixed(3)}
                         </p>
                       )}
@@ -813,9 +813,13 @@ export function DepositPageClient() {
                           maximumFractionDigits: 2,
                         })}
                       </span>
-                    ) : (
+                    ) : (tx.status === "PENDING" || tx.status === "PENDING_APPROVAL" || tx.status === "SUBMITTED" || tx.status === "PROCESSING" || tx.status === "CONFIRMING") ? (
                       <span className="text-base font-medium sm:text-lg text-muted">
                         Pending
+                      </span>
+                    ) : (
+                      <span className="text-base font-medium sm:text-lg text-muted">
+                        —
                       </span>
                     )}
                     {externalUrl && !isInternalLink && (

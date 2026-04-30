@@ -88,6 +88,8 @@ export async function GET() {
                 costBasis: true,
                 avgEntryPrice: true,
                 exitPrice: true,
+                usdcReturned: true,
+                returnFundsTxHash: true,
                 status: true,
                 createdAt: true,
                 completedAt: true,
@@ -202,12 +204,18 @@ export async function GET() {
 
     // Add prediction market sales from database
     for (const sale of tradingWallet.predictionSales) {
+      // Prefer recorded proceeds; fall back to the auto-swept USDC delivery
+      // amount when proceeds wasn't captured at sell time.
+      const proceedsNum = Number(sale.proceeds);
+      const sweepNum = sale.usdcReturned ? Number(sale.usdcReturned) : 0;
+      const amount = proceedsNum > 0 ? proceedsNum : sweepNum;
+
       allTransactions.push({
         id: sale.id,
         type: sale.side === "LONG" ? "sell_long" : "sell_short",
-        amount: Number(sale.proceeds),
+        amount,
         status: sale.status,
-        txHash: null,
+        txHash: sale.returnFundsTxHash ?? null,
         timestamp: (sale.completedAt ?? sale.createdAt).toISOString(),
         address: tradingWallet.address,
         eventId: sale.eventId,

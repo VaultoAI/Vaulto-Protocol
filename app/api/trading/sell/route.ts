@@ -139,9 +139,14 @@ export async function POST(request: NextRequest) {
           ? (sharesSold / (totalShares || sharesSold)) * costBasis
           : null;
 
-        // Calculate realized P&L if we have cost basis
+        // Proceeds: prefer Vaulto's reported proceeds, fall back to the
+        // auto-swept USDC amount delivered to the EOA (ground truth when
+        // the sweep succeeded).
+        const sweepUsdc = result.usdcReturned ? Number(result.usdcReturned) : null;
+        const proceeds = result.proceeds ?? sweepUsdc ?? 0;
+
         const realizedPnl = saleCostBasis !== null
-          ? (result.proceeds ?? 0) - saleCostBasis
+          ? proceeds - saleCostBasis
           : 0;
 
         await db.predictionMarketSale.create({
@@ -154,11 +159,13 @@ export async function POST(request: NextRequest) {
             side: side || "LONG",
             sharesSold,
             percentage: percentageSold,
-            proceeds: result.proceeds ?? 0,
+            proceeds,
             realizedPnl,
             costBasis: saleCostBasis,
             avgEntryPrice: avgEntryPrice || null,
             exitPrice: result.exitPrice || null,
+            usdcReturned: sweepUsdc,
+            returnFundsTxHash: result.returnFundsTxHash ?? null,
             status: "COMPLETED",
             completedAt: new Date(),
           },

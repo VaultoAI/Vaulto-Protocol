@@ -150,7 +150,8 @@ export async function POST(request: NextRequest) {
     // Record the sale in the database
     if (sellResult.success) {
       try {
-        const proceeds = sellResult.proceeds ?? 0;
+        const sweepUsdc = sellResult.usdcReturned ? Number(sellResult.usdcReturned) : null;
+        const proceeds = sellResult.proceeds ?? sweepUsdc ?? 0;
         const sharesSold = sellResult.sharesSold ?? positionMetadata?.shares ?? 0;
         const costBasis = positionMetadata?.costBasis ?? null;
         const realizedPnl = costBasis !== null ? proceeds - costBasis : 0;
@@ -170,6 +171,8 @@ export async function POST(request: NextRequest) {
             costBasis,
             avgEntryPrice: positionMetadata?.entryPrice ?? null,
             exitPrice: sellResult.exitPrice ?? null,
+            usdcReturned: sweepUsdc,
+            returnFundsTxHash: sellResult.returnFundsTxHash ?? null,
             status: "COMPLETED",
             completedAt: new Date(),
           },

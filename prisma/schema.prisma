@@ -804,6 +804,10 @@ model PredictionMarketSale {
   status            String        @default("PENDING") // PENDING, COMPLETED, FAILED
   errorMessage      String?
 
+  // Auto-sweep delivery — pUSD proceeds converted to USDC and sent to user EOA
+  usdcReturned      Decimal?      @db.Decimal(20, 6)
+  returnFundsTxHash String?
+
   createdAt         DateTime      @default(now())
   completedAt       DateTime?
 

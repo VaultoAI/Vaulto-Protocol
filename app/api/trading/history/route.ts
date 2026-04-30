@@ -100,6 +100,10 @@ export async function GET(request: NextRequest) {
 
     // Add sell trades
     for (const sale of user.tradingWallet.predictionSales) {
+      const proceedsNum = Number(sale.proceeds);
+      const sweepNum = sale.usdcReturned ? Number(sale.usdcReturned) : 0;
+      const effectiveProceeds = proceedsNum > 0 ? proceedsNum : sweepNum;
+
       trades.push({
         id: sale.id,
         type: "SELL",
@@ -108,7 +112,7 @@ export async function GET(request: NextRequest) {
         side: sale.side,
         shares: Number(sale.sharesSold),
         percentage: sale.percentage,
-        proceeds: Number(sale.proceeds),
+        proceeds: effectiveProceeds,
         realizedPnl: Number(sale.realizedPnl),
         status: sale.status,
         createdAt: sale.createdAt.toISOString(),
@@ -124,7 +128,10 @@ export async function GET(request: NextRequest) {
     const completedSales = user.tradingWallet.predictionSales.filter(s => s.status === "COMPLETED");
 
     const totalBuys = completedBuys.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const totalSells = completedSales.reduce((sum, s) => sum + Number(s.proceeds || 0), 0);
+    const totalSells = completedSales.reduce((sum, s) => {
+      const p = Number(s.proceeds || 0);
+      return sum + (p > 0 ? p : Number(s.usdcReturned || 0));
+    }, 0);
     const totalRealizedPnl = completedSales.reduce((sum, s) => sum + Number(s.realizedPnl || 0), 0);
     const totalVolume = totalBuys + totalSells;
 
