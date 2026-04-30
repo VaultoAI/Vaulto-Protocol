@@ -39,7 +39,8 @@ export interface CompanyIPO {
 const IPO_EVENTS = [
   { eventId: "307967", company: "SpaceX", slug: "spacex-ipo-closing-market-cap", website: "https://www.spacex.com" },
   { eventId: "48292", company: "OpenAI", slug: "openai-ipo-closing-market-cap", website: "https://openai.com" },
-  { eventId: "48300", company: "Anthropic", slug: "anthropic-ipo-closing-market-cap", website: "https://www.anthropic.com" },
+  { eventId: "197776", company: "Anthropic", slug: "anthropic-ipo-closing-market-cap-119", website: "https://www.anthropic.com" },
+  { eventId: "145689", company: "Perplexity", slug: "perplexity-ipo-closing-market-cap", website: "https://www.perplexity.ai" },
   { eventId: "48298", company: "Stripe", slug: "stripe-ipo-closing-market-cap", website: "https://stripe.com" },
   { eventId: "48297", company: "Databricks", slug: "databricks-ipo-closing-market-cap", website: "https://www.databricks.com" },
   { eventId: "48299", company: "Discord", slug: "discord-ipo-closing-market-cap", website: "https://discord.com" },

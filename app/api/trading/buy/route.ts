@@ -9,7 +9,7 @@ import { triggerBackgroundSnapshot } from "@/lib/trading-wallet/portfolio-snapsh
 const EVENT_TO_COMPANY: Record<string, string> = {
   "spacex-ipo-closing-market-cap": "SpaceX",
   "openai-ipo-closing-market-cap": "OpenAI",
-  "anthropic-ipo-closing-market-cap": "Anthropic",
+  "anthropic-ipo-closing-market-cap-119": "Anthropic",
   "stripe-ipo-closing-market-cap": "Stripe",
   "databricks-ipo-closing-market-cap": "Databricks",
   "discord-ipo-closing-market-cap": "Discord",
