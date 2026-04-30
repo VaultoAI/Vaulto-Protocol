@@ -69,9 +69,9 @@ export function MobileSignIn() {
         <button
           onClick={() => ready && !isSigningIn && login()}
           disabled={!ready || isSigningIn}
-          className="w-full rounded-xl bg-[var(--foreground)] py-4 text-base font-medium text-[var(--background)] transition-opacity disabled:opacity-50"
+          className="w-full rounded-xl bg-black py-4 text-base font-medium text-white transition-opacity disabled:opacity-50"
         >
-          {isSigningIn ? "Signing in..." : "Sign in"}
+          {isSigningIn ? "Signing in..." : "Sign in with Privy"}
         </button>
         <p className="mt-4 text-center text-xs text-gray-500">
           By signing in, you agree to our{" "}
