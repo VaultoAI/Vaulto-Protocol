@@ -12,7 +12,7 @@ interface PredictionPositionCardProps {
 
 export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: PredictionPositionCardProps) {
   const { authenticated } = usePrivy();
-  const { getPositionForEvent, sell, isSelling, isLoadingPositions } = usePredictionTrading({
+  const { getPositionForEvent, getPositionsForEvent, sell, isSelling, isLoadingPositions } = usePredictionTrading({
     fetchPositions: true,
   });
 
@@ -87,24 +87,46 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
 
     setSellError(null);
     try {
-      const result = await sell(position.id, {
-        percentage: 100,
-        totalShares: position.shares,
-        // Pass position metadata for database logging
-        eventId: position.eventId,
-        eventName: position.eventName,
-        company: position.company,
-        side: position.side,
-        costBasis: position.costBasis,
-        avgEntryPrice: position.entryPrice,
-      });
+      // A single event (e.g. SpaceX IPO closing market cap) often has the user
+      // holding multiple outcome bands at once. The aggregated `position` shows
+      // their combined exposure but only carries the first band's id, so calling
+      // sell once would leave the other bands open. Sell every band that has
+      // shares so "Sell" really means "exit this event".
+      const bands = getPositionsForEvent(eventSlug, position.side).filter(
+        (b) => b.shares > 0
+      );
+
+      const results = await Promise.all(
+        bands.map((band) =>
+          sell(band.id, {
+            percentage: 100,
+            totalShares: band.shares,
+            eventId: band.eventId,
+            eventName: band.eventName,
+            company: band.company,
+            side: band.side,
+            costBasis: band.costBasis,
+            avgEntryPrice: band.entryPrice,
+          })
+        )
+      );
+
+      const totalProceeds = results.reduce((sum, r) => sum + (r.proceeds || 0), 0);
+      const totalSharesSold = results.reduce((sum, r) => sum + (r.sharesSold || 0), 0);
+      const weightedExitPrice =
+        totalSharesSold > 0
+          ? results.reduce(
+              (sum, r) => sum + (r.exitPrice || 0) * (r.sharesSold || 0),
+              0
+            ) / totalSharesSold
+          : undefined;
 
       // Show success confirmation
       setSellResult({
         success: true,
-        proceeds: result.proceeds || estimatedProceeds,
-        sharesSold: result.sharesSold || sharesToSell,
-        exitPrice: result.exitPrice,
+        proceeds: totalProceeds || estimatedProceeds,
+        sharesSold: totalSharesSold || sharesToSell,
+        exitPrice: weightedExitPrice,
       });
 
       setShowConfirm(false);
