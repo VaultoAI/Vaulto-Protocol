@@ -184,7 +184,9 @@ async function sellPosition(params: SellPositionWithAuthParams): Promise<SellPos
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.error || "Failed to sell position");
+    const err = new Error(data.error || "Failed to sell position") as Error & { code?: string };
+    if (data.errorCode) err.code = data.errorCode;
+    throw err;
   }
 
   return data;

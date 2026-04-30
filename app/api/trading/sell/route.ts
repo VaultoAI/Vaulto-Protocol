@@ -130,9 +130,13 @@ export async function POST(request: NextRequest) {
     // Log successful sale to database
     if (result.success) {
       try {
-        // Calculate the percentage sold for the record
-        const percentageSold = percentage || (shares && totalShares ? Math.round((shares / totalShares) * 100) : 100);
-        const sharesSold = result.sharesSold || shares || 0;
+        // Use what actually executed (Vaulto-API now reports the real filled
+        // shares for FAK partial fills) so the DB row reflects on-chain truth,
+        // not the requested amount.
+        const sharesSold = result.sharesSold ?? shares ?? 0;
+        const percentageSold = sharesSold && totalShares
+          ? Math.round((sharesSold / totalShares) * 100)
+          : percentage ?? 100;
 
         // Calculate cost basis for shares sold if provided
         const saleCostBasis = costBasis !== undefined
@@ -198,9 +202,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("[Trading Sell] Error:", error);
+    const message = error instanceof Error ? error.message : "Failed to sell position";
+    const code = (error as { code?: string } | null)?.code;
+    // Preserve a stable errorCode (NO_LIQUIDITY, INSUFFICIENT_BALANCE, …)
+    // so the UI can render a friendly message rather than raw HTTP text.
+    const isClientError = code === "NO_LIQUIDITY"
+      || code === "INSUFFICIENT_BALANCE"
+      || code === "TRADE_FAILED"
+      || code === "BAD_REQUEST";
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to sell position" },
-      { status: 500 }
+      { error: message, errorCode: code },
+      { status: isClientError ? 400 : 500 }
     );
   }
 }

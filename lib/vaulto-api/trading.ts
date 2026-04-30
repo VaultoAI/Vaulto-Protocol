@@ -93,6 +93,8 @@ export interface SellPositionResponse {
   remainingShares?: number;
   exitPrice?: number;
   error?: string;
+  errorCode?: "NO_LIQUIDITY" | "INSUFFICIENT_BALANCE" | "TRADE_FAILED" | string;
+  partialFill?: boolean;
   // Backend auto-sweep: pUSD proceeds -> USDC native delivered to EOA via
   // atomic Safe multiSend. Populated when sell succeeds with proceeds > 0.
   returnFundsTxHash?: string;
@@ -233,14 +235,16 @@ async function handleResponse<T>(response: Response, url: string): Promise<T> {
   }
 
   if (!response.ok) {
-    const errorData = data as { error?: string; message?: string };
+    const errorData = data as { error?: string; message?: string; code?: string };
     const errorMsg = errorData?.error || errorData?.message || `Request failed: ${response.status}`;
     console.error(`[Vaulto Trading API] Error response from ${url}:`, {
       status: response.status,
       error: errorMsg,
       data,
     });
-    throw new Error(errorMsg);
+    const err = new Error(errorMsg) as Error & { code?: string };
+    if (errorData?.code) err.code = errorData.code;
+    throw err;
   }
 
   // Log successful response for debugging

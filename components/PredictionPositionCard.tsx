@@ -10,6 +10,26 @@ interface PredictionPositionCardProps {
   onCloseAndWithdraw?: (positionId: string) => void;
 }
 
+function friendlySellError(code: string | undefined, fallback: string): string {
+  switch (code) {
+    case "NO_LIQUIDITY":
+      return "No buyers available right now. Try again in a moment, or accept higher slippage.";
+    case "INSUFFICIENT_BALANCE":
+      return "Trading wallet doesn't have enough balance — open Polymarket once to refresh approvals, then retry.";
+    default:
+      return fallback;
+  }
+}
+
+// The frontend /api/trading/sell route returns errorCode in the body; some
+// callers (the hook) only surface the message, so as a fallback we sniff for
+// the code in the message text.
+function extractErrorCode(message: string): string | undefined {
+  if (/no liquidity/i.test(message)) return "NO_LIQUIDITY";
+  if (/balance|allowance/i.test(message)) return "INSUFFICIENT_BALANCE";
+  return undefined;
+}
+
 export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: PredictionPositionCardProps) {
   const { authenticated } = usePrivy();
   const { getPositionForEvent, getPositionsForEvent, sell, isSelling, isLoadingPositions } = usePredictionTrading({
@@ -23,6 +43,7 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
     proceeds: number;
     sharesSold: number;
     exitPrice?: number;
+    partialFill?: boolean;
   } | null>(null);
 
   // Check if market has expired - find the slug from company name or eventSlug
@@ -121,22 +142,31 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
             ) / totalSharesSold
           : undefined;
 
+      // Any band that partially filled flags the whole sell as partial — the
+      // user still has shares left and we want to surface that to them.
+      const anyPartial = results.some((r) => (r as { partialFill?: boolean }).partialFill);
+
       // Show success confirmation
       setSellResult({
         success: true,
         proceeds: totalProceeds || estimatedProceeds,
         sharesSold: totalSharesSold || sharesToSell,
         exitPrice: weightedExitPrice,
+        partialFill: anyPartial,
       });
 
       setShowConfirm(false);
 
-      // Auto-clear success after 4 seconds
-      setTimeout(() => setSellResult(null), 4000);
+      // Auto-clear success after 4 seconds (longer for partial fills so the
+      // user has time to read the explanation).
+      setTimeout(() => setSellResult(null), anyPartial ? 8000 : 4000);
     } catch (error) {
       console.error("Failed to sell:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to sell position";
-      setSellError(errorMessage);
+      const rawMessage = error instanceof Error ? error.message : "Failed to sell position";
+      const code = (error as { code?: string } | null)?.code
+        ?? extractErrorCode(rawMessage);
+      const friendly = friendlySellError(code, rawMessage);
+      setSellError(friendly);
       setShowConfirm(false);
     }
   };
@@ -162,6 +192,11 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
         {sellResult.exitPrice !== undefined && (
           <p className="mt-1 text-xs text-muted">
             Exit price ${sellResult.exitPrice.toFixed(3)}
+          </p>
+        )}
+        {sellResult.partialFill && (
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            Partial fill — only some shares could be sold at the available price. The remaining shares are still in your position.
           </p>
         )}
       </div>
