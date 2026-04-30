@@ -181,10 +181,10 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
         <button
           onClick={handleSell}
           disabled={isSelling || marketExpired}
-          className={`w-full rounded-xl py-2.5 text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
             showConfirm
-              ? "bg-red-600 hover:bg-red-700"
-              : "bg-red hover:bg-red/90"
+              ? "bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+              : "bg-red text-white hover:bg-red/90"
           }`}
         >
           {marketExpired
