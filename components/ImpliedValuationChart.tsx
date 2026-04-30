@@ -700,7 +700,7 @@ export function ImpliedValuationChart({
       </div>
 
       {/* Current implied valuation summary */}
-      <div className="mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">
+      <div className="hidden lg:block mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">
         <div className="flex items-center justify-between">
           {/* Left: Valuation */}
           <div>
@@ -723,7 +723,7 @@ export function ImpliedValuationChart({
               </p>
               {marketEndDate && (
                 <p className="text-xs text-muted mt-1">
-                  Expires: {formatIPOExpiryDate(marketEndDate)}
+                  Expires:&nbsp;{formatIPOExpiryDate(marketEndDate)}
                 </p>
               )}
             </div>
