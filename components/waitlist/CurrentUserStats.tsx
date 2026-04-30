@@ -21,8 +21,8 @@ export function CurrentUserStats() {
     if (isSharePending) return;
 
     const referralUrl = currentUser?.referralCode
-      ? `https://protocol.vaulto.ai?ref=${currentUser.referralCode}`
-      : `https://protocol.vaulto.ai`;
+      ? `https://app.vaulto.fi?ref=${currentUser.referralCode}`
+      : `https://app.vaulto.fi`;
 
     // Use native share on mobile if available
     if (navigator.share) {

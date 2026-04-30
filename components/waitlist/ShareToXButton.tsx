@@ -30,8 +30,8 @@ export function ShareToXButton({
 
   const handleShare = useCallback(() => {
     const shareUrl = referralCode
-      ? `https://protocol.vaulto.ai?ref=${encodeURIComponent(referralCode)}`
-      : "https://protocol.vaulto.ai";
+      ? `https://app.vaulto.fi?ref=${encodeURIComponent(referralCode)}`
+      : "https://app.vaulto.fi";
     const tweetText = TWEET_PREFIX + shareUrl;
 
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;

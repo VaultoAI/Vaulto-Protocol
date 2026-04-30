@@ -16,11 +16,11 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Vaulto",
   },
-  metadataBase: new URL("https://protocol.vaulto.ai"),
+  metadataBase: new URL("https://app.vaulto.fi"),
   openGraph: {
     title: "Vaulto — Trade Faster & Smarter",
     description: "Join the waitlist for early access to tokenized private company stocks. Trade pre-IPO companies like SpaceX, Anduril, and more.",
-    url: "https://protocol.vaulto.ai",
+    url: "https://app.vaulto.fi",
     siteName: "Vaulto Protocol",
     images: [
       {

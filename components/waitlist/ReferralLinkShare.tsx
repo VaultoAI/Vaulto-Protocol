@@ -10,7 +10,7 @@ export function ReferralLinkShare({ referralCode }: ReferralLinkShareProps) {
   const [copied, setCopied] = useState(false);
 
   const referralUrl = referralCode
-    ? `https://protocol.vaulto.ai?ref=${referralCode}`
+    ? `https://app.vaulto.fi?ref=${referralCode}`
     : null;
 
   const handleCopy = useCallback(async () => {
