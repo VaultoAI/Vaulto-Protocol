@@ -1,6 +1,6 @@
 export default function CompanyDetailLoading() {
   return (
-    <div>
+    <div className="hidden md:block">
       {/* Main content: Chart + Trade Widget */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left side: Company info + Chart */}

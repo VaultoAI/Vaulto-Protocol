@@ -1,6 +1,6 @@
 export default function ExploreLoading() {
   return (
-    <div>
+    <div className="hidden md:block">
       {/* Mobile-only search at top */}
       <div className="md:hidden mb-4">
         <div className="h-10 w-full animate-pulse rounded-lg bg-badge-bg/50" />
