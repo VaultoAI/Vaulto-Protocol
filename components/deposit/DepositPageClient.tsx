@@ -722,6 +722,7 @@ export function DepositPageClient() {
                         name={pos.company}
                         size={28}
                         className="sm:w-8 sm:h-8"
+                        priority
                       />
                       <div>
                         <p className="text-xs font-medium text-foreground sm:text-sm">
@@ -872,6 +873,8 @@ export function DepositPageClient() {
                         <img
                           src={getProxiedFaviconUrl("usdc.com")}
                           alt="USDC"
+                          decoding="async"
+                          loading="lazy"
                           className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
                         />
                       </div>
@@ -880,6 +883,8 @@ export function DepositPageClient() {
                         <img
                           src={getProxiedFaviconUrl("polygon.technology")}
                           alt="MATIC"
+                          decoding="async"
+                          loading="lazy"
                           className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
                         />
                       </div>
