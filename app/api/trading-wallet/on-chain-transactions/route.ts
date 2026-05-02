@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import {
   getCachedTransactions,
   getSyncState,
+  syncWalletTransactions,
   triggerBackgroundSync,
   isSyncStale,
 } from "@/lib/trading-wallet/transaction-sync";
@@ -31,8 +32,9 @@ interface Transaction {
   actualCostBasis?: number;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const force = request.nextUrl.searchParams.get("force") === "1";
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -102,6 +104,21 @@ export async function GET() {
               orderBy: { createdAt: "desc" },
               take: 50,
             },
+            deposits: {
+              select: {
+                id: true,
+                amount: true,
+                amountUsd: true,
+                txHash: true,
+                fromAddress: true,
+                tokenAddress: true,
+                status: true,
+                createdAt: true,
+                confirmedAt: true,
+              },
+              orderBy: { createdAt: "desc" },
+              take: 100,
+            },
           },
         },
       },
@@ -117,14 +134,27 @@ export async function GET() {
     const tradingWallet = user.tradingWallet;
     const allTransactions: Transaction[] = [];
 
+    // When force=1 (e.g. just after a Privy fundWallet completes), pull from
+    // Alchemy synchronously so the response includes the new deposit instead of
+    // waiting for the next 5-minute stale window.
+    if (force) {
+      await syncWalletTransactions(tradingWallet.id, tradingWallet.address, {
+        walletCreatedAt: tradingWallet.createdAt,
+        chainId: tradingWallet.chainId,
+        syncPortfolio: false,
+      });
+    }
+
     // Read cached on-chain transactions from DB (instant). Background-sync if stale.
     const [syncState, cachedTxs] = await Promise.all([
       getSyncState(tradingWallet.id),
       getCachedTransactions(tradingWallet.id),
     ]);
 
+    const seenTxHashes = new Set<string>();
     for (const tx of cachedTxs) {
       if (tx.amount !== null && tx.amount > 0) {
+        if (tx.txHash) seenTxHashes.add(tx.txHash.toLowerCase());
         allTransactions.push({
           id: tx.id,
           type: tx.type,
@@ -138,12 +168,43 @@ export async function GET() {
       }
     }
 
-    if (isSyncStale(syncState?.lastSyncedAt ?? null) && !syncState?.isSyncing) {
+    if (!force && isSyncStale(syncState?.lastSyncedAt ?? null) && !syncState?.isSyncing) {
       triggerBackgroundSync(tradingWallet.id, tradingWallet.address, {
         walletCreatedAt: tradingWallet.createdAt,
         chainId: tradingWallet.chainId,
         syncPortfolio: false,
       });
+    }
+
+    // Merge Deposit-table rows (created by /deposit/detect and /deposit/initiate)
+    // that aren't yet reflected in CachedTransaction. This guarantees Privy
+    // fundWallet deposits surface immediately, even before Alchemy indexes them.
+    for (const dep of tradingWallet.deposits) {
+      const hashKey = dep.txHash?.toLowerCase();
+      if (hashKey && seenTxHashes.has(hashKey)) continue;
+
+      const amount = dep.amountUsd != null ? Number(dep.amountUsd) : 0;
+      if (!(amount > 0)) continue;
+
+      const status =
+        dep.status === "COMPLETED"
+          ? "COMPLETED"
+          : dep.status === "FAILED"
+            ? "FAILED"
+            : "PENDING";
+
+      allTransactions.push({
+        id: `deposit-${dep.id}`,
+        type: "deposit",
+        amount,
+        status,
+        txHash: dep.txHash ?? null,
+        timestamp: (dep.confirmedAt ?? dep.createdAt).toISOString(),
+        address: dep.fromAddress,
+        asset: "USDC",
+      });
+
+      if (hashKey) seenTxHashes.add(hashKey);
     }
 
     // Add ETF orders from database

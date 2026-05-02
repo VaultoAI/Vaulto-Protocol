@@ -7,6 +7,7 @@ import { usePrivy, useFundWallet } from "@privy-io/react-auth";
 import { polygon } from "viem/chains";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
 import { usePredictionTrading } from "@/hooks/usePredictionTrading";
+import { useOnChainTransactions } from "@/hooks/useOnChainTransactions";
 import { useLogout } from "@/hooks/useLogout";
 
 const DepositModal = dynamic(
@@ -43,6 +44,9 @@ export function WalletDropdown() {
     refetchBalance,
   } = useTradingWallet();
   const { positionsTotals } = usePredictionTrading();
+  const { forceSync: forceSyncTransactions } = useOnChainTransactions(
+    tradingWallet?.address
+  );
   const { name: profileName } = useProfile();
 
   // Calculate total balance: EOA + Safe + Positions
@@ -140,6 +144,15 @@ export function WalletDropdown() {
             }
             // Always refetch balance after each detection attempt
             await refetchBalance();
+            // Force the transactions list to pull a fresh Alchemy sync so the
+            // Privy fundWallet deposit shows up on the profile page right away
+            // instead of waiting for the next 5-minute stale window.
+            await forceSyncTransactions().catch((err) => {
+              console.error(
+                `[WalletDropdown] Failed to force-sync transactions after ${delay / 1000}s:`,
+                err
+              );
+            });
           } catch (err) {
             console.error(`[WalletDropdown] Failed to detect deposits after ${delay / 1000}s:`, err);
           }
