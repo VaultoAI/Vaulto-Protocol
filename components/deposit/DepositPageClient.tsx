@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
@@ -56,6 +56,7 @@ export function DepositPageClient() {
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("trades");
+  const [profileView, setProfileView] = useState<"transactions" | "positions">("transactions");
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -86,7 +87,45 @@ export function DepositPageClient() {
   } = useTradingWallet();
 
   // Fetch prediction positions for market value
-  const { positionsTotals, isLoadingPositions } = usePredictionTrading();
+  const { positions, positionsTotals, isLoadingPositions } = usePredictionTrading();
+
+  // Aggregate positions by company (one row per company)
+  const companyPositions = useMemo(() => {
+    const groups = new Map<string, {
+      company: string;
+      marketValue: number;
+      costBasis: number;
+      unrealizedPnl: number;
+      shares: number;
+    }>();
+
+    for (const p of positions) {
+      const company = p.company || getCompanyFromEventSlug(p.eventId) || p.eventId;
+      const existing = groups.get(company);
+      if (existing) {
+        existing.marketValue += p.marketValue;
+        existing.costBasis += p.costBasis;
+        existing.unrealizedPnl += p.unrealizedPnl;
+        existing.shares += p.shares;
+      } else {
+        groups.set(company, {
+          company,
+          marketValue: p.marketValue,
+          costBasis: p.costBasis,
+          unrealizedPnl: p.unrealizedPnl,
+          shares: p.shares,
+        });
+      }
+    }
+
+    return Array.from(groups.values())
+      .filter((g) => g.marketValue > 0)
+      .map((g) => ({
+        ...g,
+        unrealizedPnlPercent: g.costBasis > 0 ? (g.unrealizedPnl / g.costBasis) * 100 : 0,
+      }))
+      .sort((a, b) => b.marketValue - a.marketValue);
+  }, [positions]);
 
   const {
     sendTransaction,
@@ -604,41 +643,131 @@ export function DepositPageClient() {
         </div>
       </div>
 
-      {/* Transactions Section */}
+      {/* Transactions / Positions Section */}
       <div className="pt-4 border-t border-border">
         <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-foreground">Transactions</h3>
-            {isLoadingHistory && (
-              <span className="flex items-center gap-1 text-xs text-muted">
-                <Loader2 className="h-3 w-3 animate-spin" />
-              </span>
-            )}
-          </div>
-          {/* Filter Toggle */}
+          {/* View Toggle: Transactions | Positions */}
           <div className="flex items-center rounded-lg border border-border p-0.5 bg-foreground/5">
             <button
-              onClick={() => setTransactionFilter("all")}
+              onClick={() => setProfileView("transactions")}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
-                transactionFilter === "all"
+                profileView === "transactions"
                   ? "bg-foreground text-background"
                   : "text-muted hover:text-foreground"
               }`}
             >
-              All
+              Transactions
             </button>
             <button
-              onClick={() => setTransactionFilter("trades")}
+              onClick={() => setProfileView("positions")}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
-                transactionFilter === "trades"
+                profileView === "positions"
                   ? "bg-foreground text-background"
                   : "text-muted hover:text-foreground"
               }`}
             >
-              Trades
+              Positions
             </button>
           </div>
+          {profileView === "transactions" ? (
+            <div className="flex items-center gap-2">
+              {isLoadingHistory && (
+                <Loader2 className="h-3 w-3 animate-spin text-muted" />
+              )}
+              {/* Filter Toggle */}
+              <div className="flex items-center rounded-lg border border-border p-0.5 bg-foreground/5">
+                <button
+                  onClick={() => setTransactionFilter("all")}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
+                    transactionFilter === "all"
+                      ? "bg-foreground text-background"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setTransactionFilter("trades")}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
+                    transactionFilter === "trades"
+                      ? "bg-foreground text-background"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Trades
+                </button>
+              </div>
+            </div>
+          ) : (
+            isLoadingPositions && positions.length === 0 && (
+              <Loader2 className="h-3 w-3 animate-spin text-muted" />
+            )
+          )}
         </div>
+        {profileView === "positions" ? (
+          companyPositions.length === 0 ? (
+            <p className="text-sm text-muted">
+              {isLoadingPositions ? "Loading positions…" : "No open positions"}
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {companyPositions.map((pos) => {
+                const isPositive = pos.unrealizedPnl >= 0;
+                const slug = getCompanySlug(pos.company);
+                const href = slug ? `/explore/${slug}` : null;
+                const rowContent = (
+                  <>
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                      <CompanyLogo
+                        name={pos.company}
+                        size={28}
+                        className="sm:w-8 sm:h-8"
+                      />
+                      <div>
+                        <p className="text-xs font-medium text-foreground sm:text-sm">
+                          {pos.company}
+                        </p>
+                        <p className="text-xs text-muted sm:text-sm">
+                          Cost ${pos.costBasis.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-base font-semibold sm:text-lg text-foreground">
+                        ${pos.marketValue.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                      <span className={`text-xs ${isPositive ? "text-green" : "text-red"}`}>
+                        {isPositive ? "+" : ""}{pos.unrealizedPnlPercent.toFixed(2)}%
+                      </span>
+                    </div>
+                  </>
+                );
+
+                const rowClassName = `flex items-center justify-between py-3 sm:py-4 -mx-3 px-3 rounded-lg transition-colors ${
+                  href ? "hover:bg-foreground/[0.08] cursor-pointer" : "cursor-default"
+                }`;
+
+                return href ? (
+                  <Link key={pos.company} href={href} className={rowClassName}>
+                    {rowContent}
+                  </Link>
+                ) : (
+                  <div key={pos.company} className={rowClassName}>
+                    {rowContent}
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : null}
+        {profileView === "transactions" && (<>
+
         {(() => {
           const filteredTransactions = transactionFilter === "trades"
             ? transactions.filter((tx) =>
@@ -861,6 +990,7 @@ export function DepositPageClient() {
             </div>
           );
         })()}
+        </>)}
       </div>
 
       {/* Prediction Market Positions - hidden on mobile */}
