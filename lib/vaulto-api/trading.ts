@@ -661,3 +661,69 @@ export async function returnFundsAfterSell(
 
   return handleResponse<ReturnFundsResponse>(response, url);
 }
+
+// ============================================================================
+// PORTFOLIO BALANCE HISTORY
+// ============================================================================
+
+export interface PortfolioHistoryPoint {
+  timestamp: string;
+  balance: number;
+  type: "snapshot" | "deposit" | "withdrawal" | "current" | "initial";
+}
+
+export interface PortfolioHistoryResponse {
+  history: PortfolioHistoryPoint[];
+  lastSnapshotAt: string | null;
+  current: {
+    eoaUsdcBalance: number;
+    safeUsdceBalance: number;
+    positionsValue: number;
+    totalValue: number;
+  } | null;
+  fromCache: boolean;
+  cacheAgeMs: number;
+}
+
+/** Fetch precomputed portfolio history (heavy work owned by vaulto-api). */
+export async function fetchPortfolioHistory(
+  apiKey: string,
+  walletId: string
+): Promise<PortfolioHistoryResponse> {
+  const url = `${getBaseUrl()}/api/trading/portfolio/history?walletId=${encodeURIComponent(walletId)}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(apiKey),
+  });
+  return handleResponse<PortfolioHistoryResponse>(response, url);
+}
+
+/**
+ * Trigger an immediate portfolio snapshot. Call after deposits, withdrawals,
+ * or trade fills so the chart picks up the new balance on the next read.
+ * Fire-and-forget at call sites is fine — failures log but don't propagate.
+ */
+export async function triggerPortfolioSnapshot(
+  apiKey: string,
+  walletId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const url = `${getBaseUrl()}/api/trading/portfolio/snapshot`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { ...getHeaders(apiKey), "Content-Type": "application/json" },
+      body: JSON.stringify({ walletId }),
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      console.error(
+        `[Vaulto Trading API] portfolio snapshot failed ${response.status}: ${text}`
+      );
+      return { ok: false, error: `${response.status}: ${text}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error("[Vaulto Trading API] portfolio snapshot error:", err);
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}

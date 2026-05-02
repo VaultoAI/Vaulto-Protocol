@@ -6,6 +6,8 @@ import {
   getBlockTimestamp,
 } from "@/lib/trading-wallet/deposit-detection";
 import { USDC_ADDRESSES, CHAIN_IDS } from "@/lib/trading-wallet/constants";
+import { triggerPortfolioSnapshot } from "@/lib/vaulto-api/trading";
+import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
 
 /**
  * POST /api/trading-wallet/deposit/detect
@@ -137,6 +139,13 @@ export async function POST() {
         fromAddress: transfer.fromAddress,
         confirmedAt: timestamp.toISOString(),
       });
+    }
+
+    // Trigger a portfolio snapshot so the balance-over-time chart picks up
+    // the new deposit on the next read. Fire-and-forget — chart still works
+    // if this misses, the periodic cron will catch up within 15 min.
+    if (createdDeposits.length > 0 && isVaultoApiConfigured()) {
+      void triggerPortfolioSnapshot(getVaultoApiToken(), tradingWallet.id);
     }
 
     return NextResponse.json({

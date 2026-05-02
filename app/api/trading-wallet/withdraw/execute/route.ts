@@ -9,6 +9,13 @@ import {
   waitForTransaction,
   isServerSigningConfigured,
 } from "@/lib/trading-wallet/server-wallet";
+import { triggerPortfolioSnapshot } from "@/lib/vaulto-api/trading";
+import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
+
+function snapshotAfterWithdrawal(walletId: string) {
+  if (!isVaultoApiConfigured()) return;
+  void triggerPortfolioSnapshot(getVaultoApiToken(), walletId);
+}
 
 export async function POST(request: Request) {
   const LOG_PREFIX = "[Withdraw Execute]";
@@ -168,6 +175,7 @@ export async function POST(request: Request) {
           },
         });
         console.log(`${LOG_PREFIX} Database updated to ${finalStatus}`);
+        if (finalStatus === "COMPLETED") snapshotAfterWithdrawal(user.tradingWallet.id);
 
         // Create audit log
         await db.auditLog.create({
@@ -292,6 +300,7 @@ export async function POST(request: Request) {
             where: { id: withdrawalId },
             data: { status: finalStatus },
           });
+          if (finalStatus === "COMPLETED") snapshotAfterWithdrawal(user.tradingWallet.id);
 
           // Create audit log
           await db.auditLog.create({

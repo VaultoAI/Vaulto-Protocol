@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
-import { sellPosition } from "@/lib/vaulto-api/trading";
+import { sellPosition, triggerPortfolioSnapshot } from "@/lib/vaulto-api/trading";
 import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
-import { triggerBackgroundSnapshot } from "@/lib/trading-wallet/portfolio-snapshot";
 
 /**
  * POST /api/trading/sell
@@ -191,13 +190,10 @@ export async function POST(request: NextRequest) {
       console.warn(`[Trading Sell] Auto-sweep failed: ${result.returnFundsError}`);
     }
 
-    // Trigger portfolio snapshot in background (non-blocking)
-    triggerBackgroundSnapshot(
-      user.tradingWallet.id,
-      user.tradingWallet.address,
-      user.tradingWallet.safeAddress,
-      user.tradingWallet.chainId
-    );
+    // Trigger portfolio snapshot via vaulto-api (heavy work lives there).
+    if (isVaultoApiConfigured()) {
+      void triggerPortfolioSnapshot(getVaultoApiToken(), user.tradingWallet.id);
+    }
 
     return NextResponse.json(result);
   } catch (error) {

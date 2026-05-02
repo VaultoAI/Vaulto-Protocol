@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePrivy, useFundWallet } from "@privy-io/react-auth";
 import { polygon } from "viem/chains";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTradingWallet } from "@/hooks/useTradingWallet";
 import { usePredictionTrading } from "@/hooks/usePredictionTrading";
 import { useOnChainTransactions } from "@/hooks/useOnChainTransactions";
@@ -48,6 +49,7 @@ export function WalletDropdown() {
     tradingWallet?.address
   );
   const { name: profileName } = useProfile();
+  const queryClient = useQueryClient();
 
   // Calculate total balance: EOA + Safe + Positions
   const totalBalance = (parseFloat(totalAvailable) || 0) + (positionsTotals?.totalValue || 0);
@@ -152,6 +154,11 @@ export function WalletDropdown() {
                 `[WalletDropdown] Failed to force-sync transactions after ${delay / 1000}s:`,
                 err
               );
+            });
+            // Invalidate the balance-over-time chart so the new deposit
+            // shows up as soon as vaulto-api's snapshot lands.
+            queryClient.invalidateQueries({
+              queryKey: ["portfolio-history", tradingWallet?.address],
             });
           } catch (err) {
             console.error(`[WalletDropdown] Failed to detect deposits after ${delay / 1000}s:`, err);
@@ -360,13 +367,13 @@ export function WalletDropdown() {
             {/* Divider */}
             <div className="my-2 border-t border-gray-100 dark:border-zinc-800 sm:my-1" />
 
-            {/* Disconnect */}
+            {/* Sign out */}
             <button
               onClick={handleLogout}
               className="flex w-full items-center gap-4 px-4 py-3.5 text-base text-red-600 transition hover:bg-red-50 active:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/20 dark:active:bg-red-900/30 sm:gap-3 sm:py-2.5 sm:text-sm"
             >
               <LogOut className="h-5 w-5 sm:h-4 sm:w-4" />
-              <span>Disconnect</span>
+              <span>Sign out</span>
             </button>
           </div>
 

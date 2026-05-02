@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { createPublicClient, http } from "viem";
 import { polygon } from "viem/chains";
+import { triggerPortfolioSnapshot } from "@/lib/vaulto-api/trading";
+import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/config";
 
 // Minimum age in milliseconds for a withdrawal to be considered "stuck"
 const STUCK_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -105,6 +107,13 @@ export async function POST() {
               }),
             },
           });
+
+          if (finalStatus === "COMPLETED" && isVaultoApiConfigured()) {
+            void triggerPortfolioSnapshot(
+              getVaultoApiToken(),
+              withdrawal.tradingWalletId
+            );
+          }
 
           // Create audit log
           await db.auditLog.create({
