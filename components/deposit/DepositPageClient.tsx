@@ -56,6 +56,15 @@ export function DepositPageClient() {
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("trades");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const {
     tradingWallet,
@@ -590,6 +599,7 @@ export function DepositPageClient() {
             strokeWidth={2}
             showGradient={true}
             onHover={setChartHover}
+            disableAnimation={isMobile}
           />
         </div>
       </div>
