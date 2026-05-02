@@ -188,6 +188,67 @@ export function LivePriceChart({
 
   const timeRanges: PrestockTimeRange[] = ["1H", "4H", "1D", "1W", "1M", "ALL"];
 
+  const selectorBar = (
+    <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-1 flex-wrap">
+        {timeRanges.map((range) => {
+          const mobileHidden = range === "1H" || range === "4H";
+          return (
+            <button
+              key={range}
+              onClick={() => setActiveRange(range)}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                mobileHidden ? "hidden sm:inline-block" : ""
+              } ${
+                activeRange === range
+                  ? "text-accent bg-accent/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              {range}
+            </button>
+          );
+        })}
+      </div>
+      {onChartTypeChange && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onChartTypeChange("funding")}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              chartType === "funding"
+                ? "text-accent bg-accent/10"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Funding
+          </button>
+          {hasMarketData && (
+            <button
+              onClick={() => onChartTypeChange("market")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                chartType === "market"
+                  ? "text-accent bg-accent/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              IPO
+            </button>
+          )}
+          <button
+            onClick={() => onChartTypeChange("live")}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              chartType === "live"
+                ? "text-accent bg-accent/10"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Price
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   // Loading state
   if (isLoading) {
     return (
@@ -198,65 +259,8 @@ export function LivePriceChart({
             <p className="text-muted text-sm">Loading price data...</p>
           </div>
         </div>
-        {/* Time range selector skeleton */}
-        <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-3 border-t border-border pt-3">
-          <div className="flex items-center gap-1 flex-wrap">
-            {timeRanges.map((range) => {
-              const mobileHidden = range === "1H" || range === "4H";
-              return (
-                <button
-                  key={range}
-                  onClick={() => setActiveRange(range)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    mobileHidden ? "hidden sm:inline-block" : ""
-                  } ${
-                    activeRange === range
-                      ? "text-accent bg-accent/10"
-                      : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  {range}
-                </button>
-              );
-            })}
-          </div>
-          {onChartTypeChange && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => onChartTypeChange("funding")}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  chartType === "funding"
-                    ? "text-accent bg-accent/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                Funding
-              </button>
-              {hasMarketData && (
-                <button
-                  onClick={() => onChartTypeChange("market")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    chartType === "market"
-                      ? "text-accent bg-accent/10"
-                      : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  IPO
-                </button>
-              )}
-              <button
-                onClick={() => onChartTypeChange("live")}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  chartType === "live"
-                    ? "text-accent bg-accent/10"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                Price
-              </button>
-            </div>
-          )}
-        </div>
+        <div className="hidden lg:block mt-3 border-t border-border pt-3">{selectorBar}</div>
+        {mobileSelectorTarget && createPortal(selectorBar, mobileSelectorTarget)}
       </div>
     );
   }
@@ -393,74 +397,8 @@ export function LivePriceChart({
       </div>
 
       {/* Time range selector — desktop inline; mobile portaled if target provided */}
-      {(() => {
-        const bar = (
-          <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1 flex-wrap">
-              {timeRanges.map((range) => {
-                const mobileHidden = range === "1H" || range === "4H";
-                return (
-                  <button
-                    key={range}
-                    onClick={() => setActiveRange(range)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      mobileHidden ? "hidden sm:inline-block" : ""
-                    } ${
-                      activeRange === range
-                        ? "text-accent bg-accent/10"
-                        : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    {range}
-                  </button>
-                );
-              })}
-            </div>
-            {onChartTypeChange && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => onChartTypeChange("funding")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    chartType === "funding"
-                      ? "text-accent bg-accent/10"
-                      : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  Funding
-                </button>
-                {hasMarketData && (
-                  <button
-                    onClick={() => onChartTypeChange("market")}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      chartType === "market"
-                        ? "text-accent bg-accent/10"
-                        : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    IPO
-                  </button>
-                )}
-                <button
-                  onClick={() => onChartTypeChange("live")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    chartType === "live"
-                      ? "text-accent bg-accent/10"
-                      : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  Price
-                </button>
-              </div>
-            )}
-          </div>
-        );
-        return (
-          <>
-            <div className="hidden lg:block mt-3 border-t border-border pt-3">{bar}</div>
-            {mobileSelectorTarget && createPortal(bar, mobileSelectorTarget)}
-          </>
-        );
-      })()}
+      <div className="hidden lg:block mt-3 border-t border-border pt-3">{selectorBar}</div>
+      {mobileSelectorTarget && createPortal(selectorBar, mobileSelectorTarget)}
 
       {/* Live price summary */}
       <div className="hidden lg:block mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">

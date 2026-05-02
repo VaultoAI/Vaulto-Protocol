@@ -387,14 +387,82 @@ export function ImpliedValuationChart({
     onRangeChange?.(range);
   };
 
+  const selectorBar = (
+    <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-1 flex-wrap">
+        {timeRanges.map((range) => {
+          const isSelected = activeRange === range;
+          return (
+            <button
+              key={range}
+              onClick={() => handleRangeChange(range)}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                isSelected
+                  ? "text-accent bg-accent/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              {range}
+            </button>
+          );
+        })}
+        {loading && (
+          <div className="hidden lg:block ml-2 w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        )}
+      </div>
+      {onChartTypeChange && (hasFundingData || hasLiveData) && (
+        <div className="flex items-center gap-1">
+          {hasFundingData && (
+            <button
+              onClick={() => onChartTypeChange("funding")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                chartType === "funding"
+                  ? "text-accent bg-accent/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Funding
+            </button>
+          )}
+          <button
+            onClick={() => onChartTypeChange("market")}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              chartType === "market"
+                ? "text-accent bg-accent/10"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            IPO
+          </button>
+          {hasLiveData && (
+            <button
+              onClick={() => onChartTypeChange("live")}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                chartType === "live"
+                  ? "text-accent bg-accent/10"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Price
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   // Loading state
   if (loading && !data) {
     return (
-      <div className="w-full h-[340px] flex items-center justify-center rounded-lg bg-muted/10">
-        <div className="hidden lg:flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-2 border-green border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted text-sm">Loading market data...</p>
+      <div className="w-full">
+        <div className="w-full h-[340px] flex items-center justify-center rounded-lg bg-muted/10">
+          <div className="hidden lg:flex flex-col items-center gap-2">
+            <div className="w-8 h-8 border-2 border-green border-t-transparent rounded-full animate-spin" />
+            <p className="text-muted text-sm">Loading market data...</p>
+          </div>
         </div>
+        <div className="hidden lg:block mt-3 border-t border-border pt-3">{selectorBar}</div>
+        {mobileSelectorTarget && createPortal(selectorBar, mobileSelectorTarget)}
       </div>
     );
   }
@@ -641,81 +709,8 @@ export function ImpliedValuationChart({
       </div>
 
       {/* Time range selector — desktop inline; mobile is portaled into mobileSelectorTarget if provided */}
-      {(() => {
-        const bar = (
-          <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1 flex-wrap">
-              {timeRanges.map((range) => {
-                const isSelected = activeRange === range;
-                return (
-                  <button
-                    key={range}
-                    onClick={() => handleRangeChange(range)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      isSelected
-                        ? "text-accent bg-accent/10"
-                        : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    {range}
-                  </button>
-                );
-              })}
-              {loading && (
-                <div className="hidden lg:block ml-2 w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-              )}
-            </div>
-            {onChartTypeChange && (hasFundingData || hasLiveData) && (
-              <div className="flex items-center gap-1">
-                {hasFundingData && (
-                  <button
-                    onClick={() => onChartTypeChange("funding")}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      chartType === "funding"
-                        ? "text-accent bg-accent/10"
-                        : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    Funding
-                  </button>
-                )}
-                <button
-                  onClick={() => onChartTypeChange("market")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    chartType === "market"
-                      ? "text-accent bg-accent/10"
-                      : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  IPO
-                </button>
-                {hasLiveData && (
-                  <button
-                    onClick={() => onChartTypeChange("live")}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      chartType === "live"
-                        ? "text-accent bg-accent/10"
-                        : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    Price
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        );
-        return (
-          <>
-            {/* Desktop inline */}
-            <div className="hidden lg:block mt-3 border-t border-border pt-3">
-              {bar}
-            </div>
-            {/* Mobile portaled to top */}
-            {mobileSelectorTarget && createPortal(bar, mobileSelectorTarget)}
-          </>
-        );
-      })()}
+      <div className="hidden lg:block mt-3 border-t border-border pt-3">{selectorBar}</div>
+      {mobileSelectorTarget && createPortal(selectorBar, mobileSelectorTarget)}
 
       {/* Current implied valuation summary */}
       <div className="hidden lg:block mt-6 p-4 rounded-xl bg-badge-bg/50 border border-border">
