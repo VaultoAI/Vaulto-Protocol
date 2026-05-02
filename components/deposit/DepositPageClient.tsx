@@ -56,15 +56,31 @@ export function DepositPageClient() {
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [transactionFilter, setTransactionFilter] = useState<"all" | "trades">("trades");
-  const [profileView, setProfileView] = useState<"transactions" | "positions">("transactions");
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
+  );
+  const [profileView, setProfileView] = useState<"transactions" | "positions">(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
+      ? "positions"
+      : "transactions"
+  );
+  const [viewUserSet, setViewUserSet] = useState(false);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 767px)");
     setIsMobile(mql.matches);
-    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    if (!viewUserSet) setProfileView(mql.matches ? "positions" : "transactions");
+    const onChange = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      if (!viewUserSet) setProfileView(e.matches ? "positions" : "transactions");
+    };
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
+  }, [viewUserSet]);
+
+  const selectProfileView = useCallback((v: "transactions" | "positions") => {
+    setViewUserSet(true);
+    setProfileView(v);
   }, []);
 
   const {
@@ -649,7 +665,7 @@ export function DepositPageClient() {
           {/* View Toggle: Transactions | Positions */}
           <div className="flex items-center rounded-lg border border-border p-0.5 bg-foreground/5">
             <button
-              onClick={() => setProfileView("transactions")}
+              onClick={() => selectProfileView("transactions")}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
                 profileView === "transactions"
                   ? "bg-foreground text-background"
@@ -659,7 +675,7 @@ export function DepositPageClient() {
               Transactions
             </button>
             <button
-              onClick={() => setProfileView("positions")}
+              onClick={() => selectProfileView("positions")}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors sm:px-3 sm:text-sm ${
                 profileView === "positions"
                   ? "bg-foreground text-background"
