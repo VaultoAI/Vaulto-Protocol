@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { PrivateCompany } from "@/lib/vaulto/companies";
 import { getSyntheticSymbol, getCompanySlug, formatValuation } from "@/lib/vaulto/companies";
 import { CompanyLogo } from "@/components/CompanyLogo";
@@ -16,6 +17,18 @@ import {
 } from "@/lib/vaulto/companyUtils";
 import type { AllImpliedValuationsResponse } from "@/lib/polymarket/implied-valuations";
 
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+  return isMobile;
+}
+
 interface ExploreTopSectionProps {
   companies: PrivateCompany[];
   /** Pre-fetched newly added companies from the database. Falls back to sorting by lastFundingDate if not provided. */
@@ -29,6 +42,7 @@ interface ExploreTopSectionProps {
  * Matches Ondo Finance layout with tighter spacing.
  */
 export function ExploreTopSection({ companies, newlyAdded: newlyAddedProp, impliedValuations }: ExploreTopSectionProps) {
+  const isMobile = useIsMobile();
   const gainers = getTopGainers(companies, 3);
   const trending = getTrending(companies, 3);
   // Use pre-fetched newlyAdded from database if provided, otherwise fall back to utility function
@@ -74,34 +88,38 @@ export function ExploreTopSection({ companies, newlyAdded: newlyAddedProp, impli
         }}
       />
 
-      {/* Trending - hidden on mobile */}
-      <div className="hidden md:block">
-        <TopColumn
-          title="Trending"
-          badge="24H"
-          companies={trending}
-          hasBorderLeft
-          renderMetric={(company) => (
-            <span className="text-xs text-muted">
-              {formatValuation(company.valuationUsd)}
-            </span>
-          )}
-        />
-      </div>
+      {/* Trending - hidden on mobile, skip render to avoid logo fetches */}
+      {!isMobile && (
+        <div className="hidden md:block">
+          <TopColumn
+            title="Trending"
+            badge="24H"
+            companies={trending}
+            hasBorderLeft
+            renderMetric={(company) => (
+              <span className="text-xs text-muted">
+                {formatValuation(company.valuationUsd)}
+              </span>
+            )}
+          />
+        </div>
+      )}
 
-      {/* Newly Added - hidden on mobile */}
-      <div className="hidden md:block">
-        <TopColumn
-          title="Newly Added"
-          companies={newlyAdded}
-          hasBorderLeft
-          renderMetric={(company) => (
-            <span className="text-xs text-muted">
-              {formatValuation(getDisplayValuation(company))}
-            </span>
-          )}
-        />
-      </div>
+      {/* Newly Added - hidden on mobile, skip render to avoid logo fetches */}
+      {!isMobile && (
+        <div className="hidden md:block">
+          <TopColumn
+            title="Newly Added"
+            companies={newlyAdded}
+            hasBorderLeft
+            renderMetric={(company) => (
+              <span className="text-xs text-muted">
+                {formatValuation(getDisplayValuation(company))}
+              </span>
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -139,7 +157,7 @@ function TopColumn({ title, badge, companies, hasBorderLeft, renderMetric }: Top
               className="flex items-center gap-3 cursor-pointer group"
             >
               {/* Logo */}
-              <CompanyLogo name={company.name} website={company.website} size={36} className="shrink-0" />
+              <CompanyLogo name={company.name} website={company.website} size={36} className="shrink-0" priority />
 
               {/* Name - takes remaining space */}
               <div className="min-w-0 flex-1">

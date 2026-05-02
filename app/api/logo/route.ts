@@ -2,19 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * API route to proxy favicon requests from Google Favicon API.
- * This avoids CORS issues by fetching server-side.
- *
- * Usage: /api/logo?domain=openai.com
- *
- * IMPORTANT: Uses CDN-Cache-Control for edge caching with proper cache key.
- * The Vary header ensures each domain gets its own cached response.
+ * Avoids CORS by fetching server-side. Adds per-process memory cache
+ * so a cold page load with many logos doesn't hammer Google for each.
  */
 
 const CACHE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 const CACHE_STALE_WHILE_REVALIDATE = 60 * 60 * 24 * 30; // 30 days
+const MEMORY_TTL_MS = 1000 * 60 * 60 * 24; // 24h in-process
 
-// Force dynamic rendering to ensure query params are always read
-export const dynamic = "force-dynamic";
+type CachedLogo = { buffer: ArrayBuffer; contentType: string; expires: number };
+const memoryCache = new Map<string, CachedLogo>();
+const inflight = new Map<string, Promise<CachedLogo>>();
+
+async function fetchFromGoogle(domain: string): Promise<CachedLogo> {
+  const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
+  const response = await fetch(faviconUrl, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; VaultoBot/1.0)" },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Google favicon ${response.status}`);
+  }
+  const buffer = await response.arrayBuffer();
+  const contentType = response.headers.get("content-type") || "image/png";
+  return { buffer, contentType, expires: Date.now() + MEMORY_TTL_MS };
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -24,49 +36,33 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing domain parameter" }, { status: 400 });
   }
 
-  // Validate domain format (basic check)
   if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/.test(domain)) {
     return NextResponse.json({ error: "Invalid domain format" }, { status: 400 });
   }
 
   try {
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
-
-    const response = await fetch(faviconUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; VaultoBot/1.0)",
-      },
-      // Don't cache on the server side - let the CDN/browser handle it
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch favicon" },
-        { status: response.status }
-      );
+    let entry = memoryCache.get(domain);
+    if (!entry || entry.expires < Date.now()) {
+      let pending = inflight.get(domain);
+      if (!pending) {
+        pending = fetchFromGoogle(domain).finally(() => inflight.delete(domain));
+        inflight.set(domain, pending);
+      }
+      entry = await pending;
+      memoryCache.set(domain, entry);
     }
 
-    const imageBuffer = await response.arrayBuffer();
-    const contentType = response.headers.get("content-type") || "image/png";
-
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(entry.buffer, {
       status: 200,
       headers: {
-        "Content-Type": contentType,
-        // Browser caching only - don't let CDN cache without proper key
-        "Cache-Control": `public, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}`,
-        // Netlify CDN cache with domain as key
+        "Content-Type": entry.contentType,
+        "Cache-Control": `public, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}, immutable`,
         "Netlify-CDN-Cache-Control": `public, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}, durable`,
-        // Cache key varies by the full URL including query string
         "Netlify-Vary": "query",
       },
     });
   } catch (error) {
     console.error("Logo proxy error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch favicon" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch favicon" }, { status: 500 });
   }
 }
