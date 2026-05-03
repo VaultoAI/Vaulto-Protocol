@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
@@ -340,7 +340,55 @@ export function DepositPageClient() {
   const isDepositing = depositStatus === "initiating" || depositStatus === "pending" || depositStatus === "confirming" || isInitiatingDeposit || isSending || isConfirmingTx;
 
   // Fetch portfolio history for chart data
-  const { chartData, history, isLoading: isLoadingHistory } = usePortfolioHistory(tradingWallet?.address);
+  const { chartData, history, isLoading: isLoadingHistory, refetch: refetchHistory } = usePortfolioHistory(tradingWallet?.address);
+
+  // Reconcile chart with live header total: if the latest snapshot diverges
+  // from the current total balance (e.g. open-position prices moved while the
+  // page was open), trigger a fresh snapshot and refetch so the graph line
+  // extends to the current value.
+  const lastReconcileKeyRef = useRef<string | null>(null);
+  const isReconcilingRef = useRef(false);
+  useEffect(() => {
+    if (!tradingWallet?.address) return;
+    if (isLoadingHistory || isLoadingBalance || isLoadingPositions) return;
+    if (history.length === 0) return;
+
+    const headerTotal = parseFloat(totalAvailable) + (positionsTotals?.totalValue || 0);
+    if (!Number.isFinite(headerTotal)) return;
+
+    const lastPoint = history[history.length - 1];
+    const lastBalance = lastPoint.balance;
+    if (Math.abs(headerTotal - lastBalance) <= 0.01) return;
+
+    // Dedupe: only reconcile once per (lastTimestamp, headerTotal) pair so we
+    // don't loop if the snapshot endpoint returns the same value.
+    const key = `${lastPoint.timestamp}:${headerTotal.toFixed(2)}`;
+    if (lastReconcileKeyRef.current === key) return;
+    if (isReconcilingRef.current) return;
+
+    lastReconcileKeyRef.current = key;
+    isReconcilingRef.current = true;
+
+    (async () => {
+      try {
+        await fetch("/api/trading-wallet/portfolio-history", { method: "POST" });
+        await refetchHistory();
+      } catch (err) {
+        console.error("Failed to reconcile portfolio history:", err);
+      } finally {
+        isReconcilingRef.current = false;
+      }
+    })();
+  }, [
+    tradingWallet?.address,
+    history,
+    totalAvailable,
+    positionsTotals?.totalValue,
+    isLoadingHistory,
+    isLoadingBalance,
+    isLoadingPositions,
+    refetchHistory,
+  ]);
 
   // Hover state for portfolio chart
   const [chartHover, setChartHover] = useState<MiniChartHoverData | null>(null);

@@ -217,3 +217,60 @@ export async function GET() {
     );
   }
 }
+
+/**
+ * POST /api/trading-wallet/portfolio-history
+ *
+ * Trigger an immediate portfolio snapshot for the authenticated user's wallet.
+ * Used by the client to reconcile the chart's last balance with the live
+ * header total when they diverge (e.g. price moves on open positions while
+ * the user has the page open).
+ */
+export async function POST() {
+  try {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbError = requireDatabase();
+    if (dbError) return dbError;
+
+    const db = getDb();
+
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+      include: { tradingWallet: { select: { id: true, status: true } } },
+    });
+
+    if (!user?.tradingWallet) {
+      return NextResponse.json(
+        { error: "Trading wallet not found" },
+        { status: 404 }
+      );
+    }
+
+    if (user.tradingWallet.status !== "ACTIVE") {
+      return NextResponse.json({ ok: false, skipped: "inactive" });
+    }
+
+    if (!isVaultoApiConfigured()) {
+      return NextResponse.json({ ok: false, skipped: "not-configured" });
+    }
+
+    const apiKey = getVaultoApiToken();
+    const result = await triggerPortfolioSnapshot(apiKey, user.tradingWallet.id);
+
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("[Trading Wallet] Portfolio snapshot error:", error);
+    return NextResponse.json(
+      { error: "Failed to trigger portfolio snapshot" },
+      { status: 500 }
+    );
+  }
+}
