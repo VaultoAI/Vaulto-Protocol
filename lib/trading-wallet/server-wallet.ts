@@ -182,6 +182,66 @@ export async function createWalletForExistingUser(
   };
 }
 
+/**
+ * Ensure a wallet has the trading policy + server signer attached.
+ *
+ * Idempotent. Fetches the wallet from Privy and patches it via PATCH
+ * /v1/wallets/{walletId} only when the desired policy/signer is missing.
+ *
+ * Required because Privy can auto-provision an embedded wallet during
+ * OAuth login (despite createOnLogin:"off"), and that wallet has no
+ * policy or signer attached.
+ */
+export async function ensureWalletPolicy(
+  privyUserId: string,
+  walletId: string
+): Promise<ServerWalletInfo & { serverSignerId: string; alreadyConfigured: boolean }> {
+  const privy = getPrivyClient();
+  const config = getServerSigningConfig();
+
+  const wallet = await privy.wallets().get(walletId);
+
+  const hasPolicy = wallet.policy_ids?.includes(config.policyId) ?? false;
+  const hasSigner =
+    wallet.additional_signers?.some((s) => s.signer_id === config.authKeyId) ?? false;
+
+  if (hasPolicy && hasSigner) {
+    console.log("[Server Wallet] Policy + signer already attached:", {
+      privyUserId,
+      walletId,
+    });
+    return {
+      walletId,
+      address: wallet.address,
+      chainType: wallet.chain_type,
+      policyId: config.policyId,
+      serverSignerId: config.authKeyId,
+      alreadyConfigured: true,
+    };
+  }
+
+  console.log("[Server Wallet] Attaching policy/signer to wallet:", {
+    privyUserId,
+    walletId,
+    hadPolicy: hasPolicy,
+    hadSigner: hasSigner,
+  });
+
+  const updated = await privy.wallets()._update(walletId, {
+    policy_ids: [config.policyId],
+    additional_signers: [{ signer_id: config.authKeyId }],
+  });
+
+  return {
+    walletId: updated.id,
+    address: updated.address,
+    chainType: updated.chain_type,
+    policyId: config.policyId,
+    serverSignerId: config.authKeyId,
+    alreadyConfigured: false,
+  };
+}
+
 export interface TransactionData {
   to: string;
   data: string;

@@ -12,6 +12,7 @@ import {
 } from "@/lib/trading-wallet/privy-server";
 import {
   createWalletForExistingUser,
+  ensureWalletPolicy,
   getUserWallet,
   isServerSigningConfigured,
 } from "@/lib/trading-wallet/server-wallet";
@@ -151,10 +152,35 @@ export async function POST(request: NextRequest) {
     );
 
     if (existingWallet && "address" in existingWallet) {
-      // User already has an embedded wallet (legacy or previously created)
+      // User already has an embedded wallet (legacy, previously created,
+      // or auto-provisioned by Privy during OAuth despite createOnLogin:"off").
       embeddedWalletAddress = existingWallet.address as string;
       privyWalletId = "wallet_id" in existingWallet ? (existingWallet.wallet_id as string) : null;
       console.log("[Ensure Credentials] Found existing embedded wallet:", embeddedWalletAddress);
+
+      // Auto-provisioned wallets have no trading policy attached. Attach it now
+      // so server-side signing works. Idempotent for already-configured wallets.
+      if (privyWalletId && isServerSigningConfigured()) {
+        try {
+          const ensured = await ensureWalletPolicy(privyUserId, privyWalletId);
+          hasServerSigner = true;
+          policyId = ensured.policyId;
+          serverSignerId = ensured.serverSignerId;
+          console.log("[Ensure Credentials] Ensured wallet policy:", {
+            walletId: privyWalletId,
+            policyId,
+            alreadyConfigured: ensured.alreadyConfigured,
+          });
+        } catch (error) {
+          console.error("[Ensure Credentials] Failed to attach policy to existing wallet:", error);
+          return NextResponse.json(
+            { error: "Failed to configure trading wallet policy", ready: false },
+            { status: 500 }
+          );
+        }
+      } else if (!privyWalletId) {
+        console.warn("[Ensure Credentials] Existing wallet has no wallet_id, cannot attach policy");
+      }
     } else {
       // No wallet exists - create one server-side with policy
       console.log("[Ensure Credentials] No embedded wallet found, creating server-side...");
@@ -293,8 +319,17 @@ export async function POST(request: NextRequest) {
       }
     } else {
       console.log("[Ensure Credentials] Trading wallet already exists:", tradingWallet.id);
-      // Use the existing wallet's hasServerSigner value
-      hasServerSigner = tradingWallet.hasServerSigner;
+      // Backfill policy fields on the DB row if we just attached them in Privy
+      // but the DB record predates the fix (policyId=null, hasServerSigner=false).
+      if (hasServerSigner && policyId && !tradingWallet.hasServerSigner) {
+        tradingWallet = await db.tradingWallet.update({
+          where: { id: tradingWallet.id },
+          data: { hasServerSigner: true, policyId, serverSignerId },
+        });
+        console.log("[Ensure Credentials] Backfilled policy fields on existing wallet:", tradingWallet.id);
+      } else {
+        hasServerSigner = tradingWallet.hasServerSigner;
+      }
     }
 
     // For wallets without server signing, skip Vaulto API credential setup

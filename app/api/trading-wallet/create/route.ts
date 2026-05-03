@@ -4,6 +4,7 @@ import { requireDatabase, getDb } from "@/lib/onboarding/db";
 import { isValidEthereumAddress, verifyPrivyToken } from "@/lib/trading-wallet/privy-server";
 import {
   createWalletForExistingUser,
+  ensureWalletPolicy,
   getUserWallet,
   isServerSigningConfigured,
 } from "@/lib/trading-wallet/server-wallet";
@@ -94,6 +95,27 @@ export async function POST(request: Request) {
         embeddedWalletAddress = existingWallet.address;
         privyWalletId = existingWallet.walletId;
         console.log("[Trading Wallet] Found existing Privy wallet:", embeddedWalletAddress);
+
+        // Auto-provisioned wallets have no trading policy attached. Attach it now.
+        if (privyWalletId && isServerSigningConfigured()) {
+          try {
+            const ensured = await ensureWalletPolicy(privyUserId, privyWalletId);
+            hasServerSigner = true;
+            policyId = ensured.policyId;
+            serverSignerId = ensured.serverSignerId;
+            console.log("[Trading Wallet] Ensured wallet policy:", {
+              walletId: privyWalletId,
+              policyId,
+              alreadyConfigured: ensured.alreadyConfigured,
+            });
+          } catch (error) {
+            console.error("[Trading Wallet] Failed to attach policy to existing wallet:", error);
+            return NextResponse.json(
+              { error: "Failed to configure trading wallet policy", code: "POLICY_ATTACH_FAILED" },
+              { status: 500 }
+            );
+          }
+        }
       } else {
         // Create wallet server-side with policy
         if (!isServerSigningConfigured()) {
