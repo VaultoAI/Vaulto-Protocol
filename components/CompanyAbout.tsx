@@ -47,7 +47,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         )}
 
         {/* Company info grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-y-5 sm:gap-x-6">
           <InfoItem label="CEO" value={company.ceo || "—"} />
           <InfoItem label="Employees" value={company.employees ? company.employees.toLocaleString() : "—"} />
           <InfoItem label="Industry" value={company.industry || "—"} />
@@ -55,7 +55,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
         </div>
 
         {/* Key facts */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6 mt-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-y-5 sm:gap-x-6 mt-2 sm:mt-6">
           <InfoItem label="Price / Share" value={formatPricePerShare(company.lastFundingEstPricePerShareUsd)} />
           <InfoItem label="Last Round" value={company.lastFundingRoundType || "—"} />
           <InfoItem
@@ -81,7 +81,7 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
               <thead>
                 <tr className="bg-badge-bg/50 border-b border-border">
                   <th className="text-left py-2.5 px-4 text-xs font-medium text-muted uppercase tracking-wider">Round</th>
-                  <th className="text-left py-2.5 px-4 text-xs font-medium text-muted uppercase tracking-wider">Date</th>
+                  <th className="hidden sm:table-cell text-left py-2.5 px-4 text-xs font-medium text-muted uppercase tracking-wider">Date</th>
                   <th className="text-right py-2.5 px-4 text-xs font-medium text-muted uppercase tracking-wider">Amount Raised</th>
                   <th className="text-right py-2.5 px-4 text-xs font-medium text-muted uppercase tracking-wider hidden md:table-cell">Post-Money Val.</th>
                   <th className="text-right py-2.5 px-4 text-xs font-medium text-muted uppercase tracking-wider hidden lg:table-cell">Price/Share</th>
@@ -94,8 +94,13 @@ export function CompanyAbout({ company }: CompanyAboutProps) {
                     <tr key={index} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
                       <td className="py-2.5 px-4">
                         <span className="font-medium text-foreground">{round.type || "—"}</span>
+                        {round.date && (
+                          <span className="block sm:hidden text-xs text-muted mt-0.5">
+                            {new Date(round.date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                          </span>
+                        )}
                       </td>
-                      <td className="py-2.5 px-4 text-muted">
+                      <td className="hidden sm:table-cell py-2.5 px-4 text-muted">
                         {round.date ? new Date(round.date).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—"}
                       </td>
                       <td className="py-2.5 px-4 text-right text-foreground">
@@ -175,8 +180,8 @@ function InfoItem({
   href?: string;
 }) {
   return (
-    <div className="min-w-0">
-      <p className="text-xs text-muted mb-1">{label}</p>
+    <div className="min-w-0 rounded-lg border border-border p-3 sm:border-0 sm:p-0 sm:rounded-none">
+      <p className="text-[10px] uppercase tracking-wider text-muted mb-1 sm:text-xs sm:normal-case sm:tracking-normal">{label}</p>
       {isLink && href ? (
         <a
           href={href}
