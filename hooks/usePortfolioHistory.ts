@@ -60,8 +60,8 @@ export function usePortfolioHistory(tradingWalletAddress: string | undefined) {
     queryKey: ["portfolio-history", tradingWalletAddress],
     queryFn: fetchPortfolioHistory,
     enabled: !!tradingWalletAddress,
-    staleTime: 5_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    refetchInterval: 300_000,
     refetchOnWindowFocus: true,
     placeholderData: (prev) => prev,
   });

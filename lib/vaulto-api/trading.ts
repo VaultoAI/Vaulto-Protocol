@@ -49,6 +49,10 @@ export interface BuyPositionResponse {
     totalCost?: number;
     positionId?: string;
   };
+  // Graph-derived entry snapshot (matches the implied-valuation chart).
+  entryGraphValuationUsd?: number;
+  entryFairSellValueUsd?: number;
+  entrySpreadCostUsd?: number;
   error?: string;
 }
 
@@ -59,12 +63,19 @@ export interface PredictionPosition {
   company?: string;
   side: "LONG" | "SHORT";
   shares: number;
+  /** With graph overlay, this is implied valuation USD at trade time. */
   entryPrice: number;
+  /** With graph overlay, this is the live implied valuation USD. */
   currentPrice: number;
   marketValue: number;
   costBasis: number;
   unrealizedPnl: number;
   unrealizedPnlPercent: number;
+  entryGraphValuationUsd?: number;
+  currentGraphValuationUsd?: number;
+  entryFairSellValueUsd?: number;
+  entrySpreadCostUsd?: number;
+  entryFairSellEstimated?: boolean;
   createdAt: string;
 }
 
@@ -321,6 +332,11 @@ interface VaultoApiPosition {
   totalCost?: number; // Alternative field name
   unrealizedPnl: number;
   unrealizedPnlPercent: number;
+  entryGraphValuationUsd?: number;
+  currentGraphValuationUsd?: number;
+  entryFairSellValueUsd?: number;
+  entrySpreadCostUsd?: number;
+  entryFairSellEstimated?: boolean;
   createdAt: string;
 }
 
@@ -369,6 +385,11 @@ function transformPosition(apiPosition: VaultoApiPosition): PredictionPosition {
     costBasis,
     unrealizedPnl: apiPosition.unrealizedPnl,
     unrealizedPnlPercent: apiPosition.unrealizedPnlPercent,
+    entryGraphValuationUsd: apiPosition.entryGraphValuationUsd,
+    currentGraphValuationUsd: apiPosition.currentGraphValuationUsd,
+    entryFairSellValueUsd: apiPosition.entryFairSellValueUsd,
+    entrySpreadCostUsd: apiPosition.entrySpreadCostUsd,
+    entryFairSellEstimated: apiPosition.entryFairSellEstimated,
     createdAt: apiPosition.createdAt,
   };
 }
@@ -702,17 +723,23 @@ export async function fetchPortfolioHistory(
  * Trigger an immediate portfolio snapshot. Call after deposits, withdrawals,
  * or trade fills so the chart picks up the new balance on the next read.
  * Fire-and-forget at call sites is fine — failures log but don't propagate.
+ *
+ * The vaulto-api endpoint throttles non-forced snapshots to one every 5
+ * minutes per wallet. Pass `force: true` from event-driven callers (deposit,
+ * withdrawal, trade fill) that must always record a new point regardless of
+ * how recently the last snapshot was written.
  */
 export async function triggerPortfolioSnapshot(
   apiKey: string,
-  walletId: string
+  walletId: string,
+  options: { force?: boolean } = {}
 ): Promise<{ ok: boolean; error?: string }> {
   const url = `${getBaseUrl()}/api/trading/portfolio/snapshot`;
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: { ...getHeaders(apiKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ walletId }),
+      body: JSON.stringify({ walletId, force: options.force === true }),
     });
     if (!response.ok) {
       const text = await response.text().catch(() => "");

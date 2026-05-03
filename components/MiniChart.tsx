@@ -62,8 +62,34 @@ export function MiniChart({
     const max = Math.max(...data);
     const range = max - min || 1;
 
+    // Use real timestamps for x-positioning when history is provided so the
+    // chart is time-proportional (a cluster of snapshots taken seconds apart
+    // doesn't dominate the visual width). Fall back to even index spacing
+    // when history is missing or invalid (preserves data-only callers like
+    // AssetCard / AssetListRow / WalletDropdown).
+    const timestamps =
+      history && history.length === data.length
+        ? history.map((h) => {
+            const t = Date.parse(h.timestamp);
+            return Number.isFinite(t) ? t : NaN;
+          })
+        : null;
+    const useTime =
+      timestamps !== null &&
+      timestamps.every((t) => Number.isFinite(t)) &&
+      timestamps[timestamps.length - 1] > timestamps[0];
+    const tMin = useTime && timestamps ? timestamps[0] : 0;
+    const tSpan =
+      useTime && timestamps
+        ? timestamps[timestamps.length - 1] - timestamps[0]
+        : 1;
+
     const points = data.map((value, i) => ({
-      x: padding.left + (i / (data.length - 1)) * innerWidth,
+      x:
+        padding.left +
+        (useTime && timestamps
+          ? ((timestamps[i] - tMin) / tSpan) * innerWidth
+          : (i / (data.length - 1)) * innerWidth),
       y: padding.top + innerHeight - ((value - min) / range) * innerHeight,
       value,
       timestamp: history?.[i]?.timestamp ?? "",

@@ -111,7 +111,8 @@ export async function POST() {
           if (finalStatus === "COMPLETED" && isVaultoApiConfigured()) {
             void triggerPortfolioSnapshot(
               getVaultoApiToken(),
-              withdrawal.tradingWalletId
+              withdrawal.tradingWalletId,
+              { force: true }
             );
           }
 

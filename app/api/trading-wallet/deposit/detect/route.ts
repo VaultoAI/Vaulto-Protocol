@@ -145,7 +145,7 @@ export async function POST() {
     // the new deposit on the next read. Fire-and-forget — chart still works
     // if this misses, the periodic cron will catch up within 15 min.
     if (createdDeposits.length > 0 && isVaultoApiConfigured()) {
-      void triggerPortfolioSnapshot(getVaultoApiToken(), tradingWallet.id);
+      void triggerPortfolioSnapshot(getVaultoApiToken(), tradingWallet.id, { force: true });
     }
 
     return NextResponse.json({

@@ -14,7 +14,7 @@ import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/confi
 
 function snapshotAfterWithdrawal(walletId: string) {
   if (!isVaultoApiConfigured()) return;
-  void triggerPortfolioSnapshot(getVaultoApiToken(), walletId);
+  void triggerPortfolioSnapshot(getVaultoApiToken(), walletId, { force: true });
 }
 
 export async function POST(request: Request) {
