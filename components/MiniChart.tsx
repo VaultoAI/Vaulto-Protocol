@@ -96,21 +96,39 @@ export function MiniChart({
       index: i,
     }));
 
-    // Build smooth cubic bezier path
+    // Monotone cubic interpolation (Fritsch–Carlson). Catmull-Rom with
+    // non-uniform x spacing produced loops/cusps at points where a small
+    // x-gap sat next to a large one; monotone cubic guarantees the curve
+    // never overshoots or reverses direction between samples.
+    const n = points.length;
+    const dx: number[] = new Array(n - 1);
+    const slope: number[] = new Array(n - 1);
+    for (let i = 0; i < n - 1; i++) {
+      dx[i] = points[i + 1].x - points[i].x || 1e-6;
+      slope[i] = (points[i + 1].y - points[i].y) / dx[i];
+    }
+
+    const tangent: number[] = new Array(n);
+    tangent[0] = slope[0];
+    tangent[n - 1] = slope[n - 2];
+    for (let i = 1; i < n - 1; i++) {
+      if (slope[i - 1] * slope[i] <= 0) {
+        tangent[i] = 0;
+      } else {
+        const w1 = 2 * dx[i] + dx[i - 1];
+        const w2 = dx[i] + 2 * dx[i - 1];
+        tangent[i] = (w1 + w2) / (w1 / slope[i - 1] + w2 / slope[i]);
+      }
+    }
+
     let linePath = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-    for (let i = 0; i < points.length - 1; i++) {
+    for (let i = 0; i < n - 1; i++) {
       const curr = points[i];
       const next = points[i + 1];
-      const tension = 0.1;
-
-      const prev = points[Math.max(i - 1, 0)];
-      const afterNext = points[Math.min(i + 2, points.length - 1)];
-
-      const cp1x = curr.x + (next.x - prev.x) * tension;
-      const cp1y = curr.y + (next.y - prev.y) * tension;
-      const cp2x = next.x - (afterNext.x - curr.x) * tension;
-      const cp2y = next.y - (afterNext.y - curr.y) * tension;
-
+      const cp1x = curr.x + dx[i] / 3;
+      const cp1y = curr.y + (tangent[i] * dx[i]) / 3;
+      const cp2x = next.x - dx[i] / 3;
+      const cp2y = next.y - (tangent[i + 1] * dx[i]) / 3;
       linePath += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
     }
 
