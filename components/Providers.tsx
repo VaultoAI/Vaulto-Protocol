@@ -15,38 +15,22 @@ import { MobileAuthGate } from "./MobileAuthGate";
  * This ensures stale user data doesn't persist across sessions.
  */
 function AuthStateListener({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated } = usePrivy();
   const queryClient = useQueryClient();
   const wasAuthenticated = useRef<boolean | null>(null);
 
-  // Set returning employee flag for Vaulto employees when they sign in
   useEffect(() => {
-    if (!ready || !authenticated || !user) return;
-
-    // Check if user has Vaulto email via Privy
-    const email = user.email?.address || user.google?.email;
-    if (email?.endsWith("@vaulto.ai")) {
-      localStorage.setItem("vaulto-employee-returning", "true");
-    }
-  }, [ready, authenticated, user]);
-
-  useEffect(() => {
-    // Only react after Privy is ready and we have a previous state to compare
     if (!ready) return;
 
-    // If user just logged out (was authenticated, now isn't)
     if (wasAuthenticated.current === true && authenticated === false) {
       console.log("[AuthStateListener] User logged out, clearing caches...");
 
-      // Clear React Query cache
       queryClient.clear();
 
-      // Clear NextAuth session
       nextAuthSignOut({ redirect: false }).catch((e) => {
         console.warn("[AuthStateListener] Failed to clear NextAuth session:", e);
       });
 
-      // Clear any user-related localStorage
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -55,18 +39,12 @@ function AuthStateListener({ children }: { children: React.ReactNode }) {
             keysToRemove.push(key);
           }
         }
-        keysToRemove.forEach((key) => {
-          // Preserve the returning employee flag so Vaulto employees see MobileSignIn
-          if (key !== "vaulto-employee-returning") {
-            localStorage.removeItem(key);
-          }
-        });
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
       } catch (e) {
         console.warn("[AuthStateListener] Failed to clear localStorage:", e);
       }
     }
 
-    // Update the ref for next comparison
     wasAuthenticated.current = authenticated;
   }, [ready, authenticated, queryClient]);
 

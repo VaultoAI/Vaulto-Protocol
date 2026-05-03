@@ -25,21 +25,46 @@ function clearUserStorage(): void {
     }
   });
 
-  // Clear any items with common user-related prefixes
-  // Preserve vaulto-employee-returning so returning employees see simplified sign-in
   try {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && (key.startsWith("vaulto-") || key.startsWith("privy-"))) {
-        if (key !== "vaulto-employee-returning") {
-          keysToRemove.push(key);
-        }
+        keysToRemove.push(key);
       }
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key));
   } catch (e) {
     console.warn("[logout] Failed to clear prefixed localStorage items", e);
+  }
+
+  // Clear sessionStorage too — Privy uses it for some session data.
+  try {
+    const sessionKeysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && (key.startsWith("vaulto-") || key.startsWith("privy-"))) {
+        sessionKeysToRemove.push(key);
+      }
+    }
+    sessionKeysToRemove.forEach((key) => sessionStorage.removeItem(key));
+  } catch (e) {
+    console.warn("[logout] Failed to clear sessionStorage", e);
+  }
+
+  // Expire any non-HttpOnly cookies on this origin so a stale Privy/auth
+  // cookie can't be picked back up by the next sign-in attempt.
+  try {
+    document.cookie.split(";").forEach((c) => {
+      const eq = c.indexOf("=");
+      const name = (eq > -1 ? c.substring(0, eq) : c).trim();
+      if (!name) return;
+      if (name.startsWith("privy-") || name.startsWith("authjs.") || name.startsWith("__Secure-authjs.")) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      }
+    });
+  } catch (e) {
+    console.warn("[logout] Failed to clear cookies", e);
   }
 }
 
@@ -92,17 +117,19 @@ export async function performLogout(options: LogoutOptions): Promise<void> {
 
   console.log("[logout] Starting comprehensive logout...");
 
-  // Clear caches and storage first (these are synchronous/fast)
   clearQueryCache(queryClient ?? null);
-  clearUserStorage();
 
-  // Clear both auth systems in parallel
-  await Promise.all([
-    privyLogout().catch((e) => {
-      console.warn("[logout] Privy logout error:", e);
-    }),
-    clearNextAuthSession(),
-  ]);
+  // Sequence: clear NextAuth (server cookie) first, then Privy (client SDK
+  // session). Doing them in parallel can let a stale Privy session bleed
+  // into the next sign-in attempt before NextAuth's cookie is gone.
+  await clearNextAuthSession();
+  await privyLogout().catch((e) => {
+    console.warn("[logout] Privy logout error:", e);
+  });
+
+  // Clear local storage / cookies AFTER both systems have signed out so we
+  // don't race their own internal cleanup.
+  clearUserStorage();
 
   console.log("[logout] Comprehensive logout complete");
 

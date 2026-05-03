@@ -4,7 +4,6 @@ import { HeroSection } from "./landing/HeroSection";
 import { FeatureSection } from "./landing/FeatureSection";
 import { TokenTicker, CodeBlock, ChainDiagram } from "./landing/FeatureVisuals";
 import { LandingFooter } from "./landing/LandingFooter";
-import { MobileSignIn } from "./landing/MobileSignIn";
 import { signInWithGoogle } from "@/app/actions/auth";
 import { useState, useEffect, useCallback, useRef } from "react";
 
@@ -20,10 +19,8 @@ function isEmbeddedBrowser(): boolean {
 }
 
 export function LandingPage() {
-  const [isLoading, setIsLoading] = useState(true);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [isEmbedded, setIsEmbedded] = useState(false);
-  const [isReturningEmployee, setIsReturningEmployee] = useState(false);
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +34,6 @@ export function LandingPage() {
 
   useEffect(() => {
     setIsEmbedded(isEmbeddedBrowser());
-    // Check if user is a returning Vaulto employee
-    setIsReturningEmployee(localStorage.getItem("vaulto-employee-returning") === "true");
-    setIsLoading(false);
   }, []);
 
   const handleEmailSignup = useCallback(
@@ -103,18 +97,8 @@ export function LandingPage() {
     setError(null);
   };
 
-  // Prevent flash of incorrect content while checking localStorage
-  if (isLoading) {
-    return null;
-  }
-
   return (
     <>
-      {/* Sign-in page for returning Vaulto employees */}
-      {isReturningEmployee && <MobileSignIn />}
-
-      {/* Landing page - only for non-returning users */}
-      {!isReturningEmployee && (
       <div className="landing-page-light min-h-screen bg-[var(--background)]" style={{ zoom: 0.9 }}>
         {/* Hidden form for Google sign-in */}
         <form ref={googleFormRef} action={signInWithGoogle} className="hidden" />
@@ -303,7 +287,6 @@ export function LandingPage() {
         </div>
       )}
       </div>
-      )}
     </>
   );
 }

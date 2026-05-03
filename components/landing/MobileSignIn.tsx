@@ -1,55 +1,103 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
-import { signIn } from "next-auth/react";
+import { signIn, signOut, getSession } from "next-auth/react";
+
+type BridgeState = "idle" | "signing-in" | "error";
 
 export function MobileSignIn() {
   const { login, ready, authenticated, getAccessToken } = usePrivy();
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [state, setState] = useState<BridgeState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // After Privy auth completes, bridge to NextAuth and redirect
+  // Once we've attempted the NextAuth bridge for the *current* Privy auth
+  // session, don't try again. Reset only when Privy goes back to
+  // unauthenticated. This breaks the previous infinite-retry loop where a
+  // failed signIn would re-trigger the effect on every render.
+  const bridgeAttemptedRef = useRef(false);
+
   useEffect(() => {
-    async function bridgeToNextAuth() {
-      if (!ready || !authenticated || isSigningIn) return;
+    if (!ready) return;
 
-      setIsSigningIn(true);
+    if (!authenticated) {
+      bridgeAttemptedRef.current = false;
+      if (state !== "idle") setState("idle");
+      return;
+    }
+
+    if (bridgeAttemptedRef.current) return;
+    bridgeAttemptedRef.current = true;
+
+    void (async () => {
+      setState("signing-in");
+      setErrorMessage(null);
       try {
-        // Get the Privy access token
         const privyToken = await getAccessToken();
         if (!privyToken) {
           console.error("[MobileSignIn] Failed to get Privy access token");
-          setIsSigningIn(false);
+          setErrorMessage("Couldn't read sign-in token. Please try again.");
+          setState("error");
           return;
         }
 
-        // Sign in to NextAuth with the Privy token
+        // If a stale NextAuth session exists from a different identity (e.g.
+        // a prior Google-OAuth waitlist sign-up), wipe it before bridging so
+        // the new Privy identity wins cleanly.
+        const existing = await getSession();
+        if (existing?.user?.email) {
+          await signOut({ redirect: false });
+        }
+
         const result = await signIn("privy", {
           privyToken,
           redirect: false,
         });
 
-        if (result?.ok) {
-          // Mark as returning employee and redirect
-          localStorage.setItem("vaulto-employee-returning", "true");
-          window.location.href = "/explore";
-        } else {
+        if (!result?.ok) {
           console.error("[MobileSignIn] NextAuth sign-in failed:", result?.error);
-          setIsSigningIn(false);
+          setErrorMessage("Sign-in failed. Please try again.");
+          setState("error");
+          return;
         }
+
+        // Pick destination based on actual session, not on any localStorage
+        // flag (which used to wrongly mark non-employees as employees).
+        const fresh = await getSession();
+        const dest = fresh?.user?.isVaultoEmployee ? "/explore" : "/waitlist-success";
+        window.location.href = dest;
       } catch (error) {
         console.error("[MobileSignIn] Bridge to NextAuth failed:", error);
-        setIsSigningIn(false);
+        setErrorMessage("Something went wrong. Please try again.");
+        setState("error");
       }
-    }
+    })();
+  }, [ready, authenticated, getAccessToken, state]);
 
-    bridgeToNextAuth();
-  }, [ready, authenticated, getAccessToken, isSigningIn]);
+  const handleClick = () => {
+    if (!ready) return;
+    if (state === "signing-in") return;
+    if (state === "error") {
+      // Allow user to retry from a clean slate.
+      bridgeAttemptedRef.current = false;
+      setState("idle");
+      setErrorMessage(null);
+    }
+    if (!authenticated) {
+      login();
+    }
+  };
+
+  const buttonLabel =
+    state === "signing-in"
+      ? "Signing in..."
+      : state === "error"
+        ? "Try again"
+        : "Sign in with Privy";
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
-      {/* Centered icon */}
       <div className="relative z-10 flex flex-1 items-center justify-center">
         <Image
           src="/vaulto-logo-mobile.png"
@@ -61,17 +109,21 @@ export function MobileSignIn() {
         />
       </div>
 
-      {/* Bottom sign-in button */}
       <div
         className="relative z-10 px-6"
         style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
       >
+        {errorMessage && (
+          <p className="mb-3 text-center text-sm text-red-500" role="alert">
+            {errorMessage}
+          </p>
+        )}
         <button
-          onClick={() => ready && !isSigningIn && login()}
-          disabled={!ready || isSigningIn}
+          onClick={handleClick}
+          disabled={!ready || state === "signing-in"}
           className="w-full rounded-xl bg-black py-4 text-base font-medium text-white transition-opacity disabled:opacity-50"
         >
-          {isSigningIn ? "Signing in..." : "Sign in with Privy"}
+          {buttonLabel}
         </button>
         <p className="mt-4 text-center text-xs text-gray-500">
           By signing in, you agree to our{" "}

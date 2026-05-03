@@ -88,43 +88,52 @@ export async function verifyPrivyTokenAndGetUserWithWallet(
     // Get full user details (use _get with user ID for server-side queries)
     const user = await client.users()._get(userId);
 
-    // Extract email from linked accounts (check multiple account types)
-    // 1. Direct email account
-    const emailAccount = user.linked_accounts.find(
-      (account) => account.type === "email" && "address" in account
-    );
-    // 2. Google OAuth account
-    const googleAccount = user.linked_accounts.find(
-      (account) => account.type === "google_oauth" && "email" in account
-    );
-    // 3. Apple OAuth account
-    const appleAccount = user.linked_accounts.find(
-      (account) => account.type === "apple_oauth" && "email" in account
-    );
+    // Pick the email from whichever account was authenticated MOST RECENTLY,
+    // not by hard-coded type priority. Fixes a bug where a Privy user with
+    // multiple linked accounts (e.g. an old `email` link to address A and a
+    // newer `google_oauth` to address B) would always resolve to A even when
+    // the user just signed in via Google as B.
+    type EmailCandidate = { email: string; verifiedAt: number };
+    const candidates: EmailCandidate[] = [];
+    for (const account of user.linked_accounts) {
+      const verifiedAt =
+        ("latest_verified_at" in account && typeof account.latest_verified_at === "number"
+          ? account.latest_verified_at
+          : null) ??
+        ("verified_at" in account && typeof account.verified_at === "number"
+          ? account.verified_at
+          : 0);
+      if (account.type === "email" && "address" in account && typeof account.address === "string") {
+        candidates.push({ email: account.address, verifiedAt });
+      } else if (
+        (account.type === "google_oauth" || account.type === "apple_oauth") &&
+        "email" in account &&
+        typeof (account as { email?: unknown }).email === "string" &&
+        (account as { email: string }).email
+      ) {
+        candidates.push({ email: (account as { email: string }).email, verifiedAt });
+      }
+    }
+    candidates.sort((a, b) => b.verifiedAt - a.verifiedAt);
 
-    // Find external wallet (for wallet-only logins)
-    const externalWallet = user.linked_accounts.find(
-      (account) =>
-        account.type === "wallet" &&
-        "wallet_client_type" in account &&
-        account.wallet_client_type !== "privy" &&
-        "address" in account
-    );
-
-    // Determine email: use linked email from any source, or generate placeholder
     let email: string;
-    if (emailAccount && "address" in emailAccount) {
-      email = emailAccount.address as string;
-    } else if (googleAccount && "email" in googleAccount) {
-      email = (googleAccount as { email: string }).email;
-    } else if (appleAccount && "email" in appleAccount) {
-      email = (appleAccount as { email: string }).email;
-    } else if (externalWallet && "address" in externalWallet) {
-      const walletAddr = (externalWallet.address as string).toLowerCase();
-      email = `${walletAddr}@wallet.vaulto.app`;
+    if (candidates.length > 0) {
+      email = candidates[0].email;
     } else {
-      const userIdSuffix = userId.replace("did:privy:", "");
-      email = `${userIdSuffix}@privy.vaulto.app`;
+      const externalWallet = user.linked_accounts.find(
+        (account) =>
+          account.type === "wallet" &&
+          "wallet_client_type" in account &&
+          account.wallet_client_type !== "privy" &&
+          "address" in account
+      );
+      if (externalWallet && "address" in externalWallet) {
+        const walletAddr = (externalWallet.address as string).toLowerCase();
+        email = `${walletAddr}@wallet.vaulto.app`;
+      } else {
+        const userIdSuffix = userId.replace("did:privy:", "");
+        email = `${userIdSuffix}@privy.vaulto.app`;
+      }
     }
 
     // Extract embedded wallet address
