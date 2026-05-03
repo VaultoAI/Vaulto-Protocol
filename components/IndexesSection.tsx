@@ -89,6 +89,7 @@ function IndexItem({ index, companies, priceData, hasBorderLeft, isFirst }: Inde
           companies={companies}
           maxVisible={4}
           size={36}
+          indexSymbol={index.symbol}
         />
 
         {/* Name - takes remaining space */}
