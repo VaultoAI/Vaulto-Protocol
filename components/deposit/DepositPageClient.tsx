@@ -20,7 +20,7 @@ import { generateUsername } from "@/lib/utils/username";
 import { getProxiedFaviconUrl } from "@/lib/utils/companyLogo";
 import { getCompanySlug, getCompanySlugFromSymbol } from "@/lib/vaulto/companies";
 import { getCompanyFromEventSlug } from "@/lib/polymarket/implied-valuations";
-import { Check, ExternalLink, Wallet, Loader2, Copy, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
+import { Check, ExternalLink, Wallet, Loader2, Pencil, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { PredictionPositions } from "@/components/PredictionPositions";
 
 // Lazy-load modal to reduce initial bundle
@@ -37,7 +37,6 @@ export function DepositPageClient() {
   const [depositStatus, setDepositStatus] = useState<DepositStatus>("idle");
   const [depositError, setDepositError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   const { ready, authenticated } = usePrivy();
   const { chain, address: connectedAddress } = useAccount();
@@ -257,11 +256,6 @@ export function DepositPageClient() {
     }
   }, [sendError, depositStatus]);
 
-  // Track client-side mounting to prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const resetDeposit = () => {
     setDepositAmount("");
     setDepositError(null);
@@ -269,13 +263,33 @@ export function DepositPageClient() {
     resetTransaction();
   };
 
-  const handleCopyReferral = async () => {
+  const handleShareReferral = useCallback(async () => {
     if (!referralCode) return;
-    const referralUrl = `${window.location.origin}/join?ref=${referralCode}`;
-    await navigator.clipboard.writeText(referralUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    const referralUrl = `https://app.vaulto.fi?ref=${referralCode}`;
+    const shareData = {
+      title: "Join Vaulto now",
+      text: "Join Vaulto now",
+      url: referralUrl,
+    };
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        const name = (error as Error).name;
+        if (name === "AbortError" || name === "InvalidStateError") return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(referralUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy referral link:", error);
+    }
+  }, [referralCode]);
 
   const handleSetMaxDeposit = () => {
     if (externalUsdcBalance && parseFloat(externalUsdcBalance) > 0) {
@@ -1019,39 +1033,29 @@ export function DepositPageClient() {
         <PredictionPositions />
       </div>
 
-      {/* Referral Section */}
-      <div className="mt-6 pt-6 border-t border-border">
+      {/* Referral Section - mobile only */}
+      <div className="mt-6 pt-6 border-t border-border sm:hidden">
         <h3 className="text-sm font-medium text-foreground mb-3 sm:mb-4">Invite Friends</h3>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 rounded-lg border border-border bg-foreground/5 px-3 py-2.5">
-            <span className="text-xs text-muted font-mono truncate block sm:text-sm">
-              {!mounted
-                ? "Loading..."
-                : referralCode
-                  ? `${window.location.origin}/join?ref=${referralCode}`
-                  : isLoadingReferral
-                    ? "Loading..."
-                    : "No referral code"}
+        <button
+          type="button"
+          onClick={handleShareReferral}
+          disabled={!referralCode}
+          aria-label="Share Vaulto with friends"
+          className="relative block w-full overflow-hidden rounded-xl border border-border bg-foreground/5 transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <img
+            src="/socialbanner.png"
+            alt="Trade faster and smarter on Vaulto"
+            className="block w-full h-auto"
+            loading="lazy"
+          />
+          {copied && (
+            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-foreground/80 py-2 text-xs font-medium text-background">
+              <Check className="h-4 w-4" />
+              Link copied
             </span>
-          </div>
-          <button
-            onClick={handleCopyReferral}
-            disabled={!referralCode}
-            className="shrink-0 rounded-lg border border-border px-3 py-2.5 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                <span className="hidden sm:inline">Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                <span className="hidden sm:inline">Copy</span>
-              </>
-            )}
-          </button>
-        </div>
+          )}
+        </button>
         <div className="mt-3 flex items-center gap-3 text-xs text-muted sm:gap-4 sm:text-sm">
           <span>{referralCount} Referral{referralCount !== 1 ? "s" : ""}</span>
           <span className="text-border">•</span>
