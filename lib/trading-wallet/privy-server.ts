@@ -72,6 +72,72 @@ export interface PrivyUserWithWallet {
   embeddedWalletAddress: string;
 }
 
+type PrivyLinkedAccount = { type: string; [key: string]: unknown };
+type PrivyUserLike = { id: string; linked_accounts: PrivyLinkedAccount[] };
+
+/**
+ * Resolve the canonical email for a Privy user.
+ *
+ * Picks whichever email-bearing linked account was authenticated MOST RECENTLY
+ * (by `latest_verified_at`, falling back to `verified_at`). This fixes a bug
+ * where a Privy user with multiple linked accounts (e.g. an old `email` link
+ * to address A and a newer `google_oauth` to address B) would always resolve
+ * to A even when the user just signed in via Google as B.
+ *
+ * Falls back to `<addr>@wallet.vaulto.app` for wallet-only logins, then to
+ * `<privy-id-suffix>@privy.vaulto.app`.
+ */
+export function resolvePrivyEmail(user: PrivyUserLike): string {
+  type EmailCandidate = { email: string; verifiedAt: number };
+  const candidates: EmailCandidate[] = [];
+  for (const account of user.linked_accounts) {
+    const verifiedAt =
+      (typeof account.latest_verified_at === "number"
+        ? account.latest_verified_at
+        : null) ??
+      (typeof account.verified_at === "number" ? account.verified_at : 0);
+    if (account.type === "email" && typeof account.address === "string") {
+      candidates.push({ email: account.address, verifiedAt });
+    } else if (
+      (account.type === "google_oauth" || account.type === "apple_oauth") &&
+      typeof account.email === "string" &&
+      account.email
+    ) {
+      candidates.push({ email: account.email, verifiedAt });
+    }
+  }
+  candidates.sort((a, b) => b.verifiedAt - a.verifiedAt);
+  if (candidates.length > 0) return candidates[0].email;
+
+  const externalWallet = user.linked_accounts.find(
+    (account) =>
+      account.type === "wallet" &&
+      account.wallet_client_type !== "privy" &&
+      typeof account.address === "string"
+  );
+  if (externalWallet && typeof externalWallet.address === "string") {
+    return `${externalWallet.address.toLowerCase()}@wallet.vaulto.app`;
+  }
+  return `${user.id.replace("did:privy:", "")}@privy.vaulto.app`;
+}
+
+/**
+ * Find the Privy embedded wallet address (chain_type ethereum) for a user.
+ * Returns null if no embedded wallet is linked.
+ */
+export function getPrivyEmbeddedWalletAddress(
+  user: PrivyUserLike
+): string | null {
+  const embeddedWallet = user.linked_accounts.find(
+    (account) =>
+      account.type === "wallet" && account.wallet_client_type === "privy"
+  );
+  if (!embeddedWallet || typeof embeddedWallet.address !== "string") {
+    return null;
+  }
+  return embeddedWallet.address;
+}
+
 /**
  * Verify a Privy access token and get user info with embedded wallet address
  */
@@ -81,76 +147,21 @@ export async function verifyPrivyTokenAndGetUserWithWallet(
   const client = getPrivyClient();
 
   try {
-    // Verify the token first
     const verifiedClaims = await client.utils().auth().verifyAccessToken(accessToken);
     const userId = verifiedClaims.user_id;
 
-    // Get full user details (use _get with user ID for server-side queries)
     const user = await client.users()._get(userId);
-
-    // Pick the email from whichever account was authenticated MOST RECENTLY,
-    // not by hard-coded type priority. Fixes a bug where a Privy user with
-    // multiple linked accounts (e.g. an old `email` link to address A and a
-    // newer `google_oauth` to address B) would always resolve to A even when
-    // the user just signed in via Google as B.
-    type EmailCandidate = { email: string; verifiedAt: number };
-    const candidates: EmailCandidate[] = [];
-    for (const account of user.linked_accounts) {
-      const verifiedAt =
-        ("latest_verified_at" in account && typeof account.latest_verified_at === "number"
-          ? account.latest_verified_at
-          : null) ??
-        ("verified_at" in account && typeof account.verified_at === "number"
-          ? account.verified_at
-          : 0);
-      if (account.type === "email" && "address" in account && typeof account.address === "string") {
-        candidates.push({ email: account.address, verifiedAt });
-      } else if (
-        (account.type === "google_oauth" || account.type === "apple_oauth") &&
-        "email" in account &&
-        typeof (account as { email?: unknown }).email === "string" &&
-        (account as { email: string }).email
-      ) {
-        candidates.push({ email: (account as { email: string }).email, verifiedAt });
-      }
-    }
-    candidates.sort((a, b) => b.verifiedAt - a.verifiedAt);
-
-    let email: string;
-    if (candidates.length > 0) {
-      email = candidates[0].email;
-    } else {
-      const externalWallet = user.linked_accounts.find(
-        (account) =>
-          account.type === "wallet" &&
-          "wallet_client_type" in account &&
-          account.wallet_client_type !== "privy" &&
-          "address" in account
-      );
-      if (externalWallet && "address" in externalWallet) {
-        const walletAddr = (externalWallet.address as string).toLowerCase();
-        email = `${walletAddr}@wallet.vaulto.app`;
-      } else {
-        const userIdSuffix = userId.replace("did:privy:", "");
-        email = `${userIdSuffix}@privy.vaulto.app`;
-      }
-    }
-
-    // Extract embedded wallet address
-    const embeddedWallet = user.linked_accounts.find(
-      (account) => account.type === "wallet" && "wallet_client_type" in account && account.wallet_client_type === "privy"
+    const email = resolvePrivyEmail(user as unknown as PrivyUserLike);
+    const embeddedWalletAddress = getPrivyEmbeddedWalletAddress(
+      user as unknown as PrivyUserLike
     );
-    if (!embeddedWallet || !("address" in embeddedWallet)) {
+
+    if (!embeddedWalletAddress) {
       console.error("[Privy Server] User has no embedded wallet:", userId);
       return null;
     }
-    const embeddedWalletAddress = embeddedWallet.address as string;
 
-    return {
-      userId,
-      email,
-      embeddedWalletAddress,
-    };
+    return { userId, email, embeddedWalletAddress };
   } catch (error) {
     console.error("[Privy Server] Token verification or user fetch failed:", error);
     return null;

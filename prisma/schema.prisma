@@ -135,6 +135,7 @@ enum UserTier {
 model User {
   id                    String              @id @default(cuid())
   email                 String              @unique
+  privyUserId           String?             @unique
   name                  String?
   image                 String?
   onboardingStatus      OnboardingStatus    @default(NOT_STARTED)

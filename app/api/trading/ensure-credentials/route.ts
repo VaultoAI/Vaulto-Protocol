@@ -9,6 +9,7 @@ import { getVaultoApiToken, isVaultoApiConfigured } from "@/lib/vaulto-api/confi
 import {
   verifyPrivyToken,
   isValidEthereumAddress,
+  resolvePrivyEmail,
 } from "@/lib/trading-wallet/privy-server";
 import {
   createWalletForExistingUser,
@@ -88,51 +89,13 @@ export async function POST(request: NextRequest) {
     const privy = getPrivyClient();
     const privyUser = await privy.users()._get(privyUserId);
 
-    // Extract email from linked accounts (check multiple account types)
-    // 1. Direct email account
-    const emailAccount = privyUser.linked_accounts.find(
-      (account) => account.type === "email" && "address" in account
+    // Resolve email by latest_verified_at across linked accounts so a Privy
+    // user with multiple identities (e.g. old direct-email + newer Google OAuth)
+    // maps to the most recently authenticated one.
+    const email = resolvePrivyEmail(
+      privyUser as unknown as { id: string; linked_accounts: Array<{ type: string; [k: string]: unknown }> }
     );
-    // 2. Google OAuth account
-    const googleAccount = privyUser.linked_accounts.find(
-      (account) => account.type === "google_oauth" && "email" in account
-    );
-    // 3. Apple OAuth account
-    const appleAccount = privyUser.linked_accounts.find(
-      (account) => account.type === "apple_oauth" && "email" in account
-    );
-
-    // Find existing external wallet (for wallet-only logins)
-    const externalWallet = privyUser.linked_accounts.find(
-      (account) =>
-        account.type === "wallet" &&
-        "wallet_client_type" in account &&
-        account.wallet_client_type !== "privy" &&
-        "address" in account
-    );
-
-    // Determine email: use linked email from any source, or generate placeholder
-    let email: string;
-    if (emailAccount && "address" in emailAccount) {
-      email = emailAccount.address as string;
-      console.log("[Ensure Credentials] Using direct email:", email);
-    } else if (googleAccount && "email" in googleAccount) {
-      email = (googleAccount as { email: string }).email;
-      console.log("[Ensure Credentials] Using Google OAuth email:", email);
-    } else if (appleAccount && "email" in appleAccount) {
-      email = (appleAccount as { email: string }).email;
-      console.log("[Ensure Credentials] Using Apple OAuth email:", email);
-    } else if (externalWallet && "address" in externalWallet) {
-      // Generate placeholder email from wallet address for wallet-only users
-      const walletAddr = (externalWallet.address as string).toLowerCase();
-      email = `${walletAddr}@wallet.vaulto.app`;
-      console.log("[Ensure Credentials] Using wallet-based placeholder email:", email);
-    } else {
-      // Fallback: use Privy user ID
-      const userIdSuffix = privyUserId.replace("did:privy:", "");
-      email = `${userIdSuffix}@privy.vaulto.app`;
-      console.log("[Ensure Credentials] Using Privy ID-based placeholder email:", email);
-    }
+    console.log("[Ensure Credentials] Resolved email:", email);
 
     // Step 2: Check if user already has an embedded wallet, or create one server-side
     let embeddedWalletAddress: string;
@@ -231,23 +194,46 @@ export async function POST(request: NextRequest) {
 
     const db = getDb();
 
-    // Step 2: Find or create user in database
+    // Step 2: Find or create user in database. Prefer privyUserId lookup — it's
+    // the stable identity across email/OAuth re-links. Fall back to email for
+    // users created before privyUserId was tracked.
     console.log("[Ensure Credentials] Finding or creating user in database...");
     let user = await db.user.findUnique({
-      where: { email },
+      where: { privyUserId },
       include: { tradingWallet: true },
     });
+
+    if (!user) {
+      user = await db.user.findUnique({
+        where: { email },
+        include: { tradingWallet: true },
+      });
+    }
 
     if (!user) {
       console.log("[Ensure Credentials] User not found, creating...");
       user = await db.user.create({
         data: {
           email,
+          privyUserId,
           name: email.split("@")[0],
         },
         include: { tradingWallet: true },
       });
       console.log("[Ensure Credentials] Created user:", user.id);
+    } else if (user.privyUserId !== privyUserId || user.email !== email) {
+      // Backfill privyUserId on legacy rows and pick up email changes
+      // (e.g. user re-linked Google with a different address).
+      user = await db.user.update({
+        where: { id: user.id },
+        data: { privyUserId, email },
+        include: { tradingWallet: true },
+      });
+      console.log("[Ensure Credentials] Updated user identity:", {
+        id: user.id,
+        privyUserId,
+        email,
+      });
     }
 
     // Step 3: Create trading wallet in DB if it doesn't exist
@@ -319,6 +305,44 @@ export async function POST(request: NextRequest) {
       }
     } else {
       console.log("[Ensure Credentials] Trading wallet already exists:", tradingWallet.id);
+
+      // Reconcile address with Privy (source of truth) — handles the case where
+      // Privy's embedded wallet for this user has changed since the DB row was
+      // created. Without this, the DB row would silently hold a stale address.
+      const dbAddrLower = tradingWallet.address.toLowerCase();
+      const privyAddrLower = embeddedWalletAddress.toLowerCase();
+      if (dbAddrLower !== privyAddrLower) {
+        const conflictingRow = await db.tradingWallet.findUnique({
+          where: { address: embeddedWalletAddress },
+        });
+        if (conflictingRow && conflictingRow.userId !== user.id) {
+          console.error("[Ensure Credentials] Cannot reconcile address: target held by another user", {
+            ourUserId: user.id,
+            targetAddress: embeddedWalletAddress,
+            heldByUserId: conflictingRow.userId,
+          });
+          return NextResponse.json(
+            { error: "Wallet already registered to another account", ready: false },
+            { status: 409 }
+          );
+        }
+        if (conflictingRow && conflictingRow.id !== tradingWallet.id) {
+          // Same user, stale duplicate row — drop it before updating
+          await db.tradingWallet.delete({ where: { id: conflictingRow.id } });
+        }
+        tradingWallet = await db.tradingWallet.update({
+          where: { id: tradingWallet.id },
+          data: {
+            address: embeddedWalletAddress,
+            privyWalletId: privyWalletId || embeddedWalletAddress,
+          },
+        });
+        console.log("[Ensure Credentials] Reconciled wallet address:", {
+          from: dbAddrLower,
+          to: privyAddrLower,
+        });
+      }
+
       // Backfill policy fields on the DB row if we just attached them in Privy
       // but the DB record predates the fix (policyId=null, hasServerSigner=false).
       if (hasServerSigner && policyId && !tradingWallet.hasServerSigner) {
