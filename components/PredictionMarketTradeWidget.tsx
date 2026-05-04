@@ -83,8 +83,8 @@ export function PredictionMarketTradeWidget({
     ? data?.valuation.bestLongReturn ?? 0
     : data?.valuation.bestShortReturn ?? 0;
 
-  // Spread is realized as a one-time cost at entry. After that the position
-  // tracks the implied valuation chart only, so a fresh position reads $0/0%.
+  // Spread is realized as a one-time cost at entry, so a fresh position opens
+  // at −spread / −spread% and tracks the implied valuation chart from there.
   const spreadCostUsd = usdcAmount > 0 ? (usdcAmount * spreadPercent) / 100 : 0;
   const fairSellValueAtEntry =
     usdcAmount > 0 && buyCost > 0 ? usdcAmount * (sellValue / buyCost) : 0;
@@ -323,7 +323,7 @@ export function PredictionMarketTradeWidget({
                   </span>
                 </div>
                 <p className="text-xs text-muted">
-                  After purchase, P&amp;L tracks the implied valuation. Today&apos;s spread is locked in as a one-time cost — your position opens at $0.00 / 0%.
+                  Today&apos;s spread is locked in up front, so your position opens at −${spreadCostUsd.toFixed(2)} / −{spreadPercent.toFixed(1)}%. From there, P&amp;L tracks the implied valuation.
                 </p>
                 {errorMessage && (
                   <p className="text-sm text-red" role="alert">

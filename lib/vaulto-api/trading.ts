@@ -355,8 +355,28 @@ interface VaultoApiPositionsResponse {
  */
 function transformPosition(apiPosition: VaultoApiPosition): PredictionPosition {
   // Use API values if available (check multiple field names), otherwise calculate
-  const costBasis = apiPosition.costBasis ?? apiPosition.totalCost ?? (apiPosition.totalShares * apiPosition.entryPrice);
-  const marketValue = apiPosition.marketValue ?? apiPosition.value ?? (costBasis + apiPosition.unrealizedPnl);
+  const apiCostBasis =
+    apiPosition.costBasis ?? apiPosition.totalCost ?? apiPosition.totalShares * apiPosition.entryPrice;
+  const apiMarketValueRaw =
+    apiPosition.marketValue ?? apiPosition.value ?? apiCostBasis + apiPosition.unrealizedPnl;
+
+  // Cost basis: when graph snapshot exists, treat full USD paid as the
+  // canonical cost (entryFairSellValueUsd + entrySpreadCostUsd). Otherwise
+  // fall back to the API's costBasis. NEVER scale marketValue by implied
+  // valuation ratio — marketValue is set authoritatively by re-marking
+  // against the live Polymarket BID in fetchPositions.
+  const hasEntrySnapshot =
+    typeof apiPosition.entryFairSellValueUsd === "number";
+
+  const costBasis = hasEntrySnapshot
+    ? apiPosition.entryFairSellValueUsd! + (apiPosition.entrySpreadCostUsd ?? 0)
+    : apiCostBasis;
+
+  // Default marketValue to the API's value; fetchPositions overwrites this
+  // with shares × current BID before returning to the client.
+  const marketValue = apiMarketValueRaw;
+  const unrealizedPnl = marketValue - costBasis;
+  const unrealizedPnlPercent = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : 0;
 
   console.log("[Vaulto Trading API] Transform position:", {
     positionId: apiPosition.positionId,
@@ -367,9 +387,12 @@ function transformPosition(apiPosition: VaultoApiPosition): PredictionPosition {
     apiValue: apiPosition.value,
     apiCostBasis: apiPosition.costBasis,
     apiTotalCost: apiPosition.totalCost,
-    calculatedCostBasis: costBasis,
-    calculatedMarketValue: marketValue,
-    unrealizedPnl: apiPosition.unrealizedPnl,
+    apiUnrealizedPnl: apiPosition.unrealizedPnl,
+    hasEntrySnapshot,
+    costBasis,
+    marketValue,
+    unrealizedPnl,
+    unrealizedPnlPercent,
   });
 
   return {
@@ -383,8 +406,8 @@ function transformPosition(apiPosition: VaultoApiPosition): PredictionPosition {
     currentPrice: apiPosition.currentPrice,
     marketValue,
     costBasis,
-    unrealizedPnl: apiPosition.unrealizedPnl,
-    unrealizedPnlPercent: apiPosition.unrealizedPnlPercent,
+    unrealizedPnl,
+    unrealizedPnlPercent,
     entryGraphValuationUsd: apiPosition.entryGraphValuationUsd,
     currentGraphValuationUsd: apiPosition.currentGraphValuationUsd,
     entryFairSellValueUsd: apiPosition.entryFairSellValueUsd,
@@ -413,7 +436,10 @@ export async function fetchPositions(
   // Log raw API response for debugging
   console.log("[Vaulto Trading API] Raw positions response:", JSON.stringify(rawData, null, 2));
 
-  // Transform API response to frontend format
+  // Transform API response to frontend format. marketValue is taken
+  // directly from upstream Vaulto API (Polymarket BID-side sell quote
+  // across all relevant contracts) — never derived from implied
+  // valuation deltas on the frontend.
   const transformedPositions = rawData.positions.map(transformPosition);
 
   // Calculate totals from transformed positions (don't rely on API totals which may be stale)
