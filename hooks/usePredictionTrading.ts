@@ -15,12 +15,19 @@ export interface PredictionPosition {
   company?: string;
   side: "LONG" | "SHORT";
   shares: number;
+  /** With graph overlay, this is implied valuation USD at trade time. */
   entryPrice: number;
+  /** With graph overlay, this is the live implied valuation USD. */
   currentPrice: number;
   marketValue: number;
   costBasis: number;
   unrealizedPnl: number;
   unrealizedPnlPercent: number;
+  entryGraphValuationUsd?: number;
+  currentGraphValuationUsd?: number;
+  entryFairSellValueUsd?: number;
+  entrySpreadCostUsd?: number;
+  entryFairSellEstimated?: boolean;
   createdAt: string;
 }
 

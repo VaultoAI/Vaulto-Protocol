@@ -223,8 +223,12 @@ export async function POST(request: NextRequest) {
         amount,           // Keep original intended amount
         shares: totalShares || null,
         averagePrice: avgPrice,
-        actualCostBasis,  // Store actual cost from API or calculated
+        actualCostBasis,  // CLOB cost (audit only)
         positionId: result.positionId ? String(result.positionId) : null,
+        // Graph-derived snapshot from Vaulto API (canonical entry/cost basis).
+        entryGraphValuationUsd: result.entryGraphValuationUsd ?? null,
+        entryFairSellValueUsd: result.entryFairSellValueUsd ?? null,
+        spreadCostUsd: result.entrySpreadCostUsd ?? null,
         status: "FILLED",
         filledAt: new Date(),
       },

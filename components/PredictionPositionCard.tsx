@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { usePredictionTrading } from "@/hooks/usePredictionTrading";
 import { IPO_MARKET_END_DATES, COMPANY_SLUG_MAP } from "@/lib/polymarket/implied-valuations";
+import { formatValuationPrecise } from "@/lib/polymarket/ipo-valuations";
 
 interface PredictionPositionCardProps {
   eventSlug: string;
@@ -90,7 +91,6 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
 
   // Use pre-calculated values from API
   const marketValue = position.marketValue;
-  const costBasis = position.costBasis;
   const unrealizedPnl = position.unrealizedPnl;
   const unrealizedPnlPercent = position.unrealizedPnlPercent;
   const isPositive = unrealizedPnl >= 0;
@@ -229,25 +229,31 @@ export function PredictionPositionCard({ eventSlug, onCloseAndWithdraw }: Predic
         </span>
       </div>
 
-      {/* Position details - 2x2 grid */}
+      {/* Position details — entry/current valuation match the chart. Shares
+          and CLOB price are intentionally hidden; they're CLOB-internal. */}
       <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
         <div>
-          <p className="text-xs text-muted mb-0.5">Shares</p>
-          <p className="text-sm font-medium text-foreground">{position.shares.toFixed(2)}</p>
+          <p className="text-xs text-muted mb-0.5">Entry Valuation</p>
+          <p className="text-sm font-medium text-foreground">
+            {position.entryGraphValuationUsd
+              ? formatValuationPrecise(position.entryGraphValuationUsd)
+              : formatValuationPrecise(position.entryPrice)}
+          </p>
         </div>
         <div>
-          <p className="text-xs text-muted mb-0.5">Entry Price</p>
-          <p className="text-sm font-medium text-foreground">${position.entryPrice.toFixed(3)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted mb-0.5">Current Price</p>
-          <p className="text-sm font-medium text-foreground">${position.currentPrice.toFixed(3)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted mb-0.5">Cost Basis</p>
-          <p className="text-sm font-medium text-foreground">${costBasis.toFixed(2)}</p>
+          <p className="text-xs text-muted mb-0.5">Current Valuation</p>
+          <p className="text-sm font-medium text-foreground">
+            {position.currentGraphValuationUsd
+              ? formatValuationPrecise(position.currentGraphValuationUsd)
+              : formatValuationPrecise(position.currentPrice)}
+          </p>
         </div>
       </div>
+      {position.entryFairSellEstimated && (
+        <p className="mt-2 text-[11px] text-muted">
+          Entry fair-sell value estimated for legacy positions. Future P&amp;L is accurate.
+        </p>
+      )}
 
       {/* Sell controls */}
       <div className="mt-3 pt-3 border-t border-border space-y-3">

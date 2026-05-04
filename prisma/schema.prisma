@@ -764,10 +764,16 @@ model PredictionMarketTrade {
   company           String?       // e.g., "SpaceX"
   side              String        // "LONG" | "SHORT"
   amount            Decimal       @db.Decimal(20, 2) // USD amount invested (intended)
-  shares            Decimal?      @db.Decimal(20, 8) // Shares received
-  averagePrice      Decimal?      @db.Decimal(20, 6) // Average entry price
-  actualCostBasis   Decimal?      @db.Decimal(20, 2) // Actual cost: shares × averagePrice
+  shares            Decimal?      @db.Decimal(20, 8) // Shares received (CLOB-internal, not displayed)
+  averagePrice      Decimal?      @db.Decimal(20, 6) // CLOB avg entry price (audit only)
+  actualCostBasis   Decimal?      @db.Decimal(20, 2) // CLOB cost: shares × averagePrice (audit only)
   positionId        String?       // From Vaulto API response
+
+  // Graph-derived entry snapshot mirrored from Vaulto API. Frontend treats
+  // these as canonical so positions read like the implied-valuation chart.
+  entryGraphValuationUsd Decimal? @db.Decimal(30, 2) // Implied valuation USD at trade time
+  entryFairSellValueUsd  Decimal? @db.Decimal(20, 2) // What user would receive selling all shares at entry
+  spreadCostUsd          Decimal? @db.Decimal(20, 2) // amount - entryFairSellValueUsd
 
   status            String        @default("PENDING") // PENDING, FILLED, FAILED
   errorMessage      String?

@@ -24,7 +24,7 @@ interface PredictionMarketTradeWidgetProps {
   variant?: "default" | "mobile";
 }
 
-type TradeState = "idle" | "loading" | "success" | "error";
+type TradeState = "idle" | "confirming" | "loading" | "success" | "error";
 
 /**
  * Inline prediction market trading widget with Long/Short tabs.
@@ -73,15 +73,24 @@ export function PredictionMarketTradeWidget({
   const spreadPercent = isLong
     ? data?.slippage.long.spreadPercent ?? 0
     : data?.slippage.short.spreadPercent ?? 0;
+  const buyCost = isLong
+    ? data?.slippage.long.buyCost ?? positionCost
+    : data?.slippage.short.buyCost ?? positionCost;
+  const sellValue = isLong
+    ? data?.slippage.long.sellValue ?? positionCost
+    : data?.slippage.short.sellValue ?? positionCost;
   const bestReturn = isLong
     ? data?.valuation.bestLongReturn ?? 0
     : data?.valuation.bestShortReturn ?? 0;
 
+  // Spread is realized as a one-time cost at entry. After that the position
+  // tracks the implied valuation chart only, so a fresh position reads $0/0%.
+  const spreadCostUsd = usdcAmount > 0 ? (usdcAmount * spreadPercent) / 100 : 0;
+  const fairSellValueAtEntry =
+    usdcAmount > 0 && buyCost > 0 ? usdcAmount * (sellValue / buyCost) : 0;
+
   // Use passed prop if available (synced with chart), otherwise fall back to fetched data
   const impliedValuation = currentImpliedValuation ?? impliedData?.impliedValuationUsd ?? 0;
-
-  // Calculate trade estimates
-  const sharesToReceive = positionCost > 0 ? usdcAmount / positionCost : 0;
 
   const handleAmountChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,22 +105,24 @@ export function PredictionMarketTradeWidget({
     []
   );
 
-  const handleTrade = useCallback(async () => {
+  const handleReview = useCallback(() => {
     if (!amount || usdcAmount <= 0) {
       setErrorMessage("Please enter a valid amount");
       return;
     }
-
     if (!hasActiveWallet) {
       setErrorMessage("Please set up your trading wallet first");
       return;
     }
-
     if (usdcBalance < usdcAmount) {
       setErrorMessage(`Insufficient USDC balance ($${usdcBalance.toFixed(2)} available)`);
       return;
     }
+    setErrorMessage(null);
+    setTradeState("confirming");
+  }, [amount, usdcAmount, usdcBalance, hasActiveWallet]);
 
+  const handleConfirm = useCallback(async () => {
     setTradeState("loading");
     setErrorMessage(null);
 
@@ -121,11 +132,10 @@ export function PredictionMarketTradeWidget({
 
       if (tradeResult.success) {
         setTradeState("success");
-        // Calculate approximate shares from average price
-        const avgPrice = tradeResult.averagePrice || positionCost;
-        const shares = avgPrice > 0 ? usdcAmount / avgPrice : 0;
+        // Position size displayed = fair sell value at entry. Frontend's
+        // success copy reflects that the spread has been deducted up front.
         setResult({
-          shares,
+          shares: fairSellValueAtEntry,
           positionId: tradeResult.positionId || "",
         });
         setAmount("");
@@ -137,7 +147,12 @@ export function PredictionMarketTradeWidget({
       setTradeState("error");
       setErrorMessage(err instanceof Error ? err.message : "Trade failed");
     }
-  }, [amount, usdcAmount, usdcBalance, hasActiveWallet, eventSlug, activeTab, buyLong, buyShort, positionCost]);
+  }, [activeTab, buyLong, buyShort, eventSlug, usdcAmount, fairSellValueAtEntry]);
+
+  const handleCancelConfirm = useCallback(() => {
+    setTradeState("idle");
+    setErrorMessage(null);
+  }, []);
 
   const handleReset = useCallback(() => {
     setTradeState("idle");
@@ -274,7 +289,10 @@ export function PredictionMarketTradeWidget({
                   {isLong ? "Long" : "Short"} Position Opened
                 </p>
                 <p className="mt-1 text-sm text-muted">
-                  {result.shares.toFixed(2)} shares
+                  Position size: ${result.shares.toFixed(2)}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  P&amp;L now tracks the implied valuation chart.
                 </p>
                 <button
                   type="button"
@@ -283,6 +301,57 @@ export function PredictionMarketTradeWidget({
                 >
                   Make another trade
                 </button>
+              </div>
+            ) : tradeState === "confirming" ? (
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Total Cost</span>
+                  <span className="text-sm font-medium text-foreground">
+                    ${usdcAmount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Spread (fixed cost)</span>
+                  <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                    −${spreadCostUsd.toFixed(2)} ({spreadPercent.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-sm font-medium text-foreground">Position size</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    ${fairSellValueAtEntry.toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted">
+                  After purchase, P&amp;L tracks the implied valuation. Today&apos;s spread is locked in as a one-time cost — your position opens at $0.00 / 0%.
+                </p>
+                {errorMessage && (
+                  <p className="text-sm text-red" role="alert">
+                    {errorMessage}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelConfirm}
+                    disabled={tradeState !== "confirming" || isBuying}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirm}
+                    disabled={isBuying}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isLong
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-red text-white hover:bg-red/90"
+                    }`}
+                  >
+                    Accept &amp; Buy
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -307,7 +376,7 @@ export function PredictionMarketTradeWidget({
                   />
                 </div>
 
-                {/* Cost breakdown */}
+                {/* Cost preview */}
                 {usdcAmount > 0 && (
                   <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
                     <div className="flex items-center justify-between">
@@ -317,9 +386,9 @@ export function PredictionMarketTradeWidget({
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted">Shares to Receive</span>
+                      <span className="text-sm text-muted">Spread (fixed cost)</span>
                       <span className="text-sm font-medium text-foreground">
-                        {sharesToReceive.toFixed(2)}
+                        −${spreadCostUsd.toFixed(2)} ({spreadPercent.toFixed(1)}%)
                       </span>
                     </div>
                   </div>
@@ -335,7 +404,7 @@ export function PredictionMarketTradeWidget({
                 {/* Action button */}
                 <button
                   type="button"
-                  onClick={handleTrade}
+                  onClick={handleReview}
                   disabled={
                     tradeState === "loading" ||
                     isBuying ||
@@ -354,7 +423,7 @@ export function PredictionMarketTradeWidget({
                     ? "Processing..."
                     : !hasActiveWallet
                       ? "Set up wallet to trade"
-                      : `${isLong ? "Long" : "Short"} ${symbol}`}
+                      : `Review ${isLong ? "Long" : "Short"} ${symbol}`}
                 </button>
               </>
             )}
