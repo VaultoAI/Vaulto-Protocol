@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePrivy } from "@privy-io/react-auth";
 
@@ -230,19 +230,10 @@ async function closeAndWithdrawPosition(
 // CREDENTIAL SETUP API FUNCTIONS
 // ============================================
 
-async function checkCredentialsStatus(): Promise<{ hasCredentials: boolean }> {
-  const res = await fetch("/api/trading/credentials-status");
-
-  if (!res.ok) {
-    // If check fails, assume no credentials
-    return { hasCredentials: false };
-  }
-
-  return res.json();
-}
-
-async function setupWallet(privyToken: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch("/api/trading/setup-wallet", {
+async function ensureCredentialsAtomic(
+  privyToken: string
+): Promise<{ ready: boolean; error?: string }> {
+  const res = await fetch("/api/trading/ensure-credentials", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -253,25 +244,7 @@ async function setupWallet(privyToken: string): Promise<{ success: boolean; erro
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.error || "Failed to setup wallet");
-  }
-
-  return data;
-}
-
-async function deriveCredentials(privyToken: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch("/api/trading/derive-credentials", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-privy-token": privyToken,
-    },
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to derive credentials");
+    throw new Error(data.error || "Failed to ensure trading credentials");
   }
 
   return data;
@@ -326,58 +299,32 @@ export function usePredictionTrading(options: UsePredictionTradingOptions = {}) 
   // Track credential setup state
   const [isSettingUpCredentials, setIsSettingUpCredentials] = useState(false);
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
-  const credentialsSetupAttemptedRef = useRef(false);
 
   // Track fund preparation state (shown when preparing funds before buy)
   const [isPreparingFunds, setIsPreparingFunds] = useState(false);
 
-  // Ensure credentials are set up before trading
+  // Ensure credentials are set up before trading.
+  // Uses atomic /api/trading/ensure-credentials which upserts the wallet and
+  // derives Polymarket credentials in one server call. Idempotent and safe
+  // to call before every trade.
   const ensureCredentials = useCallback(async (): Promise<boolean> => {
-    console.log("[usePredictionTrading] Checking credentials status...");
-
-    // Check if credentials exist
-    const status = await checkCredentialsStatus();
-    console.log("[usePredictionTrading] Credentials status:", status);
-
-    // TEMP FIX: Always re-derive credentials on first attempt to fix wallet address association
-    // Remove this after credentials are properly set up
-    const forceRederive = !credentialsSetupAttemptedRef.current;
-
-    if (status.hasCredentials && !forceRederive) {
-      console.log("[usePredictionTrading] Credentials already configured");
-      return true;
-    }
-
-    if (forceRederive) {
-      console.log("[usePredictionTrading] Force re-deriving credentials to fix wallet association...");
-    }
-
-    // Credentials don't exist, need to set them up
-    console.log("[usePredictionTrading] No credentials found, setting up...");
     setIsSettingUpCredentials(true);
     setCredentialsError(null);
 
     try {
-      // Get Privy access token
-      console.log("[usePredictionTrading] Getting Privy access token...");
       const privyToken = await getAccessToken();
       if (!privyToken) {
         throw new Error("Failed to get authentication token. Please try logging in again.");
       }
-      console.log("[usePredictionTrading] Got Privy token");
 
-      // Step 1: Setup wallet on Vaulto API
-      console.log("[usePredictionTrading] Step 1: Setting up wallet...");
-      const walletResult = await setupWallet(privyToken);
-      console.log("[usePredictionTrading] Wallet setup result:", walletResult);
-
-      // Step 2: Derive Polymarket credentials
-      console.log("[usePredictionTrading] Step 2: Deriving credentials...");
-      const credResult = await deriveCredentials(privyToken);
-      console.log("[usePredictionTrading] Derive credentials result:", credResult);
-
-      credentialsSetupAttemptedRef.current = true;
-      console.log("[usePredictionTrading] Credentials setup complete!");
+      let result = await ensureCredentialsAtomic(privyToken);
+      if (!result.ready) {
+        await new Promise((r) => setTimeout(r, 500));
+        result = await ensureCredentialsAtomic(privyToken);
+      }
+      if (!result.ready) {
+        throw new Error(result.error || "Trading credentials setup did not complete");
+      }
       return true;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Failed to setup trading credentials";
