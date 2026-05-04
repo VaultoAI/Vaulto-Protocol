@@ -4,6 +4,10 @@
 
 Vaulto Protocol is a trading platform for synthetic tokens representing private companies. The frontend is built with Next.js and displays company data fetched from a PostgreSQL database (Supabase).
 
+## Vaulto-API
+
+The Vaulto-API is managed by us and is the production backend server for this application. Source is editable at `../vaulto-api` and is deployed on Railway. Make any backend/API changes there.
+
 ## Adding a New Company
 
 When adding a new private company to the platform, follow these steps:
